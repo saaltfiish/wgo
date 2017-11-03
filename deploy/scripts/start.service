@@ -1,0 +1,17 @@
+[Unit]
+Description=WGO Server
+After=network.target
+Wants=network.target
+
+[Service]
+User={user}
+Type=forking
+ExecStart={path_to_start_sh} start
+ExecStop={path_to_start_sh} stop
+ExecReload={path_to_start_sh} reload
+Restart=on-failure
+RestartSec=20
+
+[Install]
+WantedBy=multi-user.target
+

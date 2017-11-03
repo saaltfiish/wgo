@@ -1,0 +1,31 @@
+{
+    "daemonize": false,
+    "proc_name": "odintest1",
+    "port": "9999",
+    "version": "2.3.1",
+    "access": {
+        "path": "/Users/Odin/dev/go/workspaces/misc/src/wgo_example/logs/access1.log",
+        "topic": "wgo_access"
+    },
+    "upstream": {
+        "*": {
+            "*": ["http://127.0.0.1:8888"]
+        }
+    },
+    "servers":[
+        {
+            "name": "odin",
+            "addr": ":9999"
+        },
+        {
+            "name": "odinrpc",
+            "mode": "wrpc",
+            "addr": ":50051"
+        },
+        {
+            "name": "wepiao",
+            "engine":"standard",
+            "addr": ":9998"
+        }
+    ]
+}

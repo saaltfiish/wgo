@@ -1,0 +1,82 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/klauspost/compress/flate",
+			"repository": "https://github.com/klauspost/compress",
+			"vcs": "git",
+			"revision": "14eb9c4951195779ecfbec34431a976de7335b0a",
+			"branch": "master",
+			"path": "flate",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/klauspost/compress/gzip",
+			"repository": "https://github.com/klauspost/compress",
+			"vcs": "git",
+			"revision": "14eb9c4951195779ecfbec34431a976de7335b0a",
+			"branch": "master",
+			"path": "gzip",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/klauspost/compress/zlib",
+			"repository": "https://github.com/klauspost/compress",
+			"vcs": "git",
+			"revision": "14eb9c4951195779ecfbec34431a976de7335b0a",
+			"branch": "master",
+			"path": "/zlib",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/klauspost/cpuid",
+			"repository": "https://github.com/klauspost/cpuid",
+			"vcs": "git",
+			"revision": "09cded8978dc9e80714c4d85b0322337b0a1e5e0",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/klauspost/crc32",
+			"repository": "https://github.com/klauspost/crc32",
+			"vcs": "git",
+			"revision": "19b0b332c9e4516a6370a0456e6182c3b5036720",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/valyala/bytebufferpool",
+			"repository": "https://github.com/valyala/bytebufferpool",
+			"vcs": "git",
+			"revision": "8ebd0474e5a2f0a5c7a74ad2bf421a1d1a90264f",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/valyala/fasthttp",
+			"repository": "https://github.com/valyala/fasthttp",
+			"vcs": "git",
+			"revision": "45697fe30a130ec6a54426a069c82f3abe76b63d",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/net/context",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "4d38db76854b199960801a1734443fd02870d7e1",
+			"branch": "master",
+			"path": "/context",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/sys/unix",
+			"repository": "https://go.googlesource.com/sys",
+			"vcs": "git",
+			"revision": "a646d33e2ee3172a661fc09bca23bb4889a41bc8",
+			"branch": "master",
+			"path": "/unix",
+			"notests": true
+		}
+	]
+}

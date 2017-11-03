@@ -1,0 +1,38 @@
+{
+    "daemonize": false,
+    "proc_name": "odintest1",
+    "port": "9999",
+    "version": "v0.9",
+    "access": {
+        "path": "/Users/Odin/dev/go/workspaces/misc/src/wgo_example/logs/access1.log",
+        "topic": "wgo_access"
+    },
+    "proxy": {
+        "*": {
+            "/demo": ["http://127.0.0.1:8888"]
+        }
+    },
+    "servers":[
+        {
+            "name": "odin",
+            "addr": ":9999"
+        },
+        {
+            "name": "odinrpc",
+            "mode": "wrpc",
+            "addr": ":50051"
+        },
+        {
+            "name": "wepiao",
+            "engine":"standard",
+            "addr": ":9998"
+        }
+    ],
+    "app":{
+        "config1": "hi",
+        "config2": "odin"
+    },
+    "app1": {
+        "url": "http://sina.com.cn/"
+    }
+}
