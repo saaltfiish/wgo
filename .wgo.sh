@@ -3,8 +3,8 @@
 set -e
 set -x
 
-if [ "$GOOS" == "linux" ]; then
-    go build -ldflags '-extldflags "-static"' wgo
+if [ "$GOOS" = "linux" ]; then
+    go install -ldflags '-extldflags "-static"' wgo
 else
-    go build wgo
+    go install wgo
 fi

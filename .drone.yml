@@ -1,6 +1,6 @@
 workspace:
-  base: /go
-  path: src/wgo
+  base: "/go"
+  path: "src/wgo"
 
 clone:
   git:
@@ -10,7 +10,8 @@ clone:
 
 pipeline:
   build:
-    image: golang:alpine
+    image: registry.cn-hangzhou.aliyuncs.com/gladsheim/golang:grpc
+    insecure: true
     environment:
       - CGO_ENABLED=0
       - GOOS=linux
@@ -24,7 +25,7 @@ pipeline:
     repo: docker.for.mac.localhost:5001/arch/wgo
     insecure: true
     tags: [ local ]
-    dockerfile: docker/Dockerfile
+    dockerfile: Dockerfile
     #debug: true
     when:
       event: [ local ]
@@ -32,10 +33,10 @@ pipeline:
   publish:
     image: plugins/docker
     registry: registry.cn-hangzhou.aliyuncs.com
-    repo: registry.cn-hangzhou.aliyuncs.com/arch/wgo
+    repo: registry.cn-hangzhou.aliyuncs.com/gladsheim/wgo
     secrets: [ docker_username, docker_password ]
     tags: [ latest ]
-    dockerfile: docker/Dockerfile
+    dockerfile: Dockerfile
     when:
       event: [ push, tag ]
 
