@@ -1,6 +1,6 @@
 workspace:
-  base: "/go/src"
-  path: "wgo"
+  base: "/go/src/wgo"
+  path: "."
 
 clone:
   git:
