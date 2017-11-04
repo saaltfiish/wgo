@@ -18,8 +18,8 @@ pipeline:
     commands:
       - echo $GOPATH
       - echo $(pwd)
-      - ls
-      - ls ../..
+      - ls $GOPATH/src
+      - ls $GOPATH/pkg
       - sh .wgo.sh
 
   mac_local:
