@@ -17,6 +17,7 @@ pipeline:
       - GOARCH=amd64
     commands:
       - echo $GOPATH
+      - echo $(pwd)
       - ls
       - ls ../..
       - sh .wgo.sh
