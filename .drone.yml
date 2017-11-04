@@ -1,0 +1,55 @@
+workspace:
+  base: /go
+  path: src/wgo
+
+clone:
+  git:
+    image: plugins/git
+    tags: true
+    depth: 50
+
+pipeline:
+  build:
+    image: golang:alpine
+    environment:
+      - CGO_ENABLED=0
+      - GOOS=linux
+      - GOARCH=amd64
+    commands:
+      - sh .wgo.sh
+
+  mac_local:
+    image: plugins/docker
+    registry: docker.for.mac.localhost:5001
+    repo: docker.for.mac.localhost:5001/arch/wgo
+    insecure: true
+    tags: [ local ]
+    dockerfile: docker/Dockerfile
+    #debug: true
+    when:
+      event: [ local ]
+
+  publish:
+    image: plugins/docker
+    registry: registry.cn-hangzhou.aliyuncs.com
+    repo: registry.cn-hangzhou.aliyuncs.com/arch/wgo
+    secrets: [ docker_username, docker_password ]
+    tags: [ latest ]
+    dockerfile: docker/Dockerfile
+    when:
+      event: [ push, tag ]
+
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    channel: dev
+    username: "WGO"
+    template: >
+      {{#success build.status}}
+      build {{build.number}} succeeded. Good job.
+      {{else}}
+      build {{build.number}} failed. Fix me please.
+      {{/success}}
+    when:
+      status: [ success, failure ]
+      local: false
