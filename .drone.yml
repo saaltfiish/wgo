@@ -16,10 +16,6 @@ pipeline:
       - GOOS=linux
       - GOARCH=amd64
     commands:
-      - echo $GOPATH
-      - echo $(pwd)
-      - ls $GOPATH/src
-      - ls $GOPATH/pkg
       - sh .wgo.sh
 
   mac_local:
