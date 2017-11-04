@@ -1,5 +1,4 @@
-FROM registry.cn-hangzhou.aliyuncs.com/gladsheim/golang:alpine
+FROM registry.cn-hangzhou.aliyuncs.com/gladsheim/golang:grpc
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
-ADD ../../src /go/src
-ADD ../../pkg /go/pkg
+ADD . /go/src/wgo
