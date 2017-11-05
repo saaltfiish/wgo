@@ -31,6 +31,9 @@ func RegisterConfig(tags ...interface{}) {
 
 	// es setting
 	if len(config.ES) > 0 {
+		if ea := os.Getenv("rest.esaddr"); ea != "" { // 可以通过环境变量传入es地址
+			config.ES["addr"] = ea
+		}
 		Info("es addr: %s, index: %s, user: %s, password: %s", config.ES["addr"], config.ES["index"], config.ES["user"], config.ES["password"])
 		OpenElasticSearch()
 	}
