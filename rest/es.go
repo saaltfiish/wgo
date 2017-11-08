@@ -16,6 +16,7 @@ var ElasticClient *elastic.Client
 func OpenElasticSearch() (err error) {
 	ElasticClient, err = elastic.NewClient(
 		elastic.SetURL(config.ES["addr"]),
+		elastic.SetSniff(false),
 		elastic.SetBasicAuth(config.ES["user"], config.ES["password"]))
 
 	if err != nil {
