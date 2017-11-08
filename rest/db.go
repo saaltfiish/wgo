@@ -45,7 +45,7 @@ func (cl Checklist) ToDb() (interface{}, error) {
 		if t {
 			sn = sn | (1 << uint(offset))
 		} else {
-			sn = sn &^ (1 << uini(offset))
+			sn = sn &^ (1 << uint(offset))
 		}
 	}
 	return sn, nil
