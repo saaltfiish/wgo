@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"math/bits"
+	"strconv"
 
 	"gorp"
 )
@@ -42,9 +43,9 @@ func (cl Checklist) ToDb() (interface{}, error) {
 	sn := 0
 	for offset, t := range cl {
 		if t {
-			sn = sn | (1 << offset)
+			sn = sn | (1 << uint(offset))
 		} else {
-			sn = sn &^ (1 << offset)
+			sn = sn &^ (1 << unit(offset))
 		}
 	}
 	return sn, nil
