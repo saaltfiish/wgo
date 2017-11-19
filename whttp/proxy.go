@@ -355,6 +355,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 			res.Header.Set(HeaderAccessControlAllowHeaders, ch) // 来者不拒
 		}
 		c.Response().(Response).WriteHeader(StatusOK)
+		copyFastHeader(c.Response().(Response).Header(), res.Header)
 		return nil
 	}
 
