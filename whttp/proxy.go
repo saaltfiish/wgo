@@ -349,7 +349,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		//c.Info("origin: %s", origin)
 		res.Header.Set(HeaderAccessControlAllowOrigin, origin)
 		res.Header.Set(HeaderAccessControlAllowCredentials, "true")
-		res.Header.Set(HeaderAccessControlAllowHeaders, HeaderXAppId)
+		res.Header.Set(HeaderAccessControlAllowHeaders, strings.ToLower(HeaderXAppId))
 	}
 
 	// Remove hop-by-hop headers listed in the
