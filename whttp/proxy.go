@@ -351,7 +351,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	}
 	if c.Request().(Request).Method() == "OPTIONS" { // 统一处理options请求
 		res.Header.Set(HeaderAccessControlAllowMethods, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		if ch := res.Header.Get(HeaderAccessControlRequestHeaders); ch != "" {
+		if ch := outreq.Header.Get(HeaderAccessControlRequestHeaders); ch != "" {
 			res.Header.Set(HeaderAccessControlAllowHeaders, ch) // 来者不拒
 		}
 		c.Response().(Response).WriteHeader(StatusOK)
