@@ -354,7 +354,8 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		if ch := res.Header.Get(HeaderAccessControlRequestHeaders); ch != "" {
 			res.Header.Set(HeaderAccessControlAllowHeaders, ch) // 来者不拒
 		}
-		return c.JSON(StatusOK, nil)
+		c.Response().(Response).WriteHeader(StatusOK)
+		return nil
 	}
 
 	// Remove hop-by-hop headers listed in the
