@@ -350,6 +350,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		res.Header.Set(HeaderAccessControlAllowCredentials, "true")
 	}
 	if c.Request().(Request).Method() == "OPTIONS" { // 统一处理options请求
+		res.Header.Set(HeaderAccessControlMaxAge, "86400")
 		res.Header.Set(HeaderAccessControlAllowMethods, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if ch := outreq.Header.Get(HeaderAccessControlRequestHeaders); ch != "" {
 			res.Header.Set(HeaderAccessControlAllowHeaders, ch) // 来者不拒
