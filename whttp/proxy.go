@@ -346,10 +346,15 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 
 	// cors header(Access-Control-Allow-*)
 	if origin := outreq.Header.Get(HeaderOrigin); origin != "" {
-		//c.Info("origin: %s", origin)
 		res.Header.Set(HeaderAccessControlAllowOrigin, origin)
 		res.Header.Set(HeaderAccessControlAllowCredentials, "true")
-		res.Header.Set(HeaderAccessControlAllowHeaders, strings.ToLower(HeaderXAppId))
+	}
+	if c.Request().(Request).Method() == "OPTIONS" { // 统一处理options请求
+		res.Header.Set(HeaderAccessControlAllowMethods, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if ch := res.Header.Get(HeaderAccessControlRequestHeaders); ch != "" {
+			res.Header.Set(HeaderAccessControlAllowHeaders, ch) // 来者不拒
+		}
+		return c.JSON(StatusOK, nil)
 	}
 
 	// Remove hop-by-hop headers listed in the
