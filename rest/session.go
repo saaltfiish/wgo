@@ -48,12 +48,19 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 }
 
 // save session
-func (rest *REST) SetSession(key string, value interface{}) {
+func (rest *REST) SetSession(key string, opts ...interface{}) {
 	// save to cache
 	rest.Info("set session, key: %s", key)
-	RedisSet(key, value, scfg.Life)
+	RedisSet(key, opts[0], scfg.Life)
+	// expire
+	expire := time.Time{}
+	if len(opts) > 1 {
+		if remember, ok := opts[1].(bool); ok && remember {
+			expire = time.Now().Add(time.Duration(scfg.Life) * time.Second)
+		}
+	}
 	// set cookie
-	rest.Context().SetCookie(wgo.NewCookie(scfg.Key, key, scfg.Path, scfg.Domain, time.Now().Add(time.Duration(scfg.Life)*time.Second), scfg.Security, scfg.HTTPOnly))
+	rest.Context().SetCookie(wgo.NewCookie(scfg.Key, key, scfg.Path, scfg.Domain, expire, scfg.Security, scfg.HTTPOnly))
 }
 
 // del session
