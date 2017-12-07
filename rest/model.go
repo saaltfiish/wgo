@@ -1311,6 +1311,9 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 			//处理排序问题,如果之前有排序，这里就是二次排序,如果之前无排序,这里是首要排序
 			if col.TagOptions.Contains(DBTAG_PK) { // 默认为pk降序
 				pks = fmt.Sprintf("T.`%s` DESC", col.Tag)
+				if col.ExtOptions.Contains(TAG_AORDERBY) {
+					pks = fmt.Sprintf("T.`%s` ASC", col.Tag)
+				}
 			} else if col.ExtOptions.Contains(TAG_ORDERBY) { // 默认为降序
 				b.Order(fmt.Sprintf("T.`%s` DESC", col.Tag))
 			} else if col.ExtOptions.Contains(TAG_AORDERBY) { //正排序
