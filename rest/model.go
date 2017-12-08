@@ -63,6 +63,35 @@ type ListInfo struct {
 	Sum     interface{} `json:"sum,omitempty"`      //求和
 }
 
+// build single page list from interface{}
+func SinglePageList(i interface{}) *List {
+	n := new(int)
+	page := new(int)
+	*page = 1
+	switch reflect.TypeOf(i).Kind() {
+	case reflect.Slice:
+		*n = reflect.ValueOf(i).Len()
+		return &List{
+			Info: ListInfo{
+				Total:   int64(*n),
+				Page:    page,
+				PerPage: n,
+			},
+			List: i,
+		}
+	default:
+		*n = 1
+		return &List{
+			Info: ListInfo{
+				Total:   int64(*n),
+				Page:    page,
+				PerPage: n,
+			},
+			List: []interface{}{i},
+		}
+	}
+}
+
 //错误代码
 var (
 	ErrRequired      = errors.New("field is required")
