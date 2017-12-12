@@ -457,6 +457,12 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		Warn("[SetConditions]: not found model")
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
+			Debug("[SetConditions][tag: %s][type: %s]", col.Tag, col.Type.String())
+			// join
+			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Join != "" {
+				//Debug("[SetConditions][raw][tag: %s]%v", col.Tag, condition)
+				rest.conditions = append(rest.conditions, condition)
+			}
 			// raw
 			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != "" {
 				//Debug("[SetConditions][raw][tag: %s]%v", col.Tag, condition)
@@ -483,7 +489,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			}
 			if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
-					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
+					//Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
 					rest.conditions = append(rest.conditions, ParseCondition(col.Type.String(), condition))
 				}
 			}
