@@ -146,8 +146,10 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 	case CTYPE_LT:
 		con.Lt = v
 	case CTYPE_JOIN:
-		con.JoinOn = cs[1:3]
 		con.Join = cs[0]
+		if len(cs) >= 3 {
+			con.JoinOn = cs[1:]
+		}
 	case CTYPE_OR:
 		con.Or = v
 	case CTYPE_LIKE:
