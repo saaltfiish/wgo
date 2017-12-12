@@ -392,6 +392,7 @@ func (con *Condition) Merge(oc *Condition) {
 	}
 	if oc.Join != nil {
 		con.Join = oc.Join
+		con.JoinOn = oc.JoinOn
 	}
 	if oc.Page != nil {
 		con.Page = oc.Page
@@ -482,7 +483,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			}
 			if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
-					//Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
+					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
 					rest.conditions = append(rest.conditions, ParseCondition(col.Type.String(), condition))
 				}
 			}
