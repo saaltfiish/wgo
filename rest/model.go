@@ -115,7 +115,7 @@ type Condition struct {
 	Range interface{} //范围条件, btween ? and ?
 	Order interface{}
 	Page  interface{}
-	Raw   interface{} //原始字符串
+	Raw   string //原始字符串
 }
 
 //order by
@@ -157,7 +157,7 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 	case CTYPE_PAGE:
 		con.Page = v
 	case CTYPE_RAW:
-		con.Raw = v
+		con.Raw = v.(string)
 	default:
 	}
 	return con
@@ -167,6 +167,9 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
  * 只负责生成部分sql, IS/NOT/LIKE/GT/LT
  */
 func (v *Condition) DoWhere(b *gorp.Builder) {
+	if v.Raw != "" {
+		b.Where(fmt.Sprint("(", v.Raw, ")"))
+	}
 	if v.Is != nil {
 		//Debug("[=][key: %s]%v", v.Field, v)
 		switch vt := v.Is.(type) {
@@ -446,7 +449,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
 			// raw
-			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != nil {
+			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != "" {
 				//Debug("[SetConditions][raw][tag: %s]%v", col.Tag, condition)
 				rest.conditions = append(rest.conditions, condition)
 			}
@@ -1203,14 +1206,9 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 
 	// condition
 	if len(cons) > 0 {
+		//Debug("condition set")
+		//range condition,范围查询
 		for _, v := range cons {
-			// raw sql
-			if v.Raw != nil {
-				if raws, ok := v.Raw.([]interface{}); ok {
-					return b.Raw(raws[0].(string), raws[1:]...), nil
-				}
-			}
-
 			//时间范围查询
 			if v.Range != nil {
 				//Debug("[perpare]timerange")
