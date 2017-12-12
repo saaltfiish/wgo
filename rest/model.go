@@ -103,19 +103,20 @@ var (
 )
 
 type Condition struct {
-	Table string
-	Field string
-	Is    interface{}
-	Not   interface{}
-	Or    interface{}
-	Gt    interface{}
-	Lt    interface{}
-	Like  interface{}
-	Join  interface{}
-	Range interface{} //范围条件, btween ? and ?
-	Order interface{}
-	Page  interface{}
-	Raw   string //原始字符串
+	Table  string
+	Field  string
+	Is     interface{}
+	Not    interface{}
+	Or     interface{}
+	Gt     interface{}
+	Lt     interface{}
+	Like   interface{}
+	Join   interface{}
+	Range  interface{} //范围条件, btween ? and ?
+	Order  interface{}
+	Page   interface{}
+	JoinOn []interface{}
+	Raw    string //原始字符串
 }
 
 //order by
@@ -145,7 +146,8 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 	case CTYPE_LT:
 		con.Lt = v
 	case CTYPE_JOIN:
-		con.Join = v
+		con.JoinOn = cs[0:2]
+		con.Join = cs[2:]
 	case CTYPE_OR:
 		con.Or = v
 	case CTYPE_LIKE:
@@ -163,6 +165,43 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 	return con
 }
 
+func buildWhereRaw(b *gorp.Builder, field string, con interface{}) {
+	if con == nil {
+		return
+	}
+	switch vt := con.(type) {
+	case string:
+		b.Where(fmt.Sprintf("T.`%s` = ?", field), vt)
+	case []string:
+		vs := bytes.Buffer{}
+		first := true
+		vs.WriteString("(")
+		for _, vv := range vt {
+			if !first {
+				vs.WriteString(",")
+			}
+			vs.WriteString(fmt.Sprintf("'%s'", vv))
+			first = false
+		}
+		vs.WriteString(")")
+		b.Where(fmt.Sprintf("T.`%s` IN %s", field, vs.String()))
+	case []interface{}:
+		vs := bytes.Buffer{}
+		first := true
+		vs.WriteString("(")
+		for _, vv := range vt {
+			if !first {
+				vs.WriteString(",")
+			}
+			vs.WriteString(fmt.Sprintf("'%s'", vv))
+			first = false
+		}
+		vs.WriteString(")")
+		b.Where(fmt.Sprintf("T.`%s` IN %s", field, vs.String()))
+	default:
+	}
+}
+
 /* {{{ func (v *Condition) DoWhere(b *gorp.Builder)
  * 只负责生成部分sql, IS/NOT/LIKE/GT/LT
  */
@@ -170,41 +209,8 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 	if v.Raw != "" {
 		b.Where(fmt.Sprint("(", v.Raw, ")"))
 	}
-	if v.Is != nil {
-		//Debug("[=][key: %s]%v", v.Field, v)
-		switch vt := v.Is.(type) {
-		case string:
-			b.Where(fmt.Sprintf("T.`%s` = ?", v.Field), vt)
-		case []string:
-			//Debug("[=][slices][key: %s]%v", v.Field, v)
-			vs := bytes.Buffer{}
-			first := true
-			vs.WriteString("(")
-			for _, vv := range vt {
-				if !first {
-					vs.WriteString(",")
-				}
-				vs.WriteString(fmt.Sprintf("'%s'", vv))
-				first = false
-			}
-			vs.WriteString(")")
-			b.Where(fmt.Sprintf("T.`%s` IN %s", v.Field, vs.String()))
-		case []interface{}:
-			vs := bytes.Buffer{}
-			first := true
-			vs.WriteString("(")
-			for _, vv := range vt {
-				if !first {
-					vs.WriteString(",")
-				}
-				vs.WriteString(fmt.Sprintf("'%s'", vv))
-				first = false
-			}
-			vs.WriteString(")")
-			b.Where(fmt.Sprintf("T.`%s` IN %s", v.Field, vs.String()))
-		default:
-		}
-	}
+	buildWhereRaw(b, v.Field, v.Is)
+	buildWhereRaw(b, v.Field, v.Not)
 	if v.Not != nil {
 		switch vt := v.Not.(type) {
 		case string:
@@ -1233,7 +1239,7 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				}
 			}
 		}
-		jc := 0
+		joinCount := 0
 		orCons := make(map[string][]string)
 		for _, v := range cons {
 			//Debug("[key: %s]%v", v.Field, v)
@@ -1280,35 +1286,29 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				}
 			}
 			if v.Join != nil { //关联查询
-				switch vt := v.Join.(type) {
-				case *Condition:
-					//c.Trace("%s will join %s.%s", v.Field, v.Field, vt.Field)
-					if vt.Is != nil {
-						jt := v.Field
-						jf := vt.Field
-						var canJoin bool
-						if t, ok := gorp.GetTable(jt); ok {
-							//c.Trace("table: %s; type name: %s", jt, t.Gotype.Name())
-							if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
-								for _, col := range cols {
-									//c.Trace("%s %s", jt, col.Tag)
-									if col.Tag == jf && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
-										//c.Trace("%s.%s can join", jt, jf)
-										canJoin = true
-										break
+				if vt, ok := v.Join.(*Condition); ok && vt.Is != nil {
+					joinTable := v.Field // 字段名就是表名称
+					joinField := vt.Field
+					if t, ok := gorp.GetTable(joinTable); ok {
+						//c.Trace("table: %s; type name: %s", joinTable, t.Gotype.Name())
+						if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
+							for _, col := range cols {
+								//c.Trace("%s %s", joinTable, col.Tag)
+								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
+									//c.Trace("%s.%s can join", joinTable, joinField)
+									if v.JoinOn != nil {
+										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", joinTable, joinCount, v.JoinOn[0], joinCount, v.JoinOn[1]))
+									} else {
+										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`id`", joinTable, joinCount, v.Field, joinCount))
 									}
+									// b.Where(fmt.Sprintf("T%d.`%s`=?", joinCount, joinField), vt.Is.(string))
+									buildWhereRaw(b, fmt.Sprintf("T%d.`%s`", joinCount, joinField), vt.Is)
+									joinCount++
+									break
 								}
 							}
 						}
-						if canJoin {
-							js := fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`id`", jt, jc, v.Field, jc)
-							b.Joins(js)
-							b.Where(fmt.Sprintf("T%d.`%s`=?", jc, jf), vt.Is.(string))
-							jc++
-						}
 					}
-				default:
-					//c.Trace("not support !*Condition: %v", vt)
 				}
 			}
 		}
