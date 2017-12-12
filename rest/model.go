@@ -1299,7 +1299,7 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
 									//c.Trace("%s.%s can join", joinTable, joinField)
 									if v.JoinOn != nil {
-										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", joinTable, joinCount, v.JoinOn[0], joinCount, v.JoinOn[1]))
+										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", v.JoinOn[0], joinCount, v.JoinOn[1], joinCount, v.JoinOn[2]))
 									} else {
 										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`id`", joinTable, joinCount, v.Field, joinCount))
 									}
