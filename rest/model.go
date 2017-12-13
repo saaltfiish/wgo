@@ -459,9 +459,11 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		for _, col := range cols {
 			Debug("[SetConditions][tag: %s][type: %s]", col.Tag, col.Type.String())
 			// join
-			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Join != "" {
-				//Debug("[SetConditions][raw][tag: %s]%v", col.Tag, condition)
+			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Join != nil {
+				Debug("[SetConditions][join][tag: %s]%v", col.Tag, condition)
 				rest.conditions = append(rest.conditions, condition)
+			} else {
+				Debug("[SetConditions][join][tag: %s]not found", col.Tag)
 			}
 			// raw
 			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != "" {
