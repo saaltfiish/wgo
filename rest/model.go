@@ -457,10 +457,10 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		Warn("[SetConditions]: not found model")
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
-			Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
+			// Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
 			// join
 			if condition, e := GetCondition(cs, col.ExtTag); e == nil && condition.Join != nil {
-				Debug("[SetConditions][join][table: %s]%v", col.ExtTag, condition)
+				// Debug("[SetConditions][join][table: %s]%v", col.ExtTag, condition)
 				rest.conditions = append(rest.conditions, condition)
 			}
 			// raw
