@@ -112,10 +112,10 @@ type Condition struct {
 	Lt     interface{}
 	Like   interface{}
 	Join   interface{}
+	JoinOn []interface{}
 	Range  interface{} //范围条件, btween ? and ?
 	Order  interface{}
 	Page   interface{}
-	JoinOn []interface{}
 	Raw    string //原始字符串
 }
 
@@ -457,13 +457,11 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		Warn("[SetConditions]: not found model")
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
-			Debug("[SetConditions][tag: %s][type: %s]", col.Tag, col.Type.String())
+			// Debug("[SetConditions][tag: %s][type: %s]", col.Tag, col.Type.String())
 			// join
-			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Join != nil {
-				Debug("[SetConditions][join][tag: %s]%v", col.Tag, condition)
+			if condition, e := GetCondition(cs, col.ExtTag); e == nil && condition.Join != nil {
+				Debug("[SetConditions][join][table: %s]%v", col.ExtTag, condition)
 				rest.conditions = append(rest.conditions, condition)
-			} else {
-				Debug("[SetConditions][join][tag: %s]not found", col.Tag)
 			}
 			// raw
 			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != "" {
@@ -1301,12 +1299,9 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 					joinTable := v.Field // 字段名就是表名称
 					joinField := vt.Field
 					if t, ok := gorp.GetTable(joinTable); ok {
-						//c.Trace("table: %s; type name: %s", joinTable, t.Gotype.Name())
 						if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
 							for _, col := range cols {
-								//c.Trace("%s %s", joinTable, col.Tag)
 								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
-									//c.Trace("%s.%s can join", joinTable, joinField)
 									if v.JoinOn != nil {
 										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", v.JoinOn[0], joinCount, v.JoinOn[1], joinCount, v.JoinOn[2]))
 									} else {
