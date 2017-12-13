@@ -1298,12 +1298,13 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				if vt, ok := v.Join.(*Condition); ok && vt.Is != nil {
 					joinTable := v.Field // 字段名就是表名称
 					joinField := vt.Field
+					Debug("join %s.%s", joinTable, joinField)
 					if t, ok := gorp.GetTable(joinTable); ok {
 						if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
 							for _, col := range cols {
 								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
 									if v.JoinOn != nil {
-										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", v.JoinOn[0], joinCount, v.JoinOn[1], joinCount, v.JoinOn[2]))
+										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", v.Field, joinCount, v.JoinOn[0], joinCount, v.JoinOn[1]))
 									} else {
 										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`id`", joinTable, joinCount, v.Field, joinCount))
 									}
