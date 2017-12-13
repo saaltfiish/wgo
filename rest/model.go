@@ -167,13 +167,13 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 	return con
 }
 
-func buildWhereRaw(b *gorp.Builder, field string, con interface{}) {
+func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 	if con == nil {
 		return
 	}
 	switch vt := con.(type) {
 	case string:
-		b.Where(fmt.Sprintf("T.`%s` = ?", field), vt)
+		b.Where(fmt.Sprintf("%s.`%s` = ?", tableAlias, field), vt)
 	case []string:
 		vs := bytes.Buffer{}
 		first := true
@@ -186,7 +186,7 @@ func buildWhereRaw(b *gorp.Builder, field string, con interface{}) {
 			first = false
 		}
 		vs.WriteString(")")
-		b.Where(fmt.Sprintf("T.`%s` IN %s", field, vs.String()))
+		b.Where(fmt.Sprintf("%s.`%s` IN %s", tableAlias, field, vs.String()))
 	case []interface{}:
 		vs := bytes.Buffer{}
 		first := true
@@ -199,7 +199,7 @@ func buildWhereRaw(b *gorp.Builder, field string, con interface{}) {
 			first = false
 		}
 		vs.WriteString(")")
-		b.Where(fmt.Sprintf("T.`%s` IN %s", field, vs.String()))
+		b.Where(fmt.Sprintf("%s.`%s` IN %s", tableAlias, field, vs.String()))
 	default:
 	}
 }
@@ -211,8 +211,8 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 	if v.Raw != "" {
 		b.Where(fmt.Sprint("(", v.Raw, ")"))
 	}
-	buildWhereRaw(b, v.Field, v.Is)
-	buildWhereRaw(b, v.Field, v.Not)
+	buildWhereRaw(b, "T", v.Field, v.Is)
+	buildWhereRaw(b, "T", v.Field, v.Not)
 	if v.Not != nil {
 		switch vt := v.Not.(type) {
 		case string:
@@ -457,7 +457,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		Warn("[SetConditions]: not found model")
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
-			// Debug("[SetConditions][tag: %s][type: %s]", col.Tag, col.Type.String())
+			Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
 			// join
 			if condition, e := GetCondition(cs, col.ExtTag); e == nil && condition.Join != nil {
 				Debug("[SetConditions][join][table: %s]%v", col.ExtTag, condition)
@@ -1303,13 +1303,14 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 						if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
 							for _, col := range cols {
 								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
+									Debug("[match]join %s.%s", joinTable, joinField)
 									if v.JoinOn != nil {
 										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`%s`", v.Field, joinCount, v.JoinOn[0], joinCount, v.JoinOn[1]))
 									} else {
 										b.Joins(fmt.Sprintf("LEFT JOIN `%s` T%d ON T.`%s` = T%d.`id`", joinTable, joinCount, v.Field, joinCount))
 									}
 									// b.Where(fmt.Sprintf("T%d.`%s`=?", joinCount, joinField), vt.Is.(string))
-									buildWhereRaw(b, fmt.Sprintf("T%d.`%s`", joinCount, joinField), vt.Is)
+									buildWhereRaw(b, fmt.Sprintf("T%d", joinCount), joinField, vt.Is)
 									joinCount++
 									break
 								}
