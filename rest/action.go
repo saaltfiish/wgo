@@ -5,25 +5,27 @@ type Action interface { // 把action定义为一个interface, 这样业务代码
 	OnGet(i interface{}) (interface{}, error)   //获取中
 	PostGet(i interface{}) (interface{}, error) //获取后
 
-	PreSearch(i interface{}) (interface{}, error)  // 搜索前的检查
-	OnSearch(i interface{}) (interface{}, error)   // 搜索前的检查
-	PostSearch(i interface{}) (interface{}, error) // 搜索后的检查
+	PreSearch(i interface{}) (interface{}, error)  // 搜索前
+	OnSearch(i interface{}) (interface{}, error)   // 搜索
+	PostSearch(i interface{}) (interface{}, error) // 搜索后
 
-	PreCreate(i interface{}) (interface{}, error)  // 插入前的检查
-	OnCreate(i interface{}) (interface{}, error)   // 插入前的检查
-	PostCreate(i interface{}) (interface{}, error) // 插入后的处理
+	PreCreate(i interface{}) (interface{}, error)  // 创建前
+	WillCreate(i interface{}) (interface{}, error) // 创建hook
+	OnCreate(i interface{}) (interface{}, error)   // 创建中
+	DidCreate(i interface{}) (interface{}, error)  // 创建hook
+	PostCreate(i interface{}) (interface{}, error) // 创建后
 
-	PreUpdate(i interface{}) (interface{}, error)  // 更新前的检查
-	OnUpdate(i interface{}) (interface{}, error)   // 更新前的检查
-	PostUpdate(i interface{}) (interface{}, error) // 更新后的操作
+	PreUpdate(i interface{}) (interface{}, error)  // 更新前
+	OnUpdate(i interface{}) (interface{}, error)   // 更新中
+	PostUpdate(i interface{}) (interface{}, error) // 更新后
 
-	PreDelete(i interface{}) (interface{}, error)  // 删除前的检查
-	OnDelete(i interface{}) (interface{}, error)   // 删除前的检查
-	PostDelete(i interface{}) (interface{}, error) // 删除后的检查
+	PreDelete(i interface{}) (interface{}, error)  // 删除前
+	OnDelete(i interface{}) (interface{}, error)   // 删除中
+	PostDelete(i interface{}) (interface{}, error) // 删除后
 
-	PreCheck(i interface{}) (interface{}, error)  // 搜索前的检查
-	OnCheck(i interface{}) (interface{}, error)   // 搜索前的检查
-	PostCheck(i interface{}) (interface{}, error) // 搜索后的检查
+	PreCheck(i interface{}) (interface{}, error)  // 搜索前
+	OnCheck(i interface{}) (interface{}, error)   // 搜索中
+	PostCheck(i interface{}) (interface{}, error) // 搜索后
 
 	Trigger(i interface{}) (interface{}, error) //触发器
 	Defer(i interface{})
@@ -156,6 +158,14 @@ func (rest *REST) PreCreate(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
+/* {{{ func (rest *REST) WillCreate(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) WillCreate(i interface{}) (interface{}, error) {
+	return i, nil
+}
+
+/* }}} */
 /* {{{ func (rest *REST) OnCreate(i interface{}) (interface{}, error)
  *
  */
@@ -167,6 +177,14 @@ func (rest *REST) OnCreate(i interface{}) (interface{}, error) {
 		rest.SetModel(r)
 		return r, nil
 	}
+}
+
+/* }}} */
+/* {{{ func (rest *REST) DidCreate(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) DidCreate(i interface{}) (interface{}, error) {
+	return i, nil
 }
 
 /* }}} */
