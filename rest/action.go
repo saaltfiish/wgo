@@ -16,7 +16,9 @@ type Action interface { // 把action定义为一个interface, 这样业务代码
 	PostCreate(i interface{}) (interface{}, error) // 创建后
 
 	PreUpdate(i interface{}) (interface{}, error)  // 更新前
+	WillUpdate(i interface{}) (interface{}, error) // hook
 	OnUpdate(i interface{}) (interface{}, error)   // 更新中
+	DidUpdate(i interface{}) (interface{}, error)  // hook
 	PostUpdate(i interface{}) (interface{}, error) // 更新后
 
 	PreDelete(i interface{}) (interface{}, error)  // 删除前
@@ -212,6 +214,14 @@ func (rest *REST) PreUpdate(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
+/* {{{ func (rest *REST) WillUpdate(i interface{}) (interface{}, error)
+ *
+ */
+func (rest *REST) WillUpdate(i interface{}) (interface{}, error) {
+	return i, nil
+}
+
+/* }}} */
 /* {{{ func (rest *REST) OnUpdate(i interface{}) (interface{}, error)
  *
  */
@@ -228,6 +238,14 @@ func (rest *REST) OnUpdate(i interface{}) (interface{}, error) {
 		}
 		return m, nil
 	}
+}
+
+/* }}} */
+/* {{{ func (rest *REST) DidUpdate(i interface{}) (interface{}, error)
+ *
+ */
+func (rest *REST) DidUpdate(i interface{}) (interface{}, error) {
+	return i, nil
 }
 
 /* }}} */

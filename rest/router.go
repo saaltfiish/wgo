@@ -221,7 +221,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 			return rest.NotOK(err)
 		} else if r, err := action.DidCreate(r); err != nil {
 			c.Error("DidCreate error: %s", err)
-			return rest.BadRequest(err)
+			return rest.NotOK(err)
 		} else { // 已经创建成功, 返回成功
 			if r, err = action.Trigger(r.(Model)); err != nil {
 				c.Warn("Trigger error: %s", err)
@@ -246,8 +246,14 @@ func (r *REST) RESTPatch() wgo.HandlerFunc {
 		if _, err := action.PreUpdate(m); err != nil {
 			c.Warn("PreUpdate error: %s", err)
 			return rest.BadRequest(err)
+		} else if _, err := action.WillUpdate(m); err != nil {
+			c.Error("WillUpdate error: %s", err)
+			return rest.BadRequest(err)
 		} else if r, err := action.OnUpdate(m); err != nil {
 			c.Warn("OnUpdate error: %s", err)
+			return rest.NotOK(err)
+		} else if r, err := action.DidUpdate(r); err != nil {
+			c.Error("DidUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			// 触发器
