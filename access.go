@@ -21,39 +21,35 @@ type (
 	}
 	// access log
 	AccessLog struct {
-		Ts      string   `json:"ts"`   // timestamp
-		Ver     string   `json:"ver"`  // server version
-		Host    string   `json:"host"` // server host
-		Message *Message `json:"message"`
-	}
-
-	Message struct {
-		Service string      `json:"service"` // 服务ID(服务发现管理)
-		SName   string      `json:"sname"`   // 服务名(服务发现管理)
-		Env     string      `json:"env"`     // 服务环境(testing,production等)
-		Proto   string      `json:"proto"`   // 协议 `[ "http", "rpc" ]`
-		ReqID   string      `json:"reqid"`   // request-id, 首次访问由服务端生成, 各端传播
-		Dura    float64     `json:"dura"`    // 持续时间, 单位毫秒
-		Err     int         `json:"err"`     // 错误码(成功为0)
-		Msg     string      `json:"msg"`     // 错误信息
-		CIP     string      `json:"cip"`     // 客户端IP
-		App     *App        `json:"app"`     // 应用程序信息
-		User    *User       `json:"user"`    // 客户信息
-		Call    *Call       `json:"call"`    // 调用信息
-		Ext     interface{} `json:"ext"`     // 额外信息
+		Ts      string  `json:"t"`     // timestamp
+		Ver     string  `json:"v"`     // server version
+		Host    string  `json:"h"`     // server host
+		Service string  `json:"s"`     // 服务ID(服务发现管理)
+		SName   string  `json:"n"`     // 服务名(服务发现管理)
+		Dura    float64 `json:"d"`     // 持续时间, 单位毫秒
+		ReqID   string  `json:"rid"`   // request-id, 首次访问由服务端生成, 各端传播
+		Env     string  `json:"env"`   // 服务环境(testing,production等)
+		Err     int     `json:"err"`   // 错误码(成功为0)
+		Msg     string  `json:"msg"`   // 错误信息
+		CIP     string  `json:"cip"`   // 客户端IP
+		Proto   string  `json:"proto"` // 协议 `[ "http", "rpc" ]`
+		Call    *Call   `json:"call"`  // 调用信息
+		App     *App    `json:"app"`   // 应用程序信息
 	}
 
 	App struct {
-		Query    string `json:"query"`    // http querystring | grpc method
-		Params   string `json:"params"`   // 参数信息
-		Host     string `json:"host"`     // 域名
-		Status   int    `json:"status"`   // 状态码
-		ReqLen   int64  `json:"req_len"`  // 请求长度
-		RespLen  int64  `json:"resp_len"` // 返回长度
-		UA       string `json:"ua"`       // user-agent(最长256字节)
-		Referer  string `json:"referer"`  // referer header(最长128字节)
-		Ct       string `json:"ct"`       // content-type
-		Encoding string `json:"enc"`      // 压缩编码
+		Query    string      `json:"query"`    // http querystring | grpc method
+		Params   string      `json:"params"`   // 参数信息
+		Host     string      `json:"host"`     // 域名
+		Status   int         `json:"status"`   // 状态码
+		ReqLen   int64       `json:"req_len"`  // 请求长度
+		RespLen  int64       `json:"resp_len"` // 返回长度
+		UA       string      `json:"ua"`       // user-agent(最长256字节)
+		Referer  string      `json:"referer"`  // referer header(最长128字节)
+		Ct       string      `json:"ct"`       // content-type
+		Encoding string      `json:"enc"`      // 压缩编码
+		User     *User       `json:"user"`     // 客户信息
+		Ext      interface{} `json:"ext"`      // 额外信息
 	}
 	User struct {
 		IP    string `json:"ip"`    // 用户IP
@@ -70,15 +66,14 @@ type (
 
 func NewAccessLog() *AccessLog {
 	ac := &AccessLog{
-		Ver:  getVersion(),
-		Host: Env().Hostname,
-		Message: &Message{
-			SName:   Env().ServiceName, // 服务名, 这个代码应该'自知'
-			Service: Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
-			Env:     Env().ServiceEnv,  // 服务环境, 这个应该从配置中心拿到
-			App:     &App{},
-			User:    &User{},
-			Call:    &Call{},
+		Ver:     getVersion(),
+		Host:    Env().Hostname,
+		SName:   Env().ServiceName, // 服务名, 这个代码应该'自知'
+		Service: Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
+		Env:     Env().ServiceEnv,  // 服务环境, 这个应该从配置中心拿到
+		Call:    &Call{},
+		App: &App{
+			User: &User{},
 		},
 	}
 	return ac
@@ -87,27 +82,27 @@ func NewAccessLog() *AccessLog {
 // access reset
 func (ac *AccessLog) Reset(t time.Time) {
 	ac.Ts = t.UTC().Format("2006-01-02T15:04:05.000Z07:00")
-	ac.Message.ReqID = ""
-	ac.Message.Dura = 0
-	ac.Message.Err = 0
-	ac.Message.Msg = ""
-	ac.Message.CIP = ""
-	ac.Message.Proto = ""
-	ac.Message.App.Query = ""
-	ac.Message.App.Params = ""
-	ac.Message.App.Host = ""
-	ac.Message.App.Status = 0
-	ac.Message.App.ReqLen = 0
-	ac.Message.App.RespLen = 0
-	ac.Message.App.UA = ""
-	ac.Message.App.Referer = ""
-	ac.Message.User.IP = ""
-	ac.Message.User.Id = ""
-	ac.Message.User.ExtId = ""
-	ac.Message.User.Sid = ""
-	ac.Message.Call.Depth = 0
-	ac.Message.Call.From = ""
-	ac.Message.Call.To = ""
+	ac.ReqID = ""
+	ac.Dura = 0
+	ac.Err = 0
+	ac.Msg = ""
+	ac.CIP = ""
+	ac.Proto = ""
+	ac.Call.Depth = 0
+	ac.Call.From = ""
+	ac.Call.To = ""
+	ac.App.Query = ""
+	ac.App.Params = ""
+	ac.App.Host = ""
+	ac.App.Status = 0
+	ac.App.ReqLen = 0
+	ac.App.RespLen = 0
+	ac.App.UA = ""
+	ac.App.Referer = ""
+	ac.App.User.IP = ""
+	ac.App.User.Id = ""
+	ac.App.User.ExtId = ""
+	ac.App.User.Sid = ""
 }
 
 // 获取版本号
@@ -139,40 +134,40 @@ func Access() MiddlewareFunc {
 			// error
 			if err != nil {
 				if se, ok := err.(*server.ServerError); ok {
-					ac.Message.Err = se.Status()
-					ac.Message.Msg = se.Error()
+					ac.Err = se.Status()
+					ac.Msg = se.Error()
 				} else {
-					ac.Message.Err = -1
-					ac.Message.Msg = err.Error()
+					ac.Err = -1
+					ac.Msg = err.Error()
 				}
 			}
 			// server mode
-			ac.Message.Proto = c.ServerMode()
+			ac.Proto = c.ServerMode()
 			// client ip
-			ac.Message.CIP = c.ClientIP()
+			ac.CIP = c.ClientIP()
 			// request id
-			ac.Message.ReqID = c.RequestID()
+			ac.ReqID = c.RequestID()
 			// dura
-			ac.Message.Dura = utils.Round(c.Sub().Seconds()*1000, 3)
-			// ext
-			ac.Message.Ext = c.Ext()
-			// app
-			ac.Message.App.Query = c.Query()
-			ac.Message.App.Params = c.Params()
-			ac.Message.App.Host = c.Host()
-			ac.Message.App.Status = c.Status()
-			ac.Message.App.ReqLen = c.ReqLen()
-			ac.Message.App.RespLen = c.RespLen()
-			ac.Message.App.UA = c.UserAgent()
-			ac.Message.App.Referer = c.Referer()
-			ac.Message.App.Ct = c.ContentType()
-			ac.Message.App.Encoding = c.ContentEncoding()
-			// user
-			ac.Message.User.IP = c.UserIP()
-			ac.Message.User.Id = c.UserID()
+			ac.Dura = utils.Round(c.Sub().Seconds()*1000, 3)
 			// call
-			ac.Message.Call.Depth = c.Depth()
-			ac.Message.Call.From = c.From()
+			ac.Call.Depth = c.Depth()
+			ac.Call.From = c.From()
+			// ext
+			ac.App.Ext = c.Ext()
+			// app
+			ac.App.Query = c.Query()
+			ac.App.Params = c.Params()
+			ac.App.Host = c.Host()
+			ac.App.Status = c.Status()
+			ac.App.ReqLen = c.ReqLen()
+			ac.App.RespLen = c.RespLen()
+			ac.App.UA = c.UserAgent()
+			ac.App.Referer = c.Referer()
+			ac.App.Ct = c.ContentType()
+			ac.App.Encoding = c.ContentEncoding()
+			// user
+			ac.App.User.IP = c.UserIP()
+			ac.App.User.Id = c.UserID()
 
 			if sa, err := json.Marshal(ac); err != nil {
 				c.Logger().Error("serialize access data failed: %s", err)
