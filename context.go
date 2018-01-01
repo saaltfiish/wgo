@@ -225,7 +225,9 @@ func (c *Context) Params() string {
 func (c *Context) Host() string {
 	switch c.ServerMode() {
 	case "http", "https", "whttp":
-		return c.Request().(whttp.Request).Host()
+		if host, _, err := net.SplitHostPort(c.Request().(whttp.Request).Host()); err == nil {
+			return host
+		}
 	case "rpc", "wrpc", "grpc":
 	default:
 	}
