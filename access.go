@@ -21,46 +21,46 @@ type (
 	}
 	// access log
 	AccessLog struct {
-		Ts      string  `json:"t"`     // timestamp
-		Ver     string  `json:"v"`     // server version
-		Host    string  `json:"h"`     // server host
-		Service string  `json:"s"`     // 服务ID(服务发现管理)
-		SName   string  `json:"n"`     // 服务名(服务发现管理)
-		Dura    float64 `json:"d"`     // 持续时间, 单位毫秒
-		ReqID   string  `json:"rid"`   // request-id, 首次访问由服务端生成, 各端传播
-		Env     string  `json:"env"`   // 服务环境(testing,production等)
-		Err     int     `json:"err"`   // 错误码(成功为0)
-		Msg     string  `json:"msg"`   // 错误信息
-		CIP     string  `json:"cip"`   // 客户端IP
-		Proto   string  `json:"proto"` // 协议 `[ "http", "rpc" ]`
-		Call    *Call   `json:"call"`  // 调用信息
-		App     *App    `json:"app"`   // 应用程序信息
+		Ts      string  `json:"t,omitempty"`     // timestamp
+		Ver     string  `json:"v,omitempty"`     // server version
+		Host    string  `json:"h,omitempty"`     // server host
+		Service string  `json:"s,omitempty"`     // 服务ID(服务发现管理)
+		SName   string  `json:"n,omitempty"`     // 服务名(服务发现管理)
+		Dura    float64 `json:"d"`               // 持续时间, 单位毫秒
+		ReqID   string  `json:"rid,omitempty"`   // request-id, 首次访问由服务端生成, 各端传播
+		Env     string  `json:"env,omitempty"`   // 服务环境(testing,production等)
+		Err     int     `json:"err"`             // 错误码(成功为0)
+		Msg     string  `json:"msg,omitempty"`   // 错误信息
+		CIP     string  `json:"cip,omitempty"`   // 客户端IP
+		Proto   string  `json:"proto,omitempty"` // 协议 `[ "http", "rpc" ]`
+		Call    Call    `json:"call,omitempty"`  // 调用信息
+		App     App     `json:"app,omitempty"`   // 应用程序信息
 	}
 
 	App struct {
-		Query    string      `json:"query"`    // http querystring | grpc method
-		Params   string      `json:"params"`   // 参数信息
-		Host     string      `json:"host"`     // 域名
-		Status   int         `json:"status"`   // 状态码
-		ReqLen   int64       `json:"req_len"`  // 请求长度
-		RespLen  int64       `json:"resp_len"` // 返回长度
-		UA       string      `json:"ua"`       // user-agent(最长256字节)
-		Referer  string      `json:"referer"`  // referer header(最长128字节)
-		Ct       string      `json:"ct"`       // content-type
-		Encoding string      `json:"enc"`      // 压缩编码
-		User     *User       `json:"user"`     // 客户信息
-		Ext      interface{} `json:"ext"`      // 额外信息
+		Query    string      `json:"query,omitempty"`   // http querystring | grpc method
+		Params   string      `json:"params,omitempty"`  // 参数信息
+		Host     string      `json:"host,omitempty"`    // 域名
+		Status   int         `json:"status"`            // 状态码
+		ReqLen   int64       `json:"req_len"`           // 请求长度
+		RespLen  int64       `json:"resp_len"`          // 返回长度
+		UA       string      `json:"ua,omitempty"`      // user-agent(最长256字节)
+		Referer  string      `json:"referer,omitempty"` // referer header(最长128字节)
+		Ct       string      `json:"ct,omitempty"`      // content-type
+		Encoding string      `json:"enc,omitempty"`     // 压缩编码
+		User     User        `json:"user,omitempty"`    // 客户信息
+		Ext      interface{} `json:"ext,omitempty"`     // 额外信息
 	}
 	User struct {
-		IP    string `json:"ip"`    // 用户IP
-		Id    string `json:"id"`    // 用户ID
-		ExtId string `json:"extid"` // 第三方id,openid等
-		Sid   string `json:"sid"`   // session-id
+		IP    string `json:"ip,omitempty"`     // 用户IP
+		Id    string `json:"id,omitempty"`     // 用户ID
+		ExtId string `json:"ext_id,omitempty"` // 第三方id,openid等
+		Sid   string `json:"sid,omitempty"`    // session-id
 	}
 	Call struct {
-		Depth uint64 `json:"depth"` // 调用深度, 收到请求后+1
-		From  string `json:"from"`  // 调用端服务ID(服务发现管理), 可为空
-		To    string `json:"to"`    // 向下调用服务ID, 如果有多个, 用逗号分隔
+		Depth uint64 `json:"depth"`          // 调用深度, 收到请求后+1
+		From  string `json:"from,omitempty"` // 调用端服务ID(服务发现管理), 可为空
+		To    string `json:"to,omitempty"`   // 向下调用服务ID, 如果有多个, 用逗号分隔
 	}
 )
 
@@ -71,9 +71,9 @@ func NewAccessLog() *AccessLog {
 		SName:   Env().ServiceName, // 服务名, 这个代码应该'自知'
 		Service: Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
 		Env:     Env().ServiceEnv,  // 服务环境, 这个应该从配置中心拿到
-		Call:    &Call{},
-		App: &App{
-			User: &User{},
+		Call:    Call{},
+		App: App{
+			User: User{},
 		},
 	}
 	return ac
