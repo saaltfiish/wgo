@@ -110,7 +110,7 @@ func getVersion() (ver string) {
 	if Env().ServiceVer != "" {
 		return Env().ServiceVer
 	}
-	return "nover"
+	return "unknown"
 }
 
 // 记录access日志
