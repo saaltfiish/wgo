@@ -154,10 +154,8 @@ func (c *Context) ServeContent(content io.ReadSeeker, name string, modtime time.
 // found.
 func ContentTypeByExtension(name string) (t string) {
 	if t = mime.TypeByExtension(filepath.Ext(name)); t == "" {
-		Info("not found mime type for : %s", filepath.Ext(name))
 		t = whttp.MIMEOctetStream
 	}
-	Info("name: %s, ext: %s, type: %s", name, filepath.Ext(name), t)
 	return
 }
 
