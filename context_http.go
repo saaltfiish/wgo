@@ -156,7 +156,7 @@ func ContentTypeByExtension(name string) (t string) {
 	if t = mime.TypeByExtension(filepath.Ext(name)); t == "" {
 		t = whttp.MIMEOctetStream
 	}
-	Info("name: %s, type: %s", name, t)
+	Info("name: %s, ext: %s, type: %s", name, filepath.Ext(name), t)
 	return
 }
 
