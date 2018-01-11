@@ -11,7 +11,8 @@ const (
 	GM_PUT
 	GM_HEAD
 
-	GM_ALL = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT
+	GM_ALL  = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT
+	GM_NONE = 0
 
 	//env key
 	RequestIDKey      = "_reqid_"
