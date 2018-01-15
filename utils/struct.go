@@ -41,31 +41,41 @@ func ReadStructFields(i interface{}, def bool, tags ...string) (fields StructFie
 	if t := toType(i); t.Kind() != reflect.Struct {
 		return
 	} else {
-		return typeStructFields(t, def, []int{}, tags...)
+		return typeStructFields(t, def, []int{}, "", tags...)
 	}
 }
 
 /* }}} */
 
-/* {{{ func typeStructFields(t reflect.Type, def bool, idx []int, tags ...string) (fields []StructField)
+/* {{{ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags ...string) (fields StructFields)
  * 从struct中读取字段名
  */
-func typeStructFields(t reflect.Type, def bool, idx []int, tags ...string) (fields StructFields) {
+func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags ...string) (fields StructFields) {
 	n := t.NumField()
 	for i := 0; i < n; i++ {
 		index := append(idx, i)
 		f := t.Field(i)
-		field := StructField{
-			Type:  f.Type,
-			Index: index,
-		}
 		//fmt.Printf("type: %v, org: %v\n", f.Type.Elem().Kind(), f.Type)
+		// prefix逐级递增继承, 除非设置了prefix:",skip"
+		pf := prefix
+		if pfs := f.Tag.Get("prefix"); pfs != "" {
+			p, po := ParseTag(pfs)
+			if po.Contains("skip") {
+				pf = p
+			} else {
+				pf += p
+			}
+		}
 		if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct , 也就是嵌套
 			// Recursively add nested fields in embedded structs.
-			//subfields := typeStructFields(f.Type, def, index, tags...)
+			nestedFields := typeStructFields(f.Type, def, index, pf, tags...)
 			//field.SubFields = subfields
-			continue
+			fields = append(fields, nestedFields...)
 		} else {
+			field := StructField{
+				Type:  f.Type,
+				Index: index,
+			}
 			// parse tag
 			ts := make(map[string]Tag)
 			if len(tags) > 0 {
@@ -73,11 +83,13 @@ func typeStructFields(t reflect.Type, def bool, idx []int, tags ...string) (fiel
 					if tagString := f.Tag.Get(key); tagString != "" {
 						tn, tops := ParseTag(tagString)
 						if tn == "" && def { // tag name没有指定并且def ==true, 则用字段名转下划线方式为tag name
-							tn = Underscore(f.Name)
+							tn = pf + Underscore(f.Name)
+						} else {
+							tn += pf
 						}
 						ts[key] = Tag{Name: tn, Options: tops}
 					} else if def { // 给个默认
-						ts[key] = Tag{Name: Underscore(f.Name)}
+						ts[key] = Tag{Name: pf + Underscore(f.Name)}
 					} else {
 						ts[key] = Tag{}
 					}
@@ -88,19 +100,19 @@ func typeStructFields(t reflect.Type, def bool, idx []int, tags ...string) (fiel
 			field.Tags = ts
 			if f.Type.String() != "*time.Time" && f.Type.Kind() == reflect.Ptr && f.Type.Elem().Kind() == reflect.Struct {
 				//fmt.Printf("type: %v\n", f.Type.Elem())
-				field.SubFields = typeStructFields(f.Type.Elem(), def, index, tags...)
+				field.SubFields = typeStructFields(f.Type.Elem(), def, index, pf, tags...)
 			} else if f.Type.String() != "time.Time" && f.Type.Kind() == reflect.Struct {
-				field.SubFields = typeStructFields(f.Type, def, index, tags...)
+				field.SubFields = typeStructFields(f.Type, def, index, pf, tags...)
 			} else if f.Type.Kind() == reflect.Slice {
 				mt := f.Type.Elem() // member type
 				if mt.String() != "*time.Time" && mt.Kind() == reflect.Ptr && mt.Elem().Kind() == reflect.Struct {
-					field.SubFields = typeStructFields(mt.Elem(), def, index, tags...)
+					field.SubFields = typeStructFields(mt.Elem(), def, index, pf, tags...)
 				} else if mt.String() != "time.Time" && mt.Kind() == reflect.Struct {
-					field.SubFields = typeStructFields(mt, def, index, tags...)
+					field.SubFields = typeStructFields(mt, def, index, pf, tags...)
 				}
 			}
+			fields = append(fields, field)
 		}
-		fields = append(fields, field)
 	}
 	return
 }
