@@ -58,17 +58,18 @@ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags .
 		//fmt.Printf("type: %v, org: %v\n", f.Type.Elem().Kind(), f.Type)
 		// prefix逐级递增继承, 除非设置了prefix:",skip"
 		pf := prefix
+		npf := "" // next prefix
 		if pfs := f.Tag.Get("prefix"); pfs != "" {
 			p, po := ParseTag(pfs)
-			if po.Contains("skip") {
-				pf = p
+			if po.Contains("skip") { // 忽略上级prefix
+				pf = ""
 			} else {
-				pf += p
+				npf = pf + p
 			}
 		}
 		if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct , 也就是嵌套
 			// Recursively add nested fields in embedded structs.
-			nestedFields := typeStructFields(f.Type, def, index, pf, tags...)
+			nestedFields := typeStructFields(f.Type, def, index, npf, tags...)
 			//field.SubFields = subfields
 			fields = append(fields, nestedFields...)
 		} else {
@@ -100,15 +101,15 @@ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags .
 			field.Tags = ts
 			if f.Type.String() != "*time.Time" && f.Type.Kind() == reflect.Ptr && f.Type.Elem().Kind() == reflect.Struct {
 				//fmt.Printf("type: %v\n", f.Type.Elem())
-				field.SubFields = typeStructFields(f.Type.Elem(), def, index, pf, tags...)
+				field.SubFields = typeStructFields(f.Type.Elem(), def, index, npf, tags...)
 			} else if f.Type.String() != "time.Time" && f.Type.Kind() == reflect.Struct {
-				field.SubFields = typeStructFields(f.Type, def, index, pf, tags...)
+				field.SubFields = typeStructFields(f.Type, def, index, npf, tags...)
 			} else if f.Type.Kind() == reflect.Slice {
 				mt := f.Type.Elem() // member type
 				if mt.String() != "*time.Time" && mt.Kind() == reflect.Ptr && mt.Elem().Kind() == reflect.Struct {
-					field.SubFields = typeStructFields(mt.Elem(), def, index, pf, tags...)
+					field.SubFields = typeStructFields(mt.Elem(), def, index, npf, tags...)
 				} else if mt.String() != "time.Time" && mt.Kind() == reflect.Struct {
-					field.SubFields = typeStructFields(mt, def, index, pf, tags...)
+					field.SubFields = typeStructFields(mt, def, index, npf, tags...)
 				}
 			}
 			fields = append(fields, field)
