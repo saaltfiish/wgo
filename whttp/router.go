@@ -608,7 +608,6 @@ func (r *Router) Find(method, path string, pvalues []string) *RouteNode {
 		// Param node
 	Param:
 		if c = cn.findChildByKind(pkind); c != nil {
-			// Issue #378
 			if len(pvalues) == n {
 				continue
 			}

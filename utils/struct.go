@@ -67,7 +67,7 @@ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags .
 				npf = pf + p
 			}
 		}
-		if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct , 也就是嵌套
+		if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct, 层级为当前
 			// Recursively add nested fields in embedded structs.
 			nestedFields := typeStructFields(f.Type, def, index, npf, tags...)
 			//field.SubFields = subfields
