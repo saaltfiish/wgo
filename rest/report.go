@@ -387,6 +387,7 @@ func (rpt *Report) Build() (r Result, err error) {
 
 	// 收获!
 	var result *elastic.SearchResult
+	rpt.rest.Info("search: %+v", rpt.search)
 	result, err = rpt.search.Do(context.Background())
 	if err != nil {
 		return
