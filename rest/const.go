@@ -10,8 +10,9 @@ const (
 	GM_PATCH
 	GM_PUT
 	GM_HEAD
+	GM_RPT
 
-	GM_ALL  = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT
+	GM_ALL  = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT | GM_RPT
 	GM_NONE = 0
 
 	//env key
@@ -26,6 +27,7 @@ const (
 	LogPrefixKey      = "_prefix_"
 	EndpointKey       = "_endpoint_"
 	RowkeyKey         = "_rk_"
+	RptKey            = "_rpt_"
 	SelectorKey       = "_selector_"
 	MimeTypeKey       = "_mimetype_"
 	DispositionMTKey  = "_dmt_"

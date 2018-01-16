@@ -125,6 +125,10 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) {
 		// GET /{endpoint}
 		wgo.GET("/"+endpoint, rest.RESTSearch(), ms...)
 	}
+	if flag&GM_RPT > 0 {
+		// GET /{endpoint}/{rpt_tag}
+		wgo.GET("/"+endpoint+"/:"+RptKey, rest.RESTSearch(), ms...)
+	}
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
 		wgo.POST("/"+endpoint, rest.RESTPost(), ms...)
