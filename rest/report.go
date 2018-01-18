@@ -94,8 +94,11 @@ type Aggregations []*Aggregation
 
 // NewReport
 func (rest *REST) NewReport(base interface{}, params ...string) *Report {
-	sf := utils.ReadStructFields(base, true, "field", RPT_TAG) // 读field, report两种tag
-	fields := utils.ScanStructFields(sf, "field", "", "")
+	sf := utils.ReadStructFields(base, true, FIELD_TAG, RPT_TAG) // 读json, report两种tag
+	fields := utils.ScanStructFields(sf, FIELD_TAG, "", "")
+	// for _, f := range fields {
+	// 	rest.Info("field: %s, report: %s", f.Tags[FIELD_TAG].Name, f.Tags["report"].Name)
+	// }
 	rpt := &Report{
 		base:       base,
 		fields:     fields,
@@ -171,7 +174,7 @@ func (rpt *Report) SearchFieldName(rf string, opts ...string) string {
 		tag = opts[0]
 	}
 	field := rpt.Field(rf, tag)
-	return field.Tags["field"].Name
+	return field.Tags[FIELD_TAG].Name
 }
 
 // report type
@@ -339,6 +342,7 @@ func (rpt *Report) Build() (r Result, err error) {
 	if rpt.id == "" { // 搜索查询
 		// build aggs
 		tsField := rpt.SearchFieldName(rpt.timestamp.field)
+		// rpt.rest.Context().Info("ts field: %s", tsField)
 		// start/end
 		rpt.search = rpt.search.Aggregation(RTKEY_START, MinAgg(tsField)).Aggregation(RTKEY_END, MaxAgg(tsField))
 
@@ -349,7 +353,7 @@ func (rpt *Report) Build() (r Result, err error) {
 			if len(rpt.aggregations) > 0 {
 				rpt.dimensions = rpt.dimensions.Increase()
 				for _, agg := range rpt.aggregations {
-					//rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
+					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
 					tmp = tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
 				}
 			}
@@ -367,7 +371,7 @@ func (rpt *Report) Build() (r Result, err error) {
 				field := rpt.Field(agg.field, tag)
 				switch rtype := reportType(field); rtype {
 				case RPT_SUM, RPT_TERM: // 只有sum, term才能做summary
-					//rpt.rest.Info("summary field: %s", agg.field)
+					// rpt.rest.Info("summary field: %s", agg.field)
 					rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, ""))
 				}
 			}
@@ -385,9 +389,10 @@ func (rpt *Report) Build() (r Result, err error) {
 		}
 	}
 
+	//rpt.rest.Info("reporter: %s", rpt)
+
 	// 收获!
 	var result *elastic.SearchResult
-	rpt.rest.Info("search: %+v", rpt.search)
 	result, err = rpt.search.Do(context.Background())
 	if err != nil {
 		return
@@ -413,12 +418,12 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 	}
 	// start/end
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
-		//rpt.rest.Info("end time: %s", sv.ValueAsString)
+		// rpt.rest.Info("end time: %s", sv.ValueAsString)
 		st, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", sv.ValueAsString)
 		rpt.Info.Start = st.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
 	if ev, found := result.Aggregations.MaxBucket(RTKEY_END); found && ev.ValueAsString != "" {
-		//rpt.rest.Info("end time: %s", ev.ValueAsString)
+		// rpt.rest.Info("end time: %s", ev.ValueAsString)
 		et, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", ev.ValueAsString)
 		rpt.Info.End = et.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
@@ -477,10 +482,10 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 			tr[RTKEY_DATE] = *intvlBucket.KeyAsString
 			if len(rpt.aggregations) > 0 {
 				for _, agg := range rpt.aggregations {
-					//rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
+					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
 					tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
 					if tr[agg.field] != nil && len(tr[agg.field].(Result)) > 0 {
-						//rpt.rest.Context().Info("result: %v", tr[agg.field])
+						// rpt.rest.Context().Info("result: %v", tr[agg.field])
 						empty = false
 					}
 				}
@@ -528,17 +533,17 @@ func (rpt *Report) prepare() error {
 		rpt.rangeQuery()
 
 		if cons := r.GetEnv(ConditionsKey); cons != nil {
-			//rpt.rest.Context().Info("cons: %d", len(cons.([]*Condition)))
+			// rpt.rest.Context().Info("cons: %d", len(cons.([]*Condition)))
 			for _, con := range cons.([]*Condition) {
 				if con.Is != nil && utils.InSliceIgnorecase(con.Field, rpt.params) {
 					// 参数的查询条件
 					field := rpt.Field(con.Field, RPT_TAG)
-					//rpt.rest.Context().Info("field: %s(%s), type: %s", con.Field, sfn, reportType(field))
+					// rpt.rest.Context().Info("field: %s(%s), type: %s", con.Field, sfn, reportType(field))
 					switch rtype := reportType(field); rtype {
 					case RPT_SEARCH:
 						rpt.matchPhraseQuery(con.Field, con.Is)
 					case RPT_TERM:
-						//rpt.rest.Context().Info("condition. field: %s, value: %s", con.Field, con.Is)
+						// rpt.rest.Context().Info("condition. field: %s, value: %s", con.Field, con.Is)
 						rpt.termsQuery(con.Field, con.Is)
 					}
 				}
@@ -613,7 +618,7 @@ func (rpt *Report) termsQuery(field string, text interface{}) {
 	}
 	f := rpt.Field(field, RPT_TAG)
 	sfn := rpt.SearchFieldName(field, RPT_TAG)
-	//rpt.rest.Info("[termsQuery] field: %s, text: %#q", field, text)
+	// rpt.rest.Info("[termsQuery] field: %s, text: %#q", field, text)
 	v := []interface{}{}
 	switch text.(type) {
 	case string:
@@ -635,7 +640,7 @@ func (rpt *Report) termsQuery(field string, text interface{}) {
 	if f.Path != "" { // nested
 		rpt.qs = append(rpt.qs, elastic.NewNestedQuery(f.Path, elastic.NewTermsQuery(sfn, v...)))
 	} else {
-		//rpt.rest.Info("terms query, field: %s, value: %#q", sfn, v)
+		// rpt.rest.Info("terms query, field: %s, value: %#q", sfn, v)
 		rpt.qs = append(rpt.qs, elastic.NewTermsQuery(sfn, v...))
 	}
 }
@@ -922,4 +927,62 @@ func (r Result) Hits() *elastic.SearchHits {
 		return hits.(*elastic.SearchHits)
 	}
 	return nil
+}
+
+// 自动根据传入对象的结构, 解析数据, 略牛
+func (r Result) ExtractTo(ob interface{}) interface{} {
+	if fs := utils.ReadStructFields(ob, true, FIELD_TAG, RPT_TAG); fs != nil {
+		for _, f := range fs {
+			if len(f.SubFields) <= 0 { // 尝试解析赋值
+				if p := r.Property(f.Tags[RPT_TAG].Name); p != nil {
+					switch v := p.(type) {
+					case string:
+						// Info("%s is string, value: %s", f.Tags[RPT_TAG].Name, v)
+						ob = utils.Instance(ob)
+						fv := utils.FieldByIndex(reflect.ValueOf(ob), f.Index)
+						switch f.Type.String() {
+						case "string":
+							fv.Set(reflect.ValueOf(v))
+						case "*string":
+							fv.Set(reflect.ValueOf(&v))
+						}
+					case int:
+						// Info("%s is int, value: %d", f.Tags[RPT_TAG].Name, v)
+						ob = utils.Instance(ob)
+						fv := utils.FieldByIndex(reflect.ValueOf(ob), f.Index)
+						switch f.Type.String() {
+						case "int64":
+							fv.Set(reflect.ValueOf(int64(v)))
+						case "*int64":
+							vv := int64(v)
+							fv.Set(reflect.ValueOf(&vv))
+						case "int":
+							fv.Set(reflect.ValueOf(v))
+						case "*int":
+							fv.Set(reflect.ValueOf(&v))
+						default:
+							Error("%s's type not match int: %s", f.Tags[RPT_TAG].Name, f.Type.String())
+						}
+					default:
+						Error("%s unknown type, value: %+v", v)
+					}
+				}
+			} else { // struct, 继续解析
+				// Info("struct field: %+v, %+v", f.Type, f.Tags[RPT_TAG].Name, f.SubFields)
+				ob = utils.Instance(ob)
+				fv := utils.FieldByIndex(reflect.ValueOf(ob), f.Index)
+				// nob := r.ExtractTo(reflect.Indirect(reflect.New(fv.Type())).Interface())
+				nob := r.ExtractTo(reflect.Zero(fv.Type()).Interface())
+				if !utils.IsEmptyValue(reflect.ValueOf(nob)) {
+					if fv.Type().Kind() == reflect.Ptr {
+						fv.Set(reflect.ValueOf(nob))
+					} else {
+						fv.Set(reflect.ValueOf(nob).Elem())
+					}
+				}
+			}
+		}
+	}
+	// Info("extrac: %+v", ob)
+	return ob
 }

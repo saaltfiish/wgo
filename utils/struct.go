@@ -14,6 +14,11 @@ type Tag struct {
 	Options TagOptions
 }
 
+type Prefix struct {
+	Tag   string // 针对某个tag的prefix, 如果为空则为全部
+	Value string // prefix内容
+}
+
 type StructField struct {
 	Name      string
 	Type      reflect.Type
@@ -55,6 +60,10 @@ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags .
 	for i := 0; i < n; i++ {
 		index := append(idx, i)
 		f := t.Field(i)
+		if fc := f.Name[0]; fc < 'A' || fc > 'Z' {
+			// 非大写, 略过
+			continue
+		}
 		//fmt.Printf("type: %v, org: %v\n", f.Type.Elem().Kind(), f.Type)
 		// prefix逐级递增继承, 除非设置了prefix:",skip"
 		pf := prefix
@@ -83,10 +92,11 @@ func typeStructFields(t reflect.Type, def bool, idx []int, prefix string, tags .
 				for _, key := range tags {
 					if tagString := f.Tag.Get(key); tagString != "" {
 						tn, tops := ParseTag(tagString)
-						if tn == "" && def { // tag name没有指定并且def ==true, 则用字段名转下划线方式为tag name
+						if key == "json" && tn != "" { // json 忽略prefix
+						} else if tn == "" && def { // tag name没有指定并且def ==true, 则用字段名转下划线方式为tag name
 							tn = pf + Underscore(f.Name)
 						} else {
-							tn += pf
+							tn = pf + tn
 						}
 						ts[key] = Tag{Name: tn, Options: tops}
 					} else if def { // 给个默认
@@ -447,3 +457,15 @@ func FieldExists(i interface{}, f string) bool {
 }
 
 /* }}} */
+
+// 确保一个struct指针不为空
+func Instance(ob interface{}) interface{} {
+	if IsEmptyValue(reflect.ValueOf(ob)) {
+		if reflect.TypeOf(ob).Kind() == reflect.Ptr {
+			return reflect.New(reflect.TypeOf(ob).Elem()).Interface()
+		} else {
+			return reflect.New(reflect.TypeOf(ob)).Interface()
+		}
+	}
+	return ob
+}

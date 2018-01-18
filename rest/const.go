@@ -122,7 +122,8 @@ const (
 	CTYPE_RAW
 
 	// report
-	RPT_TAG = "report"
+	FIELD_TAG = "json"
+	RPT_TAG   = "report"
 
 	RPT_NESTED = "nested"
 	RPT_TERM   = "term"

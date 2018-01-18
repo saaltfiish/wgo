@@ -24,7 +24,7 @@ pipeline:
     repo: docker.for.mac.localhost:5001/arch/wgo
     insecure: true
     tags: [ local ]
-    dockerfile: Dockerfile
+    dockerfile: docker/Dockerfile
     #debug: true
     when:
       event: [ local ]
@@ -35,7 +35,7 @@ pipeline:
     repo: registry.cn-hangzhou.aliyuncs.com/gladsheim/wgo
     secrets: [ docker_username, docker_password ]
     tags: [ latest ]
-    dockerfile: Dockerfile
+    dockerfile: docker/Dockerfile
     when:
       event: [ push, tag ]
 
