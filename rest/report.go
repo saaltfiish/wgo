@@ -930,10 +930,19 @@ func (r Result) Hits() *elastic.SearchHits {
 }
 
 // 自动根据传入对象的结构, 解析数据, 略牛
-func (r Result) ExtractTo(ob interface{}) interface{} {
-	if fs := utils.ReadStructFields(ob, true, FIELD_TAG, RPT_TAG); fs != nil {
+func (r Result) ExtractTo(ob interface{}, ifs ...utils.StructField) (interface{}, bool) {
+	// Info("results: %+v", r)
+	found := false
+	var fs utils.StructFields
+	if len(ifs) > 0 {
+		fs = utils.StructFields(ifs)
+	} else {
+		fs = utils.ReadStructFields(ob, true, FIELD_TAG, RPT_TAG)
+	}
+	if fs != nil {
 		for _, f := range fs {
 			if len(f.SubFields) <= 0 { // 尝试解析赋值
+				// Info("report field: %s", f.Tags[RPT_TAG].Name)
 				if p := r.Property(f.Tags[RPT_TAG].Name); p != nil {
 					switch v := p.(type) {
 					case string:
@@ -945,6 +954,8 @@ func (r Result) ExtractTo(ob interface{}) interface{} {
 							fv.Set(reflect.ValueOf(v))
 						case "*string":
 							fv.Set(reflect.ValueOf(&v))
+						default:
+							Error("%s's type not match int: %s", f.Tags[RPT_TAG].Name, f.Type.String())
 						}
 					case int:
 						// Info("%s is int, value: %d", f.Tags[RPT_TAG].Name, v)
@@ -966,23 +977,37 @@ func (r Result) ExtractTo(ob interface{}) interface{} {
 					default:
 						Error("%s unknown type, value: %+v", v)
 					}
+					found = true
 				}
 			} else { // struct, 继续解析
 				// Info("struct field: %+v, %+v", f.Type, f.Tags[RPT_TAG].Name, f.SubFields)
 				ob = utils.Instance(ob)
 				fv := utils.FieldByIndex(reflect.ValueOf(ob), f.Index)
-				// nob := r.ExtractTo(reflect.Indirect(reflect.New(fv.Type())).Interface())
-				nob := r.ExtractTo(reflect.Zero(fv.Type()).Interface())
-				if !utils.IsEmptyValue(reflect.ValueOf(nob)) {
-					if fv.Type().Kind() == reflect.Ptr {
-						fv.Set(reflect.ValueOf(nob))
-					} else {
-						fv.Set(reflect.ValueOf(nob).Elem())
-					}
+				// fv.Set(reflect.ValueOf(utils.Instance(reflect.Indirect(reflect.New(fv.Type())).Interface())))
+				if fv.Type().Kind() == reflect.Ptr {
+					fv.Set(reflect.ValueOf(utils.Instance(reflect.Indirect(reflect.New(fv.Type())).Interface())))
+				} else {
+					fv.Set(reflect.ValueOf(utils.Instance(reflect.Indirect(reflect.New(fv.Type())).Interface())).Elem())
 				}
+				if _, f := r.ExtractTo(ob, f.SubFields...); !f { //  如果没有找到, 置为空值
+					fv.Set(reflect.Zero(fv.Type()))
+				} else {
+					found = true
+				}
+				// nob := r.ExtractTo(reflect.Indirect(reflect.New(fv.Type())).Interface(), f.SubFields...)
+				// // nob := r.ExtractTo(reflect.Zero(fv.Type()).Interface(), f.SubFields...)
+				// if !utils.IsEmptyValue(reflect.ValueOf(nob)) {
+				// 	if fv.Type().Kind() == reflect.Ptr {
+				// 		fv.Set(reflect.ValueOf(nob))
+				// 	} else {
+				// 		fv.Set(reflect.ValueOf(nob).Elem())
+				// 	}
+				// }
 			}
 		}
+	} else {
+		Info("extrac erro: %+v", ob)
 	}
 	// Info("extrac: %+v", ob)
-	return ob
+	return ob, found
 }
