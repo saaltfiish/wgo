@@ -6,8 +6,6 @@ import (
 
 // wgo
 const (
-	VERSION = "0.9.4"
-
 	MODE_HTTP  = "http"
 	MODE_HTTPS = "https"
 	MODE_RPC   = "rpc"
