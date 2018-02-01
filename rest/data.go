@@ -19,8 +19,8 @@ var (
 
 //出/入库转换器
 type SelfConverter interface {
-	ToDb() (interface{}, error)                    //入库
-	FromDb(interface{}) (gorp.CustomScanner, bool) //出库
+	ToDb() (interface{}, error)                                             //入库
+	FromDb(interface{}) (interface{}, func(interface{}, interface{}) error) //出库
 }
 
 type BaseConverter struct{}
@@ -109,7 +109,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case *time.Time:
 		binder := func(holder, target interface{}) error {
 			var err error
@@ -136,7 +136,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case **[]string:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -153,7 +153,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case *[]string:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -169,7 +169,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case **map[string]string:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -183,7 +183,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case *map[string]string:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -197,7 +197,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case **map[string]interface{}:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -212,7 +212,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case *map[string]interface{}:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -227,7 +227,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case *map[interface{}]interface{}:
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
@@ -242,34 +242,35 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case **string:
 		binder := func(holder, target interface{}) error {
 			*t = &holder.(*sql.NullString).String
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	case **float64:
 		binder := func(holder, target interface{}) error {
 			*t = &holder.(*sql.NullFloat64).Float64
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullFloat64), target, binder}, true
-
+		return gorp.CustomScanner{Holder: new(sql.NullFloat64), Target: target, Binder: binder}, true
 	case **int64:
 		binder := func(holder, target interface{}) error {
 			*t = &holder.(*sql.NullInt64).Int64
 			return nil
 		}
-		return gorp.CustomScanner{new(sql.NullInt64), target, binder}, true
+		return gorp.CustomScanner{Holder: new(sql.NullInt64), Target: target, Binder: binder}, true
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		if t, ok := target.(SelfConverter); ok {
 			//Trace("selfconvert begin(value)")
-			return t.FromDb(target)
+			holder, binder := t.FromDb(target)
+			return gorp.CustomScanner{Holder: holder, Target: target, Binder: binder}, true
 		} else if t, ok := reflect.Indirect(reflect.ValueOf(target)).Interface().(SelfConverter); ok { //如果采用了指针, 则到这里
 			//Trace("ptr converter: %s", target)
-			return t.FromDb(target)
+			holder, binder := t.FromDb(target)
+			return gorp.CustomScanner{Holder: holder, Target: target, Binder: binder}, true
 		} else {
 			//Trace("no converter: %s", target)
 		}

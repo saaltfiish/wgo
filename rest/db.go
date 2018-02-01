@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"math/bits"
 	"strconv"
-
-	"gorp"
 )
 
 // JSON, 库里为字符串, struct 里为变量
@@ -21,7 +19,7 @@ func (a *Array) ToDb() (interface{}, error) {
 	return string(ab), err
 }
 
-func (a *Array) FromDb(target interface{}) (gorp.CustomScanner, bool) {
+func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, interface{}) error) {
 	binder := func(holder, target interface{}) error {
 		var js string
 		if holder.(*sql.NullString).Valid {
@@ -33,7 +31,7 @@ func (a *Array) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 		}
 		return nil
 	}
-	return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+	return new(sql.NullString), binder
 }
 
 // checklist, 按位记录状态
@@ -51,7 +49,7 @@ func (cl Checklist) ToDb() (interface{}, error) {
 	return sn, nil
 }
 
-func (cl Checklist) FromDb(target interface{}) (gorp.CustomScanner, bool) {
+func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, interface{}) error) {
 	binder := func(holder, target interface{}) error {
 		sn := 0
 		if holder.(*sql.NullString).Valid {
@@ -69,7 +67,7 @@ func (cl Checklist) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 		*(target.(*Checklist)) = ncl
 		return nil
 	}
-	return gorp.CustomScanner{new(sql.NullString), target, binder}, true
+	return new(sql.NullString), binder
 }
 
 // translate
