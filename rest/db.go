@@ -37,7 +37,7 @@ func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, inter
 // checklist, 按位记录状态
 type Checklist map[int]bool
 
-func (cl Checklist) ToDb() (interface{}, error) {
+func (cl Checklist) Pack() int {
 	sn := 0
 	for offset, t := range cl {
 		if t {
@@ -46,7 +46,22 @@ func (cl Checklist) ToDb() (interface{}, error) {
 			sn = sn &^ (1 << uint(offset))
 		}
 	}
-	return sn, nil
+	return sn
+}
+
+func (cl Checklist) Unpack(sn int) Checklist {
+	for offset := 0; offset < bits.Len(uint(sn)); offset++ {
+		if sn&(1<<uint(offset)) > 0 {
+			cl[offset] = true
+		} else {
+			cl[offset] = false
+		}
+	}
+	return cl
+}
+
+func (cl Checklist) ToDb() (interface{}, error) {
+	return cl.Pack(), nil
 }
 
 func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, interface{}) error) {
@@ -57,14 +72,7 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 			sn, _ = strconv.Atoi(sns)
 		}
 		ncl := make(Checklist)
-		for offset := 0; offset < bits.Len(uint(sn)); offset++ {
-			if sn&(1<<uint(offset)) > 0 {
-				ncl[offset] = true
-			} else {
-				ncl[offset] = false
-			}
-		}
-		*(target.(*Checklist)) = ncl
+		*(target.(*Checklist)) = ncl.Unpack(sn)
 		return nil
 	}
 	return new(sql.NullString), binder
