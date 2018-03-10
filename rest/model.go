@@ -912,10 +912,15 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 	if pf, pv, _ := m.PKey(); pv != "" {
 		//Info("pk: %s", pv)
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if len(ext) > 0 {
+	} else if len(ext) == 1 { // 只有一个, 为传入pk
 		if id, ok := ext[0].(string); ok && id != "" {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
 		}
+	} else if len(ext) == 2 { // 2个为条件
+		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
+	} else {
+		//没找到记录
+		return nil, ErrNoRecord
 	}
 	bi, _ := m.ReadPrepare()
 	builder := bi.(*gorp.Builder)
