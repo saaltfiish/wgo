@@ -74,6 +74,11 @@ func (_ *REST) TRACE(c *wgo.Context) error {
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
+// deny
+func RESTDeny(c *wgo.Context) error {
+	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+}
+
 // 注册路由
 // 注册之后可以自动获得rest提供的通用方法,这是rest的核心价值之一
 // 同时也可以自己写同名方法覆盖
@@ -81,7 +86,7 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	if _, ok := i.(Router); !ok {
 		panic("input not Router")
 	}
-	rt := i.(Router)
+	// rt := i.(Router)
 	if _, ok := i.(Model); !ok {
 		panic("input not Model")
 	}
@@ -93,13 +98,13 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	rest.defaultms = ms
 
 	// default,deny
-	wgo.HEAD("/"+endpoint, rt.HEAD)
-	wgo.GET("/"+endpoint+"/:"+RowkeyKey, rt.GET)
-	wgo.GET("/"+endpoint, rt.LIST)
-	wgo.POST("/"+endpoint, rt.POST)
-	wgo.DELETE("/"+endpoint+"/:"+RowkeyKey, rt.DELETE)
-	wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, rt.PATCH)
-	wgo.PUT("/"+endpoint+"/:"+RowkeyKey, rt.PUT)
+	// wgo.HEAD("/"+endpoint, RESTDeny)
+	// wgo.GET("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
+	// wgo.GET("/"+endpoint, RESTDeny)
+	// wgo.POST("/"+endpoint, RESTDeny)
+	// wgo.DELETE("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
+	// wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
+	// wgo.PUT("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 
 	rest.Builtin(flag)
 	return rest
@@ -119,31 +124,39 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) {
 	}
 	if flag&GM_GET > 0 {
 		// GET /{endpoint}/{id}
-		wgo.GET("/"+endpoint+"/:"+RowkeyKey, rest.RESTGet(), ms...)
+		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+		Debug("[Builtin]GET %s", path)
+		wgo.GET(path, rest.RESTGet(), ms...)
 	}
 	if flag&GM_LIST > 0 {
 		// GET /{endpoint}
-		wgo.GET("/"+endpoint, rest.RESTSearch(), ms...)
+		path := fmt.Sprintf("/%s", endpoint)
+		wgo.GET(path, rest.RESTSearch(), ms...)
 	}
 	if flag&GM_RPT > 0 {
-		// GET /{endpoint}/{rpt_tag}
-		wgo.GET("/"+endpoint+"/:"+RptKey, rest.RESTSearch(), ms...)
+		// POST /{endpoint}/{rpt_tag}
+		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
+		wgo.POST(path, rest.RESTSearch(), ms...)
 	}
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
-		wgo.POST("/"+endpoint, rest.RESTPost(), ms...)
+		path := fmt.Sprintf("/%s", endpoint)
+		wgo.POST(path, rest.RESTPost(), ms...)
 	}
 	if flag&GM_DELETE > 0 {
 		// DELETE /{endpoint}/{id}
-		wgo.DELETE("/"+endpoint+"/:"+RowkeyKey, rest.RESTDelete(), ms...)
+		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+		wgo.DELETE(path, rest.RESTDelete(), ms...)
 	}
 	if flag&GM_PATCH > 0 {
 		// PATCH /{endpoint}/{id}
-		wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, rest.RESTPatch(), ms...)
+		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+		wgo.PATCH(path, rest.RESTPatch(), ms...)
 	}
 	if flag&GM_PUT > 0 {
 		// PUT /{endpoint}/{id}
-		wgo.PUT("/"+endpoint+"/:"+RowkeyKey, rest.RESTPut(), ms...)
+		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+		wgo.PUT(path, rest.RESTPut(), ms...)
 	}
 }
 
@@ -159,6 +172,9 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 		if _, err := action.PreGet(m); err != nil {
 			c.Warn("PreGet error: %s", err)
 			return rest.BadRequest(err)
+		} else if _, err := action.WillGet(m); err != nil {
+			c.Warn("WillGet error: %s", err)
+			return rest.BadRequest(err)
 		}
 
 		if ret, err := action.OnGet(m); err != nil {
@@ -168,7 +184,10 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 			} else {
 				return rest.InternalError(err)
 			}
-		} else if ret1, err := action.PostGet(ret); err != nil {
+		} else if ret0, err := action.DidGet(ret); err != nil {
+			c.Warn("DidGet error: %s", err)
+			return rest.NotOK(err)
+		} else if ret1, err := action.PostGet(ret0); err != nil {
 			c.Warn("PostGet error: %s", err)
 			return rest.NotOK(err)
 		} else {
@@ -188,6 +207,9 @@ func (r *REST) RESTSearch() wgo.HandlerFunc {
 		if _, err := action.PreSearch(m); err != nil { // presearch准备条件等
 			c.Warn("PreSearch error: %s", err)
 			return rest.BadRequest(err)
+		} else if _, err := action.WillSearch(m); err != nil {
+			c.Warn("WillSearch error: %s", err)
+			return rest.BadRequest(err)
 		}
 
 		if l, err := action.OnSearch(m); err != nil {
@@ -196,7 +218,10 @@ func (r *REST) RESTSearch() wgo.HandlerFunc {
 			} else {
 				return rest.InternalError(err)
 			}
-		} else if rl, err := action.PostSearch(l); err != nil {
+		} else if l0, err := action.DidSearch(l); err != nil {
+			c.Warn("DidSearch error: %s", err)
+			return rest.NotOK(err)
+		} else if rl, err := action.PostSearch(l0); err != nil {
 			c.Warn("PostSearch error: %s", err)
 			return rest.NotOK(err)
 		} else {

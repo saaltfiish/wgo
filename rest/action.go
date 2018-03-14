@@ -2,11 +2,15 @@ package rest
 
 type Action interface { // 把action定义为一个interface, 这样业务代码可以overwrite
 	PreGet(i interface{}) (interface{}, error)  //获取前
+	WillGet(i interface{}) (interface{}, error) //获取前hook
 	OnGet(i interface{}) (interface{}, error)   //获取中
+	DidGet(i interface{}) (interface{}, error)  //获取到hook
 	PostGet(i interface{}) (interface{}, error) //获取后
 
 	PreSearch(i interface{}) (interface{}, error)  // 搜索前
+	WillSearch(i interface{}) (interface{}, error) // 搜索前hook
 	OnSearch(i interface{}) (interface{}, error)   // 搜索
+	DidSearch(i interface{}) (interface{}, error)  // 搜索完hook
 	PostSearch(i interface{}) (interface{}, error) // 搜索后
 
 	PreCreate(i interface{}) (interface{}, error)  // 创建前
@@ -76,6 +80,14 @@ func (rest *REST) PreGet(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
+/* {{{ func (rest *REST) WillGet(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) WillGet(i interface{}) (interface{}, error) {
+	return i, nil
+}
+
+/* }}} */
 /* {{{ func (rest *REST) OnGet(i interface{}) (interface{}, error)
  *
  */
@@ -86,6 +98,14 @@ func (rest *REST) OnGet(i interface{}) (interface{}, error) {
 	} else {
 		return nil, err
 	}
+}
+
+/* }}} */
+/* {{{ func (rest *REST) DidGet(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) DidGet(i interface{}) (interface{}, error) {
+	return i, nil
 }
 
 /* }}} */
@@ -129,12 +149,28 @@ func (rest *REST) PreSearch(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
+/* {{{ func (rest *REST) WillSearch(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) WillSearch(i interface{}) (interface{}, error) {
+	return i, nil
+}
+
+/* }}} */
 /* {{{ func (rest *REST) OnSearch(i interface{}) (interface{}, error)
  *
  */
 func (rest *REST) OnSearch(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	return m.Rows()
+}
+
+/* }}} */
+/* {{{ func (rest *REST) DidSearch(i interface{}) (interface{}, error)
+ * React灵感,啥也不做,只等覆盖
+ */
+func (rest *REST) DidSearch(i interface{}) (interface{}, error) {
+	return i, nil
 }
 
 /* }}} */

@@ -404,10 +404,16 @@ func (con *Condition) Merge(oc *Condition) {
 
 /* }}} */
 
-// 创建一个全新的model
+// 基于类型创建一个全新的model, i会被置为空
 func NewModel(i interface{}) Model {
 	rest := new(REST)
 	return rest.NewModel(i)
+}
+
+// 基于变量创建全新的model,  i的值保留
+func SetModel(i interface{}) Model {
+	rest := new(REST)
+	return rest.SetModel(i.(Model))
 }
 
 // 创建一个跟rest有关的model
