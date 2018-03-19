@@ -30,6 +30,9 @@ func Init() wgo.MiddlewareFunc {
 			var ct int
 			var p, pp string
 
+			// user id
+			rest.SetEnv(USERID_KEY, c.UserID())
+
 			// 处理起始时间
 			rest.setTimeRangeFromStartEnd()
 
