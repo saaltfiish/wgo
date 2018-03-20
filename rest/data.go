@@ -261,6 +261,32 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			return nil
 		}
 		return gorp.CustomScanner{Holder: new(sql.NullInt64), Target: target, Binder: binder}, true
+	case *interface{}:
+		// Info("here interface")
+		binder := func(holder, target interface{}) error {
+			if holder.(*sql.NullString).Valid {
+				if str := holder.(*sql.NullString).String; str != "" {
+					// 先尝试数据
+					var st0 []interface{}
+					// Info("interface str: %s", str)
+					if err := json.Unmarshal([]byte(str), &st0); err != nil {
+						// Info("not array: %s", err)
+						// 再尝试object
+						var st1 map[interface{}]interface{}
+						if err := json.Unmarshal([]byte(str), &st1); err != nil {
+							// Info("not object: %s", err)
+							*t = &holder.(*sql.NullString).String
+						} else {
+							*(target.(*interface{})) = st1
+						}
+					} else {
+						*(target.(*interface{})) = st0
+					}
+				}
+			}
+			return nil
+		}
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		if t, ok := target.(SelfConverter); ok {
