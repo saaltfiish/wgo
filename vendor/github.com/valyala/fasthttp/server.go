@@ -340,6 +340,7 @@ func CompressHandler(h RequestHandler) RequestHandler {
 //     * CompressBestSpeed
 //     * CompressBestCompression
 //     * CompressDefaultCompression
+//     * CompressHuffmanOnly
 func CompressHandlerLevel(h RequestHandler, level int) RequestHandler {
 	return func(ctx *RequestCtx) {
 		h(ctx)
@@ -441,6 +442,11 @@ func (ctx *RequestCtx) Hijack(handler HijackHandler) {
 	ctx.hijackHandler = handler
 }
 
+// Hijacked returns true after Hijack is called.
+func (ctx *RequestCtx) Hijacked() bool {
+	return ctx.hijackHandler != nil
+}
+
 // SetUserValue stores the given value (arbitrary object)
 // under the given key in ctx.
 //
@@ -491,11 +497,23 @@ func (ctx *RequestCtx) VisitUserValues(visitor func([]byte, interface{})) {
 	}
 }
 
+type connTLSer interface {
+	ConnectionState() tls.ConnectionState
+}
+
 // IsTLS returns true if the underlying connection is tls.Conn.
 //
 // tls.Conn is an encrypted connection (aka SSL, HTTPS).
 func (ctx *RequestCtx) IsTLS() bool {
-	_, ok := ctx.c.(*tls.Conn)
+	// cast to (connTLSer) instead of (*tls.Conn), since it catches
+	// cases with overridden tls.Conn such as:
+	//
+	// type customConn struct {
+	//     *tls.Conn
+	//
+	//     // other custom fields here
+	// }
+	_, ok := ctx.c.(connTLSer)
 	return ok
 }
 
@@ -506,7 +524,7 @@ func (ctx *RequestCtx) IsTLS() bool {
 // The returned state may be used for verifying TLS version, client certificates,
 // etc.
 func (ctx *RequestCtx) TLSConnectionState() *tls.ConnectionState {
-	tlsConn, ok := ctx.c.(*tls.Conn)
+	tlsConn, ok := ctx.c.(connTLSer)
 	if !ok {
 		return nil
 	}
@@ -552,14 +570,19 @@ func (cl *ctxLogger) Printf(format string, args ...interface{}) {
 	ctxLoggerLock.Lock()
 	msg := fmt.Sprintf(format, args...)
 	ctx := cl.ctx
-	req := &ctx.Request
-	cl.logger.Printf("%.3f #%016X - %s<->%s - %s %s - %s",
-		time.Since(ctx.Time()).Seconds(), ctx.ID(), ctx.LocalAddr(), ctx.RemoteAddr(), req.Header.Method(), ctx.URI().FullURI(), msg)
+	cl.logger.Printf("%.3f %s - %s", time.Since(ctx.Time()).Seconds(), ctx.String(), msg)
 	ctxLoggerLock.Unlock()
 }
 
 var zeroTCPAddr = &net.TCPAddr{
 	IP: net.IPv4zero,
+}
+
+// String returns unique string representation of the ctx.
+//
+// The returned value may be useful for logging.
+func (ctx *RequestCtx) String() string {
+	return fmt.Sprintf("#%016X - %s<->%s - %s %s", ctx.ID(), ctx.LocalAddr(), ctx.RemoteAddr(), ctx.Request.Header.Method(), ctx.URI().FullURI())
 }
 
 // ID returns unique ID of the request.
@@ -575,19 +598,26 @@ func (ctx *RequestCtx) ConnID() uint64 {
 	return ctx.connID
 }
 
-// Time returns RequestHandler call time.
+// Time returns RequestHandler call time truncated to the nearest second.
+//
+// Call time.Now() at the beginning of RequestHandler in order to obtain
+// percise RequestHandler call time.
 func (ctx *RequestCtx) Time() time.Time {
 	return ctx.time
 }
 
 // ConnTime returns the time server starts serving the connection
 // the current request came from.
+//
+// The returned time is truncated to the nearest second.
 func (ctx *RequestCtx) ConnTime() time.Time {
 	return ctx.connTime
 }
 
 // ConnRequestNum returns request sequence number
 // for the current connection.
+//
+// Sequence starts with 1.
 func (ctx *RequestCtx) ConnRequestNum() uint64 {
 	return ctx.connRequestNum
 }
@@ -813,6 +843,9 @@ func (ctx *RequestCtx) IsHead() bool {
 //
 // Always returns non-nil result.
 func (ctx *RequestCtx) RemoteAddr() net.Addr {
+	if ctx.c == nil {
+		return zeroTCPAddr
+	}
 	addr := ctx.c.RemoteAddr()
 	if addr == nil {
 		return zeroTCPAddr
@@ -824,6 +857,9 @@ func (ctx *RequestCtx) RemoteAddr() net.Addr {
 //
 // Always returns non-nil result.
 func (ctx *RequestCtx) LocalAddr() net.Addr {
+	if ctx.c == nil {
+		return zeroTCPAddr
+	}
 	addr := ctx.c.LocalAddr()
 	if addr == nil {
 		return zeroTCPAddr
@@ -831,11 +867,22 @@ func (ctx *RequestCtx) LocalAddr() net.Addr {
 	return addr
 }
 
-// RemoteIP returns client ip for the given request.
+// RemoteIP returns the client ip the request came from.
 //
 // Always returns non-nil result.
 func (ctx *RequestCtx) RemoteIP() net.IP {
-	x, ok := ctx.RemoteAddr().(*net.TCPAddr)
+	return addrToIP(ctx.RemoteAddr())
+}
+
+// LocalIP returns the server ip the request came to.
+//
+// Always returns non-nil result.
+func (ctx *RequestCtx) LocalIP() net.IP {
+	return addrToIP(ctx.LocalAddr())
+}
+
+func addrToIP(addr net.Addr) net.IP {
+	x, ok := addr.(*net.TCPAddr)
 	if !ok {
 		return net.IPv4zero
 	}
@@ -1252,7 +1299,7 @@ func (s *Server) Serve(ln net.Listener) error {
 			if time.Since(lastOverflowErrorTime) > time.Minute {
 				s.logger().Printf("The incoming connection cannot be served, because %d concurrent connections are served. "+
 					"Try increasing Server.Concurrency", maxWorkersCount)
-				lastOverflowErrorTime = time.Now()
+				lastOverflowErrorTime = CoarseTimeNow()
 			}
 
 			// The current server reached concurrency limit,
@@ -1294,7 +1341,7 @@ func acceptConn(s *Server, ln net.Listener, lastPerIPErrorTime *time.Time) (net.
 				if time.Since(*lastPerIPErrorTime) > time.Minute {
 					s.logger().Printf("The number of connections from %s exceeds MaxConnsPerIP=%d",
 						getConnIP4(c), s.MaxConnsPerIP)
-					*lastPerIPErrorTime = time.Now()
+					*lastPerIPErrorTime = CoarseTimeNow()
 				}
 				continue
 			}
@@ -1409,7 +1456,7 @@ func (s *Server) serveConn(c net.Conn) error {
 	serverName := s.getServerName()
 	connRequestNum := uint64(0)
 	connID := nextConnID()
-	currentTime := time.Now()
+	currentTime := CoarseTimeNow()
 	connTime := currentTime
 	maxRequestBodySize := s.MaxRequestBodySize
 	if maxRequestBodySize <= 0 {
@@ -1418,6 +1465,7 @@ func (s *Server) serveConn(c net.Conn) error {
 
 	ctx := s.acquireCtx(c)
 	ctx.connTime = connTime
+	isTLS := ctx.IsTLS()
 	var (
 		br *bufio.Reader
 		bw *bufio.Writer
@@ -1451,6 +1499,7 @@ func (s *Server) serveConn(c net.Conn) error {
 		} else {
 			br, err = acquireByteReader(&ctx)
 		}
+		ctx.Request.isTLS = isTLS
 
 		if err == nil {
 			if s.DisableHeaderNamesNormalizing {
@@ -1464,12 +1513,14 @@ func (s *Server) serveConn(c net.Conn) error {
 			}
 		}
 
-		currentTime = time.Now()
+		currentTime = CoarseTimeNow()
 		ctx.lastReadDuration = currentTime.Sub(ctx.time)
 
 		if err != nil {
 			if err == io.EOF {
 				err = nil
+			} else {
+				bw = writeErrorResponse(bw, ctx, err)
 			}
 			break
 		}
@@ -1499,6 +1550,7 @@ func (s *Server) serveConn(c net.Conn) error {
 				br = nil
 			}
 			if err != nil {
+				bw = writeErrorResponse(bw, ctx, err)
 				break
 			}
 		}
@@ -1602,7 +1654,7 @@ func (s *Server) serveConn(c net.Conn) error {
 			break
 		}
 
-		currentTime = time.Now()
+		currentTime = CoarseTimeNow()
 	}
 
 	if br != nil {
@@ -1658,7 +1710,7 @@ func (s *Server) updateWriteDeadline(c net.Conn, ctx *RequestCtx, lastDeadlineTi
 	// Optimization: update write deadline only if more than 25%
 	// of the last write deadline exceeded.
 	// See https://github.com/golang/go/issues/15133 for details.
-	currentTime := time.Now()
+	currentTime := CoarseTimeNow()
 	if currentTime.Sub(lastDeadlineTime) > (writeTimeout >> 2) {
 		if err := c.SetWriteDeadline(currentTime.Add(writeTimeout)); err != nil {
 			panic(fmt.Sprintf("BUG: error in SetWriteDeadline(%s): %s", writeTimeout, err))
@@ -1829,6 +1881,26 @@ func (s *Server) acquireCtx(c net.Conn) *RequestCtx {
 	return ctx
 }
 
+// Init2 prepares ctx for passing to RequestHandler.
+//
+// conn is used only for determining local and remote addresses.
+//
+// This function is intended for custom Server implementations.
+// See https://github.com/valyala/httpteleport for details.
+func (ctx *RequestCtx) Init2(conn net.Conn, logger Logger, reduceMemoryUsage bool) {
+	ctx.c = conn
+	ctx.logger.logger = logger
+	ctx.connID = nextConnID()
+	ctx.s = fakeServer
+	ctx.connRequestNum = 0
+	ctx.connTime = CoarseTimeNow()
+	ctx.time = ctx.connTime
+
+	keepBodyBuffer := !reduceMemoryUsage
+	ctx.Request.keepBodyBuffer = keepBodyBuffer
+	ctx.Response.keepBodyBuffer = keepBodyBuffer
+}
+
 // Init prepares ctx for passing to RequestHandler.
 //
 // remoteAddr and logger are optional. They are used by RequestCtx.Logger().
@@ -1838,35 +1910,34 @@ func (ctx *RequestCtx) Init(req *Request, remoteAddr net.Addr, logger Logger) {
 	if remoteAddr == nil {
 		remoteAddr = zeroTCPAddr
 	}
-	ctx.c = &fakeAddrer{
-		addr: remoteAddr,
+	c := &fakeAddrer{
+		laddr: zeroTCPAddr,
+		raddr: remoteAddr,
 	}
 	if logger == nil {
 		logger = defaultLogger
 	}
-	ctx.connID = nextConnID()
-	ctx.logger.logger = logger
-	ctx.s = &fakeServer
+	ctx.Init2(c, logger, true)
 	req.CopyTo(&ctx.Request)
-	ctx.Response.Reset()
-	ctx.connRequestNum = 0
-	ctx.connTime = time.Now()
-	ctx.time = ctx.connTime
 }
 
-var fakeServer Server
+var fakeServer = &Server{
+	// Initialize concurrencyCh for TimeoutHandler
+	concurrencyCh: make(chan struct{}, DefaultConcurrency),
+}
 
 type fakeAddrer struct {
 	net.Conn
-	addr net.Addr
+	laddr net.Addr
+	raddr net.Addr
 }
 
 func (fa *fakeAddrer) RemoteAddr() net.Addr {
-	return fa.addr
+	return fa.raddr
 }
 
 func (fa *fakeAddrer) LocalAddr() net.Addr {
-	return fa.addr
+	return fa.laddr
 }
 
 func (fa *fakeAddrer) Read(p []byte) (int, error) {
@@ -1915,4 +1986,19 @@ func (s *Server) writeFastError(w io.Writer, statusCode int, msg string) {
 		"\r\n"+
 		"%s",
 		s.getServerName(), serverDate.Load(), len(msg), msg)
+}
+
+func writeErrorResponse(bw *bufio.Writer, ctx *RequestCtx, err error) *bufio.Writer {
+	if _, ok := err.(*ErrSmallBuffer); ok {
+		ctx.Error("Too big request header", StatusRequestHeaderFieldsTooLarge)
+	} else {
+		ctx.Error("Error when parsing request", StatusBadRequest)
+	}
+	ctx.SetConnectionClose()
+	if bw == nil {
+		bw = acquireWriter(ctx)
+	}
+	writeResponse(ctx, bw)
+	bw.Flush()
+	return bw
 }
