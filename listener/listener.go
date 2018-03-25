@@ -8,26 +8,27 @@ import (
 )
 
 type Listener struct {
-	net.Listener
+	// net.Listener
+	*net.TCPListener
 	wg *sync.WaitGroup
 }
 
 func WrapListener(l net.Listener) (el *Listener) {
 	return &Listener{
-		Listener: l,
-		wg:       &sync.WaitGroup{},
+		TCPListener: l.(*net.TCPListener),
+		wg:          &sync.WaitGroup{},
 	}
 }
 
 func New(addr string) (el *Listener) {
-	ln, err := net.Listen("tcp4", addr)
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic("listen failed")
 	}
 
 	el = &Listener{
-		Listener: ln,
-		wg:       &sync.WaitGroup{},
+		TCPListener: ln.(*net.TCPListener),
+		wg:          &sync.WaitGroup{},
 	}
 
 	return
@@ -36,7 +37,8 @@ func New(addr string) (el *Listener) {
 
 // Accept 接受连接
 func (l *Listener) Accept() (c net.Conn, err error) {
-	tc, err := l.Listener.(*net.TCPListener).AcceptTCP()
+	tc, err := l.AcceptTCP()
+	// tc, err := l.Listener.Accept()
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +59,11 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 }
 
 func (l *Listener) Close() error {
-	return l.Listener.Close()
+	return l.TCPListener.Close()
 }
 
 func (l *Listener) File() *os.File {
-	tl := l.Listener.(*net.TCPListener)
-	fl, _ := tl.File()
-	return fl
+	return l.File()
 }
 
 func (l *Listener) Wait() {

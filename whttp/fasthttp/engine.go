@@ -3,6 +3,7 @@ package fasthttp
 import (
 	"net"
 	"sync"
+	"time"
 
 	"wgo/server"
 
@@ -33,6 +34,10 @@ func New() (eng *Engine) {
 		//Server: new(fasthttp.Server),
 		Server: &fasthttp.Server{
 			Name:               "WGO",
+			ReduceMemoryUsage:  true,
+			Concurrency:        100000,
+			ReadTimeout:        120 * time.Second,
+			WriteTimeout:       5 * time.Second,
 			MaxRequestBodySize: 64 * 1024 * 1024,
 		},
 		pool: &pool{

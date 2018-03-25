@@ -1,3 +1,10 @@
+//
+// server.go
+// Copyright (C) 2018 Odin <Odin@Odin-Pro.local>
+//
+// Distributed under terms of the MIT license.
+//
+
 package server
 
 import (
@@ -5,9 +12,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	// self import
 	"wgo/daemon"
@@ -23,20 +34,22 @@ type (
 	Server struct {
 		lock       sync.Mutex
 		cfg        Config
-		tls        bool
-		listener   net.Listener
+		tlsConfig  *tls.Config // optional TLS config, used by ServeTLS and ListenAndServeTLS
+		listener   *listener.Listener
 		engine     Engine
 		engine_gen EngineFactory
 		mux_gen    MuxFactory
 	}
 	Config struct {
-		Name     string `mapstructure:"name"`
-		Mode     string `mapstructure:"mode"`
-		Engine   string `mapstructure:"engine"`
-		Addr     string `mapstructure:"addr"`
-		Hosts    string `mapstructure:"hosts"`
-		CertFile string `mapstructure:"cert_file"`
-		KeyFile  string `mapstructure:"key_file"`
+		Name       string   `mapstructure:"name"`
+		Mode       string   `mapstructure:"mode"`
+		Engine     string   `mapstructure:"engine"`
+		Addr       string   `mapstructure:"addr"`
+		Hosts      []string `mapstructure:"hosts"`
+		NoAutocert bool     `mapstructure:"no_autocert"`
+		NoCallback bool     `mapstructure:"no_callback"`
+		CertFile   string   `mapstructure:"cert_file"`
+		KeyFile    string   `mapstructure:"key_file"`
 	}
 )
 
@@ -90,7 +103,7 @@ func (s *Server) SetEngine(e Engine) Engine {
 /* {{{ func (s *Server) Listener() net.Listener
  * Listener returns the net.Listener which this server (is) listening to
  */
-func (s *Server) Listener() net.Listener {
+func (s *Server) Listener() *listener.Listener {
 	return s.listener
 }
 
@@ -146,17 +159,11 @@ func (s *Server) Port() int {
 	if portIdx := strings.IndexByte(a, ':'); portIdx != -1 {
 		p, err := strconv.Atoi(a[portIdx+1:])
 		if err != nil {
-			//if s.tls {
-			//	return 443
-			//}
 			return 80
 		} else {
 			return p
 		}
 	}
-	//if s.tls {
-	//	return 443
-	//}
 	return 80
 }
 
@@ -213,7 +220,7 @@ func (s *Server) Close() error {
  * listener没有请求, 代表服务器空闲
  */
 func (s *Server) IsIdle() bool {
-	s.listener.(*listener.Listener).Wait()
+	s.listener.Wait()
 	return true
 }
 
@@ -232,32 +239,71 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 	if nl, err = d.GetListener(s.cfg.Addr); err == nil {
 		//Info("Get listener from daemon pool, addr: %s", s.cfg.Addr)
 	} else {
-		if nl, err = net.Listen("tcp4", s.cfg.Addr); err != nil {
+		if nl, err = net.Listen("tcp", s.cfg.Addr); err != nil {
 			//Info("Create listener failed: %s, addr: %s", err, s.cfg.Addr)
 			return
 		} else {
 			//Info("Create listener and add to daemon pool, addr: %s", s.cfg.Addr)
-			d.AddListener(nl) // 把listener加入daemon是为了利用daemon的reload特性
+			s.listener = listener.WrapListener(nl)
+			d.AddListener(nl) // 把listener加入daemon, 以利用daemon的Reload
 		}
-		// tls
-		if s.Mode() == MODE_HTTPS && s.cfg.CertFile != "" && s.cfg.KeyFile != "" {
-			s.tls = true
-			var cert tls.Certificate
-			if cert, err = tls.LoadX509KeyPair(s.cfg.CertFile, s.cfg.KeyFile); err != nil {
-				return
+		// tls config
+		if s.Mode() == MODE_HTTPS {
+			config := &tls.Config{}
+			config.NextProtos = append(config.NextProtos, "http/1.1")
+			config.PreferServerCipherSuites = true
+			if !s.cfg.NoAutocert && s.cfg.CertFile == "" && s.cfg.KeyFile == "" {
+				// Let's Encrypt
+				manager := &autocert.Manager{
+					Prompt:     autocert.AcceptTOS,
+					HostPolicy: autocert.HostWhitelist(s.cfg.Hosts...),
+					Cache:      autocert.DirCache("wgo-autocert"),
+				}
+				config.GetCertificate = manager.GetCertificate
+				if !s.cfg.NoCallback {
+					// for Let's Encrypt callbacks over http
+					// 80端口不能被占用(Let's Encrypt callbacks over http)
+					mux := &http.ServeMux{}
+					mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+						newURI := "https://" + r.Host + r.URL.String()
+						http.Redirect(w, r, newURI, http.StatusFound)
+					})
+					httpSrv := &http.Server{
+						ReadTimeout:  5 * time.Second,
+						WriteTimeout: 5 * time.Second,
+						IdleTimeout:  120 * time.Second,
+						Handler:      manager.HTTPHandler(mux),
+						Addr:         ":http", // 必须是80
+					}
+					go func() {
+						Info("Starting HTTP server on %s, for Encrypt callbacks", httpSrv.Addr)
+						err := httpSrv.ListenAndServe()
+						if err != nil {
+							Info("httpsSrv.ListenAndServe() failed with %s", err)
+						}
+					}()
+				}
 			}
-			tlsConfig := &tls.Config{
-				Certificates:             []tls.Certificate{cert},
-				PreferServerCipherSuites: true,
+			if config.GetCertificate == nil || (s.cfg.CertFile != "" && s.cfg.KeyFile != "") { // 提供了key file
+				config.Certificates = make([]tls.Certificate, 1)
+				if config.Certificates[0], err = tls.LoadX509KeyPair(s.cfg.CertFile, s.cfg.KeyFile); err != nil {
+					Error("LoadX509KeyPair error: %s", err)
+					return
+				}
 			}
-			nl = tls.NewListener(nl, tlsConfig)
+			s.tlsConfig = config
 		}
 	}
 	s.lock.Lock()
-	s.listener = listener.WrapListener(nl)
 	s.lock.Unlock()
 
-	return s.Engine().Start(s.listener)
+	if s.Mode() == MODE_HTTPS {
+		Info("start tls server")
+		return s.Engine().Start(tls.NewListener(s.listener, s.tlsConfig))
+	} else {
+		Info("start normal server")
+		return s.Engine().Start(s.listener)
+	}
 }
 
 /* }}} */

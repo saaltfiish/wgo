@@ -25,9 +25,12 @@ const (
 	CFG_KEY_TIMEZONE    = "time_zone"
 	CFG_KEY_LOGS        = "logs"
 	CFG_KEY_SERVERS     = "servers"
+	CFG_KEY_ENGINE      = "engine"
+	CFG_KEY_MODE        = "mode"
 	CFG_KEY_LISTEN      = "listen"
 	CFG_KEY_ADDR        = "addr"
 	CFG_KEY_PORT        = "port"
+	CFG_KEY_HOSTS       = "hosts"
 	CFG_KEY_VERSION     = "version"
 	CFG_KEY_ACCESS      = "access"
 )

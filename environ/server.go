@@ -28,7 +28,7 @@ func ServersConfig(cfg *Config) []server.Config {
 		for i := 0; i < len(scs); i++ {
 			if addr := scs[i].Addr; addr != "" {
 				if portIdx := strings.IndexByte(addr, ':'); portIdx == 0 {
-					// if contains only :port	,then the : is the first letter, so we dont have setted a hostname, lets set it
+					// if contains only :port, then the : is the first letter, so we dont have setted a hostname, lets set it
 					scs[i].Addr = defaultListenHost + addr
 				}
 				if portIdx := strings.IndexByte(addr, ':'); portIdx < 0 {
@@ -49,6 +49,16 @@ func ServersConfig(cfg *Config) []server.Config {
  *
  */
 func DefaultServers(cfg *Config) []server.Config {
+	// mode
+	mode := defaultServerMode
+	if m := cfg.String(CFG_KEY_MODE); m != "" {
+		mode = m
+	}
+	// engine
+	engine := "fasthttp"
+	if eng := cfg.String(CFG_KEY_ENGINE); eng != "" {
+		engine = eng
+	}
 	// find hsotname:port
 	addr := ""
 	if l := cfg.String(CFG_KEY_LISTEN); l != "" {
@@ -57,10 +67,17 @@ func DefaultServers(cfg *Config) []server.Config {
 		addr = a
 	} else if p := cfg.String(CFG_KEY_PORT); p != "" {
 		addr = ":" + p
+	} else if mode == server.MODE_HTTPS {
+		addr = ":443"
+	}
+	// hosts
+	hosts := []string{}
+	if hs := cfg.StringSlice(CFG_KEY_HOSTS); len(hs) > 0 {
+		hosts = hs
 	}
 	if addr != "" {
 		if portIdx := strings.IndexByte(addr, ':'); portIdx == 0 {
-			// if contains only :port	,then the : is the first letter, so we dont have setted a hostname, lets set it
+			// if contains only :port, then the `:` is the first letter, so we dont have setted a hostname, lets set it
 			addr = defaultListenHost + addr
 		}
 		if portIdx := strings.IndexByte(addr, ':'); portIdx < 0 {
@@ -68,9 +85,11 @@ func DefaultServers(cfg *Config) []server.Config {
 			addr = addr + ":80"
 		}
 		sc := server.Config{
-			Name: defaultServerName,
-			Mode: defaultServerMode,
-			Addr: addr,
+			Name:   defaultServerName,
+			Mode:   mode,
+			Engine: engine,
+			Addr:   addr,
+			Hosts:  hosts,
 		}
 		return []server.Config{sc}
 	}
