@@ -114,7 +114,6 @@ func Proxy() MiddlewareFunc {
 
 			var proxyUrl *url.URL
 			var cacheOpts Options
-			c.Info("host: %s, cfg: %q, path: %s", c.Host(), proxyCfg, path)
 			if addrs, ok := proxyCfg.([]interface{}); ok && len(addrs) > 0 { // 旧配置, 只配置地址
 				// random select
 				proxyUrl, _ = randomAddr(addrs)
@@ -131,6 +130,7 @@ func Proxy() MiddlewareFunc {
 				c.Info("not foud proxy for you")
 				return next(c)
 			}
+			c.Info("host: %s, cfg: %q, path: %s, proxyUrl: %s", c.Host(), proxyCfg, path, proxyUrl)
 
 			ttl := 0
 			key := ""
