@@ -11,6 +11,7 @@ clone:
 pipeline:
   build:
     image: registry.cn-hangzhou.aliyuncs.com/gladsheim/golang:grpc
+    pull: true
     environment:
       - CGO_ENABLED=0
       - GOOS=linux
