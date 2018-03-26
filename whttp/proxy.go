@@ -123,7 +123,7 @@ func Proxy() MiddlewareFunc {
 					cacheOpts = cc
 				}
 			} else {
-				c.Error("config wrong")
+				c.Error("config wrong, host: %s, cfg: %q, path: %s", c.Host(), proxyCfg, path)
 			}
 
 			if proxyUrl == nil {
