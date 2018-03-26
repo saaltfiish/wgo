@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	yaml "gopkg.in/yaml.v2"
+
 	"github.com/spf13/viper"
 	"wgo/utils"
 )
@@ -271,16 +273,22 @@ func (cfg *Config) UnmarshalKey(key string, rawVal interface{}) error {
  * 封装viper方法
  */
 func (cfg *Config) AppConfig(rawVal interface{}, opts ...interface{}) error {
+	// default key app
 	key := "app"
 	if len(opts) > 0 {
 		if k, ok := opts[0].(string); ok {
 			key = k
 		}
 	}
+	// check config type
+	if ext := filepath.Ext(cfg.v.ConfigFileUsed()); ext != "" && (ext[1:] == "yml" || ext[1:] == "yaml") {
+		// fmt.Printf("%s(%s), %s\n", key, cfg.v.ConfigFileUsed(), utils.Dump(cfg.v.Get(key)))
+		ymlBytes, _ := yaml.Marshal(cfg.v.Get(key))
+		return yaml.Unmarshal(ymlBytes, rawVal)
+	}
+	// default json
 	jsonBytes, _ := json.Marshal(cfg.v.Get(key))
 	return json.Unmarshal(jsonBytes, rawVal)
-
-	//return cfg.v.UnmarshalKey(key, rawVal) // 跟系统json包反序列化有区别
 }
 
 /* }}} */
