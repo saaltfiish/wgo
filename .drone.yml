@@ -24,7 +24,7 @@ pipeline:
     repo: docker.for.mac.localhost:5001/arch/wgo
     insecure: true
     tags: [ local ]
-    dockerfile: docker/Dockerfile
+    dockerfile: docker/Dockerfile.dev
     #debug: true
     when:
       event: [ local ]

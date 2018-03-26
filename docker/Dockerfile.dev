@@ -1,0 +1,4 @@
+FROM 127.0.0.1:5001/golang:grpc
+MAINTAINER Odin Lee <odin@godigitalchina.com>
+
+ADD . /go/src/wgo

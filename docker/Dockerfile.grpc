@@ -2,4 +2,5 @@ FROM golang:latest
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
 RUN go get golang.org/x/net/context
+RUN go get golang.org/x/crypto/acme
 RUN go get google.golang.org/grpc

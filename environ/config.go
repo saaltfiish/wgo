@@ -282,7 +282,7 @@ func (cfg *Config) AppConfig(rawVal interface{}, opts ...interface{}) error {
 	}
 	// check config type
 	if ext := filepath.Ext(cfg.v.ConfigFileUsed()); ext != "" && (ext[1:] == "yml" || ext[1:] == "yaml") {
-		// fmt.Printf("%s(%s), %s\n", key, cfg.v.ConfigFileUsed(), utils.Dump(cfg.v.Get(key)))
+		fmt.Printf("%s(%s), %s\n", key, cfg.v.ConfigFileUsed(), utils.Dump(cfg.v.Get(key)))
 		ymlBytes, _ := yaml.Marshal(cfg.v.Get(key))
 		return yaml.Unmarshal(ymlBytes, rawVal)
 	}

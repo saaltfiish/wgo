@@ -6,7 +6,7 @@ import (
 
 	ctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/transport"
+	// "google.golang.org/grpc/transport"
 )
 
 type (
@@ -67,9 +67,9 @@ func (req *Request) Method() string {
 // get query
 func (req *Request) Query() string {
 	//return req.method
-	if stream, ok := transport.StreamFromContext(req.context); ok {
-		return stream.Method()
-	}
+	// if stream, ok := transport.StreamFromContext(req.context); ok {
+	// 	return stream.Method()
+	// }
 	return ""
 }
 
@@ -80,11 +80,11 @@ func (req *Request) Header() *Header {
 
 // get request ip
 func (req *Request) RemoteAddress() string {
-	if stream, ok := transport.StreamFromContext(req.context); ok {
-		if t := stream.ServerTransport(); t != nil {
-			return t.RemoteAddr().String()
-		}
-	}
+	// if stream, ok := transport.StreamFromContext(req.context); ok {
+	// 	if t := stream.ServerTransport(); t != nil {
+	// 		return t.RemoteAddr().String()
+	// 	}
+	// }
 	return ""
 }
 
