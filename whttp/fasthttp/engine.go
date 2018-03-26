@@ -39,6 +39,7 @@ func New() (eng *Engine) {
 			ReadTimeout:        120 * time.Second,
 			WriteTimeout:       5 * time.Second,
 			MaxRequestBodySize: 64 * 1024 * 1024,
+			ReadBufferSize:     16 * 1024,
 		},
 		pool: &pool{
 			request: sync.Pool{
