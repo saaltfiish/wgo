@@ -114,7 +114,7 @@ func Proxy() MiddlewareFunc {
 
 			var proxyUrl *url.URL
 			var cacheOpts Options
-			//c.Info("cfg: %q, type: %s", proxyCfg, reflect.TypeOf(proxyCfg))
+			c.Info("host: %s, cfg: %q, path: %s", c.Host(), proxyCfg, path)
 			if addrs, ok := proxyCfg.([]interface{}); ok && len(addrs) > 0 { // 旧配置, 只配置地址
 				// random select
 				proxyUrl, _ = randomAddr(addrs)
