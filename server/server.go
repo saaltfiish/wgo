@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -239,7 +240,7 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 	if nl, err = d.GetListener(s.cfg.Addr); err == nil {
 		//Info("Get listener from daemon pool, addr: %s", s.cfg.Addr)
 	} else {
-		if nl, err = net.Listen("tcp", s.cfg.Addr); err != nil {
+		if nl, err = net.Listen("tcp4", s.cfg.Addr); err != nil {
 			//Info("Create listener failed: %s, addr: %s", err, s.cfg.Addr)
 			return
 		} else {
@@ -254,6 +255,11 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 			config.PreferServerCipherSuites = true
 			if !s.cfg.NoAutocert && s.cfg.CertFile == "" && s.cfg.KeyFile == "" {
 				// Let's Encrypt
+				cacheDir := "wgo-autocert"
+				if err = os.MkdirAll(cacheDir, 0700); err != nil {
+					Error("cannot create -autocertCacheDir=%q: %s", cacheDir, err)
+				}
+				Info("autocert hosts: %s", s.cfg.Hosts)
 				manager := &autocert.Manager{
 					Prompt:     autocert.AcceptTOS,
 					HostPolicy: autocert.HostWhitelist(s.cfg.Hosts...),
