@@ -130,7 +130,7 @@ func Proxy() MiddlewareFunc {
 				c.Info("not foud proxy for you")
 				return next(c)
 			}
-			c.Info("host: %s, cfg: %q, path: %s, proxyUrl: %s", c.Host(), proxyCfg, path, proxyUrl)
+			// c.Info("host: %s, cfg: %q, path: %s, proxyUrl: %s", c.Host(), proxyCfg, path, proxyUrl)
 
 			ttl := 0
 			key := ""
