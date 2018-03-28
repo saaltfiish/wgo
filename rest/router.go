@@ -422,6 +422,11 @@ func (rs Routes) SetOptions(k string, v interface{}) {
 	rs.Routes.SetOptions("rest", whttp.Options{k: v})
 }
 
+// skip auth
+func (rs Routes) Free() {
+	rs.SetOptions(SKIPAUTH_KEY, true)
+}
+
 func (rest *REST) Options(k string) interface{} {
 	if c := rest.Context(); c != nil {
 		if opts := c.Options("rest"); opts != nil {
