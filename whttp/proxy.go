@@ -341,8 +341,11 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 
 	res, err := rp.Transport.RoundTrip(outreq)
 	if err != nil {
+		c.Error("RoundTrip error: %s", err)
 		return err
 	}
+	// del content-length
+	res.Header.Del(HeaderContentLength)
 
 	// cors header(Access-Control-Allow-*)
 	if origin := outreq.Header.Get(HeaderOrigin); origin != "" {
