@@ -131,9 +131,16 @@ func (wp *WorkerPool) dispatch() {
 // push job
 func Push(i interface{}) {
 	if wp != nil {
-		wp.Push(i)
+		wp.push(i)
 	}
 }
-func (wp *WorkerPool) Push(i interface{}) {
-	wp.queue <- newJob(i)
+func PushTo(name string, i interface{}) {
+	for _, work := range wgo.works {
+		if work.Name() == name {
+			work.push(i)
+		}
+	}
+}
+func (work *WorkerPool) push(i interface{}) {
+	work.queue <- newJob(i)
 }
