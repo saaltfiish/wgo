@@ -7,7 +7,7 @@ type Job struct {
 	Result  interface{} `json:"result,omitempty"`
 }
 
-type JobFunc func(interface{})
+type JobFunc func(interface{}) interface{}
 
 type JobWorker struct {
 	pool    chan chan *Job
@@ -43,7 +43,8 @@ func (jw *JobWorker) Run(sn int) {
 			select {
 			case job := <-jw.channel:
 				// we have received a job
-				jw.handler(job.Payload)
+				// todo, deal result
+				job.Result = jw.handler(job.Payload)
 			case <-jw.quit:
 				// we have received a signal to stop
 				return

@@ -12,6 +12,7 @@ func (w *WGO) shutdown() {
 	wg := new(sync.WaitGroup)
 	// stop work
 	for _, work := range w.works {
+		w.Info("bye work(%s)", work.Name())
 		work.End()
 	}
 	// shutdown servers
