@@ -20,23 +20,17 @@ type (
 		cfg     *environ.Config  // 配置参数
 		env     *environ.Environ // 环境参数
 		logger  logger           // 日志
-		workers []*Worker
+		works   []*WorkerPool
 		servers Servers
 
 		Daemon *daemon.Daemon // 守护进程
-	}
-
-	WorkerFunc func(*WGO)
-
-	Worker struct {
-		n string
-		f WorkerFunc
 	}
 )
 
 var (
 	debug bool
 	wgo   *WGO
+	wp    *WorkerPool
 )
 
 func init() {
@@ -213,19 +207,15 @@ func (w *WGO) Run() {
 
 /* }}} */
 
-/* {{{ func (w *WGO) AddWorker(label string, wf WorkerFunc)
- *
- */
-func AddWorker(label string, wf WorkerFunc) { wgo.AddWorker(label, wf) }
-func (w *WGO) AddWorker(label string, wf WorkerFunc) {
-	if len(w.workers) <= 0 {
-		w.workers = make([]*Worker, 0)
+// add work
+func AddWork(label string, max int, jf JobFunc) { wgo.AddWork(label, max, jf) }
+func (w *WGO) AddWork(label string, max int, jf JobFunc) {
+	if len(w.works) <= 0 {
+		w.works = make([]*WorkerPool, 0)
 	}
 
-	w.workers = append(w.workers, &Worker{n: label, f: wf})
+	w.works = append(w.works, NewWorkerPool(label, max, jf))
 }
-
-/* }}} */
 
 /* {{{ func AddServer(sc environ.Server)
  *
@@ -254,16 +244,16 @@ func (w *WGO) AddServer(sc server.Config) {
  *
  */
 func (w *WGO) serve() {
-	// workers
-	if len(w.workers) > 0 {
-		//wwg.Add(len(w.workers))
-		for _, worker := range w.workers {
-			Info("run worker: %s", worker.n)
-			go func(worker *Worker) {
-				//defer wwg.Done()
-				Debug("worker.f(w): ", worker.n, worker.f)
-				worker.f(w)
-			}(worker)
+	// works
+	if len(w.works) > 0 {
+		for i, worker := range w.works {
+			Info("run worker(%d): %s", i, worker.Name())
+			if i == 0 {
+				// 注册第一个为默认
+				worker.Start().Register()
+			} else {
+				worker.Start()
+			}
 		}
 	}
 

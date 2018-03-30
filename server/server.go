@@ -304,10 +304,10 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 	s.lock.Unlock()
 
 	if s.Mode() == MODE_HTTPS {
-		Info("start tls server")
+		Info("start https server")
 		return s.Engine().Start(tls.NewListener(s.listener, s.tlsConfig))
 	} else {
-		Info("start normal server")
+		Info("start http server")
 		return s.Engine().Start(s.listener)
 	}
 }

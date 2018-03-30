@@ -10,6 +10,11 @@ import (
 
 func (w *WGO) shutdown() {
 	wg := new(sync.WaitGroup)
+	// stop work
+	for _, work := range w.works {
+		work.End()
+	}
+	// shutdown servers
 	for _, server := range w.servers {
 		wg.Add(1)
 		//w.Info("Closing Server(%s,%s)", server.Name(), server.Addr())
