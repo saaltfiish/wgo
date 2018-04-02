@@ -21,12 +21,6 @@ var config *environ.Config
 var db map[string]string
 var es map[string]string
 
-func init() {
-	// try register self
-	ge := wgo.Env()
-	RegisterConfig(ge.ProcName)
-}
-
 func RegisterConfig(tags ...interface{}) {
 	if cfg := wgo.SubConfig(tags...); cfg != nil {
 		//wgo.Info("find config: %v", cfg)

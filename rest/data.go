@@ -31,7 +31,8 @@ type BaseConverter struct{}
 func OpenDB(tag, dns string) (err error) {
 	//Debug("open mysql: %s,%s", tag, dns)
 	if wgo.Env().DebugMode {
-		gorp.TraceOn("[debug]", logger)
+		Debug("gorp debug on")
+		gorp.TraceOn("gorp|", logger)
 	}
 	gorp.SetTypeConvert(BaseConverter{})
 	if err = gorp.Open(tag, "mysql", dns); err != nil {
