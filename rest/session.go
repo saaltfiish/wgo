@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"wgo"
-	"wgo/environ"
 )
 
 // session
@@ -83,7 +82,7 @@ func (rest *REST) DelSession(opts ...string) (key string) {
 
 // 鉴权+session, 包括cs,ss
 func Auth() wgo.MiddlewareFunc {
-	if err := environ.Cfg().AppConfig(scfg, "session"); err != nil {
+	if err := wgo.Cfg().AppConfig(scfg, "session"); err != nil {
 		Info("not found session scfg")
 	}
 	if scfg.Prefix == "" {

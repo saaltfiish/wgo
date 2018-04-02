@@ -2,39 +2,74 @@
 package rest
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 
-	"wgo"
-)
+	yaml "gopkg.in/yaml.v2"
 
-var config *Config
+	"wgo"
+	"wgo/environ"
+)
 
 type Config struct {
 	DB map[string]string `json:"db"`
 	ES map[string]string `json:"es"`
 }
 
+var config *environ.Config
+var db map[string]string
+var es map[string]string
+
+func init() {
+	// try register self
+	ge := wgo.Env()
+	RegisterConfig(ge.ProcName)
+}
+
 func RegisterConfig(tags ...interface{}) {
-	cfg := new(Config)
-	if err := wgo.AppConfig(cfg, tags...); err == nil {
+	if cfg := wgo.SubConfig(tags...); cfg != nil {
 		//wgo.Info("find config: %v", cfg)
 		config = cfg
+		db = config.StringMapString("db")
+		es = config.StringMapString("es")
+	} else {
+		panic("not found config")
 	}
 	// open dbs
 	if dns := os.Getenv("rest.db"); dns != "" { // params dns overwrite config file
 		OpenDB("db", dns)
-	} else if len(config.DB) > 0 {
-		for tag, dns := range config.DB {
+	} else if len(db) > 0 {
+		for tag, dns := range db {
 			OpenDB(tag, dns)
 		}
 	}
 
 	// es setting
-	if len(config.ES) > 0 {
+	if len(es) > 0 {
 		if ea := os.Getenv("rest.esaddr"); ea != "" { // 可以通过环境变量传入es地址
-			config.ES["addr"] = ea
+			es["addr"] = ea
 		}
-		Info("es addr: %s, index: %s, user: %s, password: %s", config.ES["addr"], config.ES["index"], config.ES["user"], config.ES["password"])
+		Debug("es addr: %s, index: %s, user: %s, password: %s", es["addr"], es["index"], es["user"], es["password"])
 		OpenElasticSearch()
 	}
+}
+
+// 获取深层config
+func GetConfig(rawVal interface{}, opts ...interface{}) error {
+	// default key app
+	if len(opts) > 0 && config != nil {
+		if k, ok := opts[0].(string); ok {
+			if environ.ConfigType() == "yaml" {
+				bytes, _ := yaml.Marshal(config.Get(k))
+				// Debug("string: %s", string(jsonBytes))
+				return yaml.Unmarshal(bytes, rawVal)
+			} else {
+				bytes, _ := json.Marshal(config.Get(k))
+				// Debug("string%s", string(jsonBytes))
+				return json.Unmarshal(bytes, rawVal)
+			}
+		}
+	}
+	return fmt.Errorf("not found config for %s", opts)
 }

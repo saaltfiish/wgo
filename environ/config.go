@@ -51,6 +51,7 @@ func NewConfig(ops ...interface{}) *Config {
 		if v, ok := ops[0].(*viper.Viper); ok {
 			return &Config{v: v}
 		}
+		return nil
 	}
 	return &Config{v: viper.New()}
 }
@@ -254,6 +255,7 @@ func (cfg *Config) IsSet(key string) bool {
 /* {{{ func (cfg *Config) Sub(key string) *Config
  *
  */
+func Sub(key string) *Config { return environ.Cfg().Sub(key) }
 func (cfg *Config) Sub(key string) *Config {
 	return NewConfig(cfg.v.Sub(key))
 }
@@ -269,6 +271,15 @@ func (cfg *Config) UnmarshalKey(key string, rawVal interface{}) error {
 
 /* }}} */
 
+// config type
+func ConfigType() string { return environ.cfg.Type() }
+func (cfg *Config) Type() string {
+	if ext := filepath.Ext(cfg.v.ConfigFileUsed()); ext != "" && (ext[1:] == "yml" || ext[1:] == "yaml") {
+		return "yaml"
+	}
+	return "json"
+}
+
 /* {{{ func (cfg *Config) AppConfig(rawVal interface{}, opts ...interface{}) interface{}
  * 封装viper方法
  */
@@ -282,12 +293,12 @@ func (cfg *Config) AppConfig(rawVal interface{}, opts ...interface{}) error {
 	}
 	// check config type
 	if ext := filepath.Ext(cfg.v.ConfigFileUsed()); ext != "" && (ext[1:] == "yml" || ext[1:] == "yaml") {
-		fmt.Printf("%s(%s), %s\n", key, cfg.v.ConfigFileUsed(), utils.Dump(cfg.v.Get(key)))
-		ymlBytes, _ := yaml.Marshal(cfg.v.Get(key))
+		// fmt.Printf("%s(%s), %s\n", key, cfg.v.ConfigFileUsed(), utils.Dump(cfg.v.Get(key)))
+		ymlBytes, _ := yaml.Marshal(cfg.Get(key))
 		return yaml.Unmarshal(ymlBytes, rawVal)
 	}
 	// default json
-	jsonBytes, _ := json.Marshal(cfg.v.Get(key))
+	jsonBytes, _ := json.Marshal(cfg.Get(key))
 	return json.Unmarshal(jsonBytes, rawVal)
 }
 

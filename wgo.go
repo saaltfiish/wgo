@@ -293,3 +293,11 @@ func Version() (ver string) {
 func AppConfig(rawVal interface{}, opts ...interface{}) error {
 	return Cfg().AppConfig(rawVal, opts...)
 }
+func SubConfig(opts ...interface{}) *environ.Config {
+	if len(opts) > 0 {
+		if k, ok := opts[0].(string); ok {
+			return Cfg().Sub(k)
+		}
+	}
+	return nil
+}

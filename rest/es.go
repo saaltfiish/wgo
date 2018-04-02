@@ -15,16 +15,16 @@ var ElasticClient *elastic.Client
 
 func OpenElasticSearch() (err error) {
 	ElasticClient, err = elastic.NewClient(
-		elastic.SetURL(config.ES["addr"]),
+		elastic.SetURL(es["addr"]),
 		elastic.SetSniff(false),
-		elastic.SetBasicAuth(config.ES["user"], config.ES["password"]))
+		elastic.SetBasicAuth(es["user"], es["password"]))
 
 	if err != nil {
 		panic(err)
 	}
 	ctx := context.Background()
 	var exists bool
-	exists, err = ElasticClient.IndexExists(config.ES["index"]).Do(ctx)
+	exists, err = ElasticClient.IndexExists(es["index"]).Do(ctx)
 	if err != nil {
 		panic(err)
 	} else if !exists {
@@ -34,7 +34,7 @@ func OpenElasticSearch() (err error) {
 }
 
 func SearchService() *elastic.SearchService {
-	return ElasticClient.Search().Index(config.ES["index"])
+	return ElasticClient.Search().Index(es["index"])
 }
 
 // get field

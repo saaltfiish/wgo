@@ -1187,7 +1187,7 @@ func (rest *REST) AddTable(tags ...string) {
 		DataAccessor[tb+"::"+READTAG] = DBTAG
 		if len(tags) > 0 {
 			writeTag := tags[0]
-			if dns := config.DB[writeTag]; dns != "" {
+			if dns := db[writeTag]; dns != "" {
 				Info("%s's writer: %s", tb, dns)
 				if err := OpenDB(writeTag, dns); err != nil {
 					Warn("open db(%s) error: %s", writeTag, err)
@@ -1198,7 +1198,7 @@ func (rest *REST) AddTable(tags ...string) {
 		}
 		if len(tags) > 1 {
 			readTag := tags[1]
-			if dns := config.DB[readTag]; dns != "" {
+			if dns := db[readTag]; dns != "" {
 				Info("%s's reader: %s", tb, dns)
 				if err := OpenDB(readTag, dns); err != nil {
 					Warn("open db(%s) error: %s", readTag, err)

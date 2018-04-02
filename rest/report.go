@@ -105,7 +105,7 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		rest:       rest,
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
-		search:     ElasticClient.Search().Index(config.ES["index"]).Type(config.ES[base.(Model).TableName()]),
+		search:     ElasticClient.Search().Index(es["index"]).Type(es[base.(Model).TableName()]),
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
@@ -563,7 +563,7 @@ func (rpt *Report) idsQuery() {
 		rpt.qs = make([]elastic.Query, 0)
 	}
 	rpt.search = rpt.search.Size(1)
-	rpt.qs = append(rpt.qs, elastic.NewIdsQuery(config.ES[rpt.base.(Model).TableName()]).Ids(rpt.id))
+	rpt.qs = append(rpt.qs, elastic.NewIdsQuery(es[rpt.base.(Model).TableName()]).Ids(rpt.id))
 }
 
 // range query
