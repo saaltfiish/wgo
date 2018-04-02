@@ -40,7 +40,12 @@ func RedisGet(key string) (value interface{}, err error) {
 }
 
 func RedisSet(key string, value interface{}, expireSeconds int) error {
-	vb, _ := json.Marshal(value)
+	var vb []byte
+	if vs, ok := value.(string); ok {
+		vb = []byte(vs)
+	} else {
+		vb, _ = json.Marshal(value)
+	}
 	return Storage.Put(key, vb, time.Duration(expireSeconds)*time.Second)
 }
 
