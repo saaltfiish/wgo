@@ -2,9 +2,13 @@
 // reference: http://marcio.io/2015/07/handling-1-million-requests-per-minute-with-golang/
 package wgo
 
+import (
+	"time"
+)
+
 type Job struct {
-	Payload interface{} `json:"payload,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
+	Payload interface{}      `json:"payload,omitempty"`
+	Result  chan interface{} `json:"result,omitempty"`
 }
 
 type JobFunc func(interface{}) interface{}
@@ -30,6 +34,7 @@ type WorkerPool struct {
 func newJob(pl interface{}) *Job {
 	return &Job{
 		Payload: pl,
+		Result:  make(chan interface{}, 1),
 	}
 }
 
@@ -43,8 +48,7 @@ func (jw *JobWorker) Run(sn int) {
 			select {
 			case job := <-jw.channel:
 				// we have received a job
-				// todo, deal result
-				job.Result = jw.handler(job.Payload)
+				job.Result <- jw.handler(job.Payload)
 			case <-jw.quit:
 				// we have received a signal to stop
 				return
@@ -128,12 +132,20 @@ func (wp *WorkerPool) dispatch() {
 	}
 }
 
-// push job
+// push job, 异步
 func Push(i interface{}) {
 	if wp != nil {
 		wp.push(i)
 	}
 }
+
+// req job, 同步
+func Req(i interface{}) {
+	if wp != nil {
+		wp.req(i)
+	}
+}
+
 func PushTo(name string, i interface{}) {
 	for _, work := range wgo.works {
 		if work.Name() == name {
@@ -143,4 +155,16 @@ func PushTo(name string, i interface{}) {
 }
 func (work *WorkerPool) push(i interface{}) {
 	work.queue <- newJob(i)
+}
+func (work *WorkerPool) req(i interface{}) {
+	job := newJob(i)
+	work.queue <- job
+	// waiting result, timeout in 10 seconds
+	to := time.Tick(10 * time.Second)
+	select {
+	case <-to: //超时
+		Info("timeout in 10s")
+	case result := <-job.Result:
+		Info("received result: %+v", result)
+	}
 }
