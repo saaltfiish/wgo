@@ -2,7 +2,6 @@
 package rest
 
 import (
-	"strconv"
 	"strings"
 
 	"wgo"
@@ -31,12 +30,8 @@ func Init() wgo.MiddlewareFunc {
 			var ct int
 			var p, pp string
 
-			// user id
-			uid := c.UserID()
-			if _, err := strconv.Atoi(uid); err == nil {
-				// 目前只支持数字类型的userid
-				rest.SetEnv(USERID_KEY, c.UserID())
-			}
+			// get user id
+			rest.setUserID()
 
 			// 处理起始时间
 			rest.setTimeRangeFromStartEnd()
