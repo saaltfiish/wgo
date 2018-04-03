@@ -3,6 +3,7 @@
 package wgo
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -140,10 +141,11 @@ func Push(i interface{}) {
 }
 
 // req job, 同步
-func Req(i interface{}) {
+func Req(i interface{}) interface{} {
 	if wp != nil {
-		wp.req(i)
+		return wp.req(i)
 	}
+	return nil
 }
 
 func PushTo(name string, i interface{}) {
@@ -156,7 +158,7 @@ func PushTo(name string, i interface{}) {
 func (work *WorkerPool) push(i interface{}) {
 	work.queue <- newJob(i)
 }
-func (work *WorkerPool) req(i interface{}) {
+func (work *WorkerPool) req(i interface{}) interface{} {
 	job := newJob(i)
 	work.queue <- job
 	// waiting result, timeout in 10 seconds
@@ -164,7 +166,9 @@ func (work *WorkerPool) req(i interface{}) {
 	select {
 	case <-to: //超时
 		Info("timeout in 10s")
+		return fmt.Errorf("timeout in 10s")
 	case result := <-job.Result:
 		Info("received result: %+v", result)
+		return result
 	}
 }

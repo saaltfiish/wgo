@@ -31,7 +31,9 @@ func init() {
 	SetLogger(wgo.Self())
 	wgo.Use(Init())
 	wgo.Use(Auth())
+
 	// try register self
+	// behind SetLogger
 	RegisterConfig(wgo.Env().ProcName)
 }
 
