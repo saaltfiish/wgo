@@ -66,7 +66,6 @@ const (
 	TAG_CANGROUP    = "GRP"   // 可以group操作
 	TAG_ORDERBY     = "O"     // 可排序(默认DESC)
 	TAG_AORDERBY    = "AO"    // 正排序(默认DESC)
-	TAG_VERIFIABLE  = "V"     // 验证后可修改
 	TAG_RETURN      = "RET"   // 返回,创建后需要返回数值
 	TAG_SUM         = "SUM"   // 求和
 	TAG_TSUM        = "TS"    // 总求和(放到聚合中,只能有一个)

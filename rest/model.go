@@ -748,7 +748,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					fv.Set(reflect.Zero(fv.Type()))
 				} else if rest.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
 					// 注意不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
-					c.Info("%s is uneditable: %v", col.Tag, fv)
+					c.Warn("%s is uneditable: %v", col.Tag, fv)
 					//return nil, fmt.Errorf("%s is uneditable", col.Tag) //尝试编辑不可编辑的字段,直接报错
 					fv.Set(reflect.Zero(fv.Type())) // 不报错, 忽略之
 				}
