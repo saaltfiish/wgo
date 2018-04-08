@@ -12,14 +12,15 @@ import (
 	"wgo/environ"
 )
 
-type Config struct {
-	DB map[string]string `json:"db"`
-	ES map[string]string `json:"es"`
-}
+// type Config struct {
+// 	DB map[string]string `json:"db"`
+// 	ES map[string]string `json:"es"`
+// }
 
 var config *environ.Config
 var db map[string]string
 var es map[string]string
+var mio map[string]interface{} // object storage
 
 func RegisterConfig(tags ...interface{}) {
 	if cfg := wgo.SubConfig(tags...); cfg != nil {
@@ -27,6 +28,7 @@ func RegisterConfig(tags ...interface{}) {
 		config = cfg
 		db = config.StringMapString("db")
 		es = config.StringMapString("es")
+		mio = config.StringMap("storage")
 	} else {
 		panic("not found config")
 	}
@@ -46,6 +48,12 @@ func RegisterConfig(tags ...interface{}) {
 		}
 		Debug("es addr: %s, index: %s, user: %s, password: %s", es["addr"], es["index"], es["user"], es["password"])
 		OpenElasticSearch()
+	}
+
+	// minio
+	if len(mio) > 0 {
+		Debug("mio endpoint: %s, accessKey: %s, secretKey: %s, secure: %v", mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool))
+		openObjectStorage()
 	}
 }
 
