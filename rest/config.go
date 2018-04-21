@@ -52,7 +52,7 @@ func RegisterConfig(tags ...interface{}) {
 
 	// minio
 	if len(mio) > 0 {
-		Debug("mio endpoint: %s, accessKey: %s, secretKey: %s, secure: %v", mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool))
+		Debug("mio endpoint: %s, accessKey: %s, secretKey: %s, cdn_domain: %s, secure: %v", mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["cdn"].(string), mio["secure"].(bool))
 		openObjectStorage()
 	}
 }

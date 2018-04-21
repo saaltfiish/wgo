@@ -44,11 +44,7 @@ func (o *ObjectStorage) SetBucketRead(bucketName, objectPrefix string) error {
 // pub object
 func PutObject(bucketName, objectName, contentType string, reader io.Reader, objectSize int64) (string, error) {
 	_, err := objectStorage.PutObject(bucketName, objectName, contentType, reader, objectSize)
-	scheme := "http"
-	if mio["secure"].(bool) {
-		scheme = "https"
-	}
-	url := fmt.Sprintf("%s://%s/%s/%s", scheme, mio["endpoint"].(string), mio["bucket"].(string), objectName)
+	url := fmt.Sprintf("%s/%s/%s", mio["cdn"].(string), mio["bucket"].(string), objectName)
 	return url, err
 }
 func (o *ObjectStorage) PutObject(bucketName, objectName, contentType string, reader io.Reader, objectSize int64) (int64, error) {
