@@ -48,7 +48,7 @@ func OpenDB(tag, dns string) (err error) {
  */
 func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 	switch t := val.(type) {
-	case *[]string, []string, *[]int, []int, map[string]string, *map[string]string, map[string]interface{}, *map[string]interface{}, map[interface{}]interface{}: //转为字符串
+	case *[]string, []string, *[]int, []int, map[string]string, *map[string]string, map[string]interface{}, *map[string]interface{}, map[interface{}]interface{}, []interface{}: //转为字符串
 		c, _ := json.Marshal(t)
 		return string(c), nil
 	//case *float64:
@@ -59,7 +59,7 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 	//	return utils.ParseFloat(t), nil
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
-		//Trace("val: %v", val)
+		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
 		if _, ok := val.(SelfConverter); ok {
 			//Trace("selfconvert todb")
 			return val.(SelfConverter).ToDb()
@@ -267,7 +267,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 		binder := func(holder, target interface{}) error {
 			if holder.(*sql.NullString).Valid {
 				if str := holder.(*sql.NullString).String; str != "" {
-					// 先尝试数据
+					// 先尝试数组
 					var st0 []interface{}
 					// Info("interface str: %s", str)
 					if err := json.Unmarshal([]byte(str), &st0); err != nil {

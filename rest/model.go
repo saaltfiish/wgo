@@ -17,7 +17,7 @@ import (
 )
 
 type Model interface {
-	Keeper() Keeper // 各种检查
+	Keeper() Keeper // 各种检查, 闭包缓存
 	KeeperFactory() Keeper
 
 	SetConditions(...*Condition) Model
@@ -1473,7 +1473,7 @@ func GetSumFields(i interface{}, g ...string) (s string) {
 
 /* }}} */
 
-// 挖掘 model
+// dig model
 func digModel(m Model) Model {
 	rt := utils.RealType(m, reflect.TypeOf((*Model)(nil)).Elem())
 	//Info("mtype: %v, real type: %v", mt, rt)
