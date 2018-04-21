@@ -271,11 +271,11 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					var st0 []interface{}
 					// Info("interface str: %s", str)
 					if err := json.Unmarshal([]byte(str), &st0); err != nil {
-						// Info("not array: %s", err)
+						// Debug("not array: %s", err)
 						// 再尝试object
-						var st1 map[interface{}]interface{}
+						var st1 map[string]interface{}
 						if err := json.Unmarshal([]byte(str), &st1); err != nil {
-							// Info("not object: %s", err)
+							// Debug("not object: %s", err, str)
 							*t = &holder.(*sql.NullString).String
 						} else {
 							*(target.(*interface{})) = st1
