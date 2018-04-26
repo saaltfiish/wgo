@@ -82,17 +82,17 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 }
 
 // translate
-func (cl Checklist) Translate(seq map[int]string) map[string]bool {
-	tcl := make(map[string]bool)
+func (cl Checklist) Translate(seq map[int]string) Checklist {
+	tcl := make(Checklist)
 	for offset, name := range seq {
 		if t, ok := cl[offset]; ok {
 			tcl[name] = t
+		} else if t, ok := cl[name]; ok {
+			tcl[offset] = t
 		} else {
+			tcl[offset] = false
 			tcl[name] = false
 		}
 	}
 	return tcl
 }
-
-// convert
-// func ToChecklist(
