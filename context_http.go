@@ -192,7 +192,7 @@ func (c *Context) JSON(code int, i interface{}) (err error) {
 	}
 	b, err := json.Marshal(i)
 	if err != nil {
-		return
+		return err
 	}
 	return c.JSONBlob(code, b)
 }
@@ -200,7 +200,7 @@ func (c *Context) JSON(code int, i interface{}) (err error) {
 func (c *Context) JSONPretty(code int, i interface{}, indent string) (err error) {
 	b, err := json.MarshalIndent(i, "", indent)
 	if err != nil {
-		return
+		return err
 	}
 	return c.JSONBlob(code, b)
 }
@@ -212,7 +212,7 @@ func (c *Context) JSONBlob(code int, b []byte) (err error) {
 func (c *Context) JSONP(code int, callback string, i interface{}) (err error) {
 	b, err := json.Marshal(i)
 	if err != nil {
-		return
+		return err
 	}
 	return c.JSONPBlob(code, callback, b)
 }

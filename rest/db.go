@@ -291,7 +291,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		if t, ok := target.(SelfConverter); ok {
-			//Trace("selfconvert begin(value)")
+			//Debug("selfconvert begin(value)")
 			holder, binder := t.FromDb(target)
 			return gorp.CustomScanner{Holder: holder, Target: target, Binder: binder}, true
 		} else if t, ok := reflect.Indirect(reflect.ValueOf(target)).Interface().(SelfConverter); ok { //如果采用了指针, 则到这里

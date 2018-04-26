@@ -35,13 +35,13 @@ func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, inter
 }
 
 // checklist, 按位记录状态
-type Checklist map[interface{}]bool
+type Checklist map[string]bool
 
 func (cl Checklist) Pack() int {
 	sn := 0
 	for key, t := range cl {
-		offset, ok := key.(int) // key必须转为int才能pack
-		if ok {
+		offset, err := strconv.Atoi(key)
+		if err == nil {
 			if t {
 				sn = sn | (1 << uint(offset))
 			} else {
@@ -55,9 +55,9 @@ func (cl Checklist) Pack() int {
 func (cl Checklist) Unpack(sn int) Checklist {
 	for offset := 0; offset < bits.Len(uint(sn)); offset++ {
 		if sn&(1<<uint(offset)) > 0 {
-			cl[offset] = true
+			cl[strconv.Itoa(offset)] = true
 		} else {
-			cl[offset] = false
+			cl[strconv.Itoa(offset)] = false
 		}
 	}
 	return cl
@@ -75,6 +75,8 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 			sn, _ = strconv.Atoi(sns)
 		}
 		ncl := make(Checklist)
+		Debug("unpack")
+		Debug("sn: %d, %v", sn, ncl.Unpack(sn))
 		*(target.(*Checklist)) = ncl.Unpack(sn)
 		return nil
 	}
@@ -85,12 +87,12 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 func (cl Checklist) Translate(seq map[int]string) Checklist {
 	tcl := make(Checklist)
 	for offset, name := range seq {
-		if t, ok := cl[offset]; ok {
+		if t, ok := cl[strconv.Itoa(offset)]; ok {
 			tcl[name] = t
 		} else if t, ok := cl[name]; ok {
-			tcl[offset] = t
+			tcl[strconv.Itoa(offset)] = t
 		} else {
-			tcl[offset] = false
+			tcl[strconv.Itoa(offset)] = false
 			tcl[name] = false
 		}
 	}
