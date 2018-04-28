@@ -12,13 +12,26 @@ import (
 	"time"
 
 	"gorp"
-	//"wgo"
+	"wgo"
 	"wgo/utils"
 )
 
 type Model interface {
 	Keeper() Keeper // 各种检查, 闭包缓存
 	KeeperFactory() Keeper
+
+	// sugar
+	Is(string, interface{}) Model
+	Not(string, interface{}) Model
+	Or(string, interface{}) Model
+	Like(string, interface{}) Model
+	Gt(string, interface{}) Model
+	Lt(string, interface{}) Model
+	Range(string, interface{}) Model
+	Join(string, interface{}) Model
+	Order(string, interface{}) Model
+	Page(string, interface{}) Model
+	Raw(string, interface{}) Model
 
 	SetConditions(...*Condition) Model
 	Conditions() []*Condition
@@ -27,13 +40,15 @@ type Model interface {
 	SetFields(...string) Model
 	Fields() []string
 	NewList() interface{} // 返回一个空结构列表
-	AddTable(...string)
+	AddTable(...string) Model
+	ImportDic(string, ChecklistDic)
 	DBConn(string) *gorp.DbMap                   // 数据库连接
 	TableName() string                           // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
 	PKey() (string, string, bool)                // key字段,以及是否auto incr
 	ReadPrepare() (interface{}, error)           // 组条件
 	Row(...interface{}) (Model, error)           //获取单条记录
-	Rows() (*List, error)                        //获取多条记录
+	Rows(...interface{}) (interface{}, error)    //获取多条记录
+	List() (*List, error)                        // 获取多条记录并返回list
 	GetOlder(rk ...string) Model                 //获取旧记录
 	GetSum(...string) (*List, error)             //获取多条记录
 	GetCount() (int64, error)                    //获取多条记录
@@ -172,7 +187,7 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 		return
 	}
 	switch vt := con.(type) {
-	case string:
+	case string, int:
 		b.Where(fmt.Sprintf("%s.`%s` = ?", tableAlias, field), vt)
 	case []string:
 		vs := bytes.Buffer{}
@@ -404,6 +419,16 @@ func (con *Condition) Merge(oc *Condition) {
 
 /* }}} */
 
+// new model from context
+func RestFromContext(c *wgo.Context) *REST {
+	return c.Ext().(*REST)
+}
+
+// new model from context
+func ModelFromContext(c *wgo.Context, i interface{}) Model {
+	return RestFromContext(c).NewModel(i)
+}
+
 // 基于类型创建一个全新的model, i会被置为空
 func NewModel(i interface{}) Model {
 	rest := new(REST)
@@ -452,6 +477,41 @@ func GetCondition(cs []*Condition, k string) (con *Condition, err error) {
 
 /* }}} */
 
+// sugar
+func (rest *REST) Is(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_IS, field, value))
+}
+func (rest *REST) Not(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_NOT, field, value))
+}
+func (rest *REST) Or(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_OR, field, value))
+}
+func (rest *REST) Like(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_LIKE, field, value))
+}
+func (rest *REST) Gt(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_GT, field, value))
+}
+func (rest *REST) Lt(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_LT, field, value))
+}
+func (rest *REST) Range(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_RANGE, field, value))
+}
+func (rest *REST) Join(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_JOIN, field, value))
+}
+func (rest *REST) Order(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_ORDER, field, value))
+}
+func (rest *REST) Page(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_PAGE, field, value))
+}
+func (rest *REST) Raw(field string, value interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_RAW, field, value))
+}
+
 /* {{{ func (rest *REST) SetConditions(cs ...*Condition) Model
  * 设置条件
  */
@@ -460,7 +520,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		rest.conditions = make([]*Condition, 0)
 	}
 	if m := rest.Model(); m == nil {
-		Warn("[SetConditions]: not found model")
+		Warn("[rest.SetConditions]: not found model")
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
 			// Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
@@ -495,7 +555,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			}
 			if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
-					//Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
+					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
 					rest.conditions = append(rest.conditions, ParseCondition(col.Type.String(), condition))
 				}
 			}
@@ -519,9 +579,6 @@ func (rest *REST) Conditions() []*Condition {
  * 生成条件
  */
 func (rest *REST) SetPagination(p *Pagination) Model {
-	if rest.conditions == nil {
-		rest.pagination = new(Pagination)
-	}
 	rest.pagination = p
 	return rest
 }
@@ -1027,10 +1084,46 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Rows() (l *List, err error)
+/* {{{ func (rest *REST) Rows(...interface{}) (rs interface{}, err error)
  * 获取list, 通用函数
  */
-func (rest *REST) Rows() (l *List, err error) {
+func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
+	if m := rest.Model(); m != nil {
+		//c := rest.Context()
+		bi, _ := rest.ReadPrepare()
+		builder := bi.(*gorp.Builder)
+		ms = rest.NewList()
+		// find pagination
+		var p *Pagination
+		if len(opts) > 0 {
+			if pp, ok := opts[0].(*Pagination); ok {
+				p = pp
+			}
+		}
+		if p != nil {
+			err = builder.Select(GetDbFields(m, true)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
+		} else {
+			err = builder.Select(GetDbFields(m, true)).Find(ms)
+		}
+		if err != nil && err != sql.ErrNoRows {
+			//支持出错
+			return nil, err
+		}
+
+		return reflect.ValueOf(ms).Elem().Interface(), nil
+	} else {
+		err := fmt.Errorf("not found model")
+		//Info("error: %s", err)
+		return nil, err
+	}
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) List() (l *List, err error)
+ * 获取list, 通用函数
+ */
+func (rest *REST) List() (l *List, err error) {
 	if m := rest.Model(); m != nil {
 		//c := rest.Context()
 		l = new(List)
@@ -1051,9 +1144,9 @@ func (rest *REST) Rows() (l *List, err error) {
 		if err != nil && err != sql.ErrNoRows {
 			//支持出错
 			return l, err
-		} else if ms == nil {
-			//没找到记录
-			return l, ErrNoRecord
+			// } else if ms == nil {
+			// 	//没找到记录
+			// 	return l, ErrNoRecord
 		}
 
 		l.List = ms
@@ -1164,10 +1257,10 @@ func (rest *REST) GetOlder(opts ...string) Model {
 
 /* }}} */
 
-/* {{{ func (rest *REST) AddTable(tags ...string)
+/* {{{ func (rest *REST) AddTable(tags ...string) Model
  * 注册表结构
  */
-func (rest *REST) AddTable(tags ...string) {
+func (rest *REST) AddTable(tags ...string) Model {
 	if m := rest.Model(); m != nil {
 		reflectVal := reflect.ValueOf(m)
 		mv := reflect.Indirect(reflectVal).Interface()
@@ -1211,9 +1304,15 @@ func (rest *REST) AddTable(tags ...string) {
 		err := fmt.Errorf("not found model")
 		Info("[AddTable]: %s", err)
 	}
+
+	return rest
 }
 
 /* }}} */
+
+// 注入checklist的字典
+func (rest *REST) ImportDic(field string, dic ChecklistDic) {
+}
 
 /* {{{ func (rest *REST) ReadPrepare() (interface{}, error)
  * 查询准备

@@ -239,7 +239,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 		action := m.(Action)
 		defer action.Defer(m)
 
-		if _, err := action.PreCreate(m); err != nil { // presearch准备条件等
+		if _, err := action.PreCreate(m); err != nil { // prepare
 			c.Error("PreCreate error: %s", err)
 			return rest.BadRequest(err)
 		} else if _, err := action.WillCreate(m); err != nil {
@@ -251,7 +251,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 		} else if r, err := action.DidCreate(r); err != nil {
 			c.Error("DidCreate error: %s", err)
 			return rest.NotOK(err)
-		} else { // 已经创建成功, 返回成功
+		} else { // all done
 			if r, err = action.Trigger(r.(Model)); err != nil {
 				c.Warn("Trigger error: %s", err)
 			}

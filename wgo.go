@@ -208,13 +208,15 @@ func (w *WGO) Run() {
 /* }}} */
 
 // add work
-func AddWork(label string, max int, jf JobFunc) { wgo.AddWork(label, max, jf) }
-func (w *WGO) AddWork(label string, max int, jf JobFunc) {
+func AddWork(label string, max int, jf JobHandler) *WorkerPool { return wgo.AddWork(label, max, jf) }
+func (w *WGO) AddWork(label string, max int, jf JobHandler) *WorkerPool {
 	if len(w.works) <= 0 {
 		w.works = make([]*WorkerPool, 0)
 	}
 
-	w.works = append(w.works, NewWorkerPool(label, max, jf))
+	wp := NewWorkerPool(label, max, jf)
+	w.works = append(w.works, wp)
+	return wp
 }
 
 /* {{{ func AddServer(sc environ.Server)

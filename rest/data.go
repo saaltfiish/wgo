@@ -36,6 +36,7 @@ func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, inter
 
 // checklist, 按位记录状态
 type Checklist map[string]bool
+type ChecklistDic map[int]string
 
 func (cl Checklist) Pack() int {
 	sn := 0
@@ -75,8 +76,6 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 			sn, _ = strconv.Atoi(sns)
 		}
 		ncl := make(Checklist)
-		Debug("unpack")
-		Debug("sn: %d, %v", sn, ncl.Unpack(sn))
 		*(target.(*Checklist)) = ncl.Unpack(sn)
 		return nil
 	}

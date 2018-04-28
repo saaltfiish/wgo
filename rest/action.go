@@ -162,7 +162,7 @@ func (rest *REST) WillSearch(i interface{}) (interface{}, error) {
  */
 func (rest *REST) OnSearch(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	return m.Rows()
+	return m.List()
 }
 
 /* }}} */
