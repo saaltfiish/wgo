@@ -981,7 +981,7 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 		}
 	} else if len(ext) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
-	} else {
+	} else if len(m.Conditions()) == 0 {
 		//没找到记录
 		return nil, ErrNoRecord
 	}

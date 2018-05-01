@@ -2,6 +2,9 @@ package utils
 
 import (
 	"crypto/rand"
+	"fmt"
+
+	"github.com/dustin/randbo"
 )
 
 // RandomCreateBytes generate random []byte by specify chars.
@@ -18,4 +21,11 @@ func RandomCreateBytes(n int, alphabets string) []byte {
 		}
 	}
 	return bytes
+}
+
+// fast random string
+func FastRequestId(n int) string {
+	buf := make([]byte, n)
+	randbo.New().Read(buf) //号称最快的随机字符串
+	return fmt.Sprintf("%x", buf)
 }

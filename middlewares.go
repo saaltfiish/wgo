@@ -8,9 +8,9 @@ import (
 	"runtime"
 	//"strings"
 
+	"wgo/utils"
 	"wgo/whttp"
-
-	"github.com/dustin/randbo"
+	// "github.com/dustin/randbo"
 )
 
 // default middlewares
@@ -99,9 +99,10 @@ func Prepare() MiddlewareFunc {
 			if prid := c.PreRequestId(); prid != "" && c.Depth() > 0 {
 				requestId = prid
 			} else { // generate request id
-				buf := make([]byte, 16)
-				randbo.New().Read(buf) //号称最快的随机字符串
-				requestId = fmt.Sprintf("%x", buf)
+				// buf := make([]byte, 16)
+				// randbo.New().Read(buf) //号称最快的随机字符串
+				// requestId = fmt.Sprintf("%x", buf)
+				requestId = utils.FastRequestId(16)
 			}
 			c.SetRequestID(requestId)
 

@@ -5,15 +5,28 @@ package wgo
 import (
 	"fmt"
 	"time"
+
+	"wgo/utils"
 )
 
 type Job struct {
-	Method  string           `json:"method,omitempty"`
-	Payload interface{}      `json:"payload,omitempty"`
-	Result  chan interface{} `json:"result,omitempty"`
+	id      string
+	method  string
+	payload interface{}
+	result  chan interface{}
 }
 
-type JobHandler func(interface{}) interface{}
+func (j *Job) ID() string {
+	return j.id
+}
+func (j *Job) Method() string {
+	return j.method
+}
+func (j *Job) Payload() interface{} {
+	return j.payload
+}
+
+type JobHandler func(*Job) interface{}
 
 type JobWorker struct {
 	pool    chan chan *Job
@@ -42,15 +55,26 @@ type JobRoute struct {
 // new job
 func NewJob(pl interface{}, opts ...interface{}) *Job {
 	method := ""
+	id := ""
 	if len(opts) > 0 {
-		if m, ok := opts[0].(string); ok {
+		if m, ok := opts[0].(string); ok && m != "" {
 			method = m
 		}
 	}
+	if len(opts) > 1 {
+		if r, ok := opts[1].(string); ok && r != "" {
+			id = r
+		}
+	}
+	// generate random job id
+	if id == "" {
+		id = utils.FastRequestId(16)
+	}
 	return &Job{
-		Method:  method,
-		Payload: pl,
-		Result:  make(chan interface{}, 1),
+		id:      id,
+		method:  method,
+		payload: pl,
+		result:  make(chan interface{}, 1),
 	}
 }
 
@@ -65,12 +89,12 @@ func (jw *JobWorker) Run(sn int) {
 			case job := <-jw.channel:
 				// we have received a job, route it
 				handler := jw.handler // default handler
-				if job.Method != "" {
-					if route, ok := jw.routes[job.Method]; ok {
+				if job.method != "" {
+					if route, ok := jw.routes[job.method]; ok {
 						handler = route.handler
 					}
 				}
-				job.Result <- handler(job.Payload)
+				job.result <- handler(job)
 			case <-jw.quit:
 				// we have received a signal to stop
 				return
@@ -107,11 +131,12 @@ func (workerPool *WorkerPool) Register() {
 }
 
 // routes for methods
-func (workerPool *WorkerPool) Add(method string, handler JobHandler) {
+func (workerPool *WorkerPool) Add(method string, handler JobHandler) *WorkerPool {
 	workerPool.routes[method] = &JobRoute{
 		method:  method,
 		handler: handler,
 	}
+	return workerPool
 }
 
 // worker poll name
@@ -172,11 +197,11 @@ func Push(i interface{}, opts ...interface{}) {
 }
 
 // req job, 同步
-func Req(i interface{}, opts ...interface{}) interface{} {
+func Req(i interface{}, opts ...interface{}) (interface{}, error) {
 	if wp != nil {
 		return wp.req(i, opts...)
 	}
-	return nil
+	return nil, fmt.Errorf("not found worker pool")
 }
 
 func PushTo(name string, i interface{}, opts ...interface{}) {
@@ -187,13 +212,13 @@ func PushTo(name string, i interface{}, opts ...interface{}) {
 	}
 }
 
-func ReqTo(name string, i interface{}, opts ...interface{}) interface{} {
+func ReqTo(name string, i interface{}, opts ...interface{}) (interface{}, error) {
 	for _, work := range wgo.works {
 		if work.Name() == name {
 			return work.req(i, opts...)
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("not found worker pool")
 }
 
 func (work *WorkerPool) push(i interface{}, opts ...interface{}) {
@@ -205,7 +230,7 @@ func (work *WorkerPool) push(i interface{}, opts ...interface{}) {
 		work.queue <- NewJob(i, opts...)
 	}
 }
-func (work *WorkerPool) req(i interface{}, opts ...interface{}) interface{} {
+func (work *WorkerPool) req(i interface{}, opts ...interface{}) (interface{}, error) {
 	var job *Job
 	if ijob, ok := i.(*Job); ok {
 		// 如果直接传入job, 欣然接受, 忽略opts
@@ -219,10 +244,14 @@ func (work *WorkerPool) req(i interface{}, opts ...interface{}) interface{} {
 	to := time.Tick(10 * time.Second)
 	select {
 	case <-to: //超时
-		Info("timeout in 10s")
-		return fmt.Errorf("timeout in 10s")
-	case result := <-job.Result:
-		Info("received result: %+v", result)
-		return result
+		Warn("timeout in 10s")
+		return nil, fmt.Errorf("timeout in 10s")
+	case result := <-job.result:
+		// Info("received job result: %+v", result)
+		if err, ok := result.(error); ok {
+			return nil, err
+		} else {
+			return result, nil
+		}
 	}
 }
