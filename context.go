@@ -237,6 +237,19 @@ func (c *Context) Host() string {
 	}
 	return ""
 }
+
+// origin
+func (c *Context) Origin() string {
+	switch c.ServerMode() {
+	case "http", "https", "whttp":
+		return c.RequestHeader().Get(whttp.HeaderOrigin)
+	case "rpc", "wrpc", "grpc":
+	default:
+	}
+	return ""
+}
+
+// user-agent
 func (c *Context) UserAgent() string {
 	switch c.ServerMode() {
 	case "http", "https", "whttp":

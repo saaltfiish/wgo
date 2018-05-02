@@ -249,11 +249,12 @@ func (w *WGO) serve() {
 	// works
 	if len(w.works) > 0 {
 		for i, worker := range w.works {
-			Info("run worker(%d): %s", i, worker.Name())
 			if i == 0 {
 				// 注册第一个为默认
+				Info("start work(default): %s", worker.Name())
 				worker.Start().Register()
 			} else {
+				Info("start work(%d): %s", i, worker.Name())
 				worker.Start()
 			}
 		}

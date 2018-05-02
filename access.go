@@ -41,6 +41,7 @@ type (
 		Query    string      `json:"query,omitempty"`   // http querystring | grpc method
 		Params   string      `json:"params,omitempty"`  // 参数信息
 		Host     string      `json:"host,omitempty"`    // 域名
+		Origin   string      `json:"origin,omitempty"`  // from where
 		Status   int         `json:"status"`            // 状态码
 		ReqLen   int64       `json:"req_len"`           // 请求长度
 		RespLen  int64       `json:"resp_len"`          // 返回长度
@@ -94,6 +95,7 @@ func (ac *AccessLog) Reset(t time.Time) {
 	ac.App.Query = ""
 	ac.App.Params = ""
 	ac.App.Host = ""
+	ac.App.Origin = ""
 	ac.App.Status = 0
 	ac.App.ReqLen = 0
 	ac.App.RespLen = 0
@@ -158,6 +160,7 @@ func Access() MiddlewareFunc {
 			ac.App.Query = c.Query()
 			ac.App.Params = c.Params()
 			ac.App.Host = c.Host()
+			ac.App.Origin = c.Origin()
 			ac.App.Status = c.Status()
 			ac.App.ReqLen = c.ReqLen()
 			ac.App.RespLen = c.RespLen()
