@@ -240,12 +240,12 @@ func (work *WorkerPool) req(i interface{}, opts ...interface{}) (interface{}, er
 		job = NewJob(i, opts...)
 	}
 	work.queue <- job
-	// waiting result, timeout in 10 seconds
-	to := time.Tick(10 * time.Second)
+	// waiting result, timeout in 60 seconds
+	to := time.Tick(60 * time.Second)
 	select {
 	case <-to: //超时
-		Warn("timeout in 10s")
-		return nil, fmt.Errorf("timeout in 10s")
+		Warn("timeout in 60s")
+		return nil, fmt.Errorf("timeout in 60s")
 	case result := <-job.result:
 		// Info("received job result: %+v", result)
 		if err, ok := result.(error); ok {
