@@ -26,14 +26,7 @@ func LocalDel(key string) bool {
 }
 
 func RedisGet(key string) (value interface{}, err error) {
-	if key != "" {
-		for tried := 0; tried < 3; tried++ {
-			if value = Storage.Get(key); value != nil {
-				break
-			}
-		}
-	}
-	if value == nil {
+	if value = Storage.Get(key); value == nil {
 		err = fmt.Errorf("not found %s in redis", key)
 	}
 	return

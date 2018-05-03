@@ -35,12 +35,15 @@ func OpenRedis(cfg *SessionConfig) {
 
 // Get 根据hash规则查询节点
 func (s *storage) Get(key string) interface{} {
-	idx := s.Hash(key)
-	v := s.nodes[idx].Get(key)
-	if v == nil {
-		Info("[Get]idx: %d, key: %s", idx, key)
+	if key != "" {
+		idx := s.Hash(key)
+		v := s.nodes[idx].Get(key)
+		if v == nil {
+			Info("[Get]idx: %d, key: %s", idx, key)
+		}
+		return v
 	}
-	return v
+	return nil
 }
 
 // Put 根据hash规则保存数据
