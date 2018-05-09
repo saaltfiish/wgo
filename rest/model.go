@@ -536,8 +536,15 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			}
 			// time range
 			if col.ExtOptions.Contains(TAG_TIMERANGE) {
-				if condition, e := GetCondition(cs, TAG_TIMERANGE); e == nil && condition.Range != nil {
-					//Info("[SetConditions]timerange")
+				if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Is != nil {
+					// 直接对字段查询
+					Debug("[SetConditions]timerange: %s, %s", col.Tag, condition.Is)
+					if is, ok := condition.Is.([]string); ok && len(is) > 1 {
+						condition.Is = nil
+						condition.Range = getTimeRange(is[0], is[1])
+						rest.conditions = append(rest.conditions, condition)
+					}
+				} else if condition, e := GetCondition(cs, TAG_TIMERANGE); e == nil && condition.Is != nil {
 					condition.Field = col.Tag
 					rest.conditions = append(rest.conditions, condition)
 				} else {
@@ -1339,9 +1346,9 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				//Debug("[perpare]timerange")
 				switch vt := v.Range.(type) {
 				case *TimeRange: //只支持timerange
-					b.Where(fmt.Sprintf("T.`%s` BETWEEN ? AND ?", v.Field), vt.Start, vt.End)
+					b.Where(fmt.Sprintf("T.`%s` BETWEEN ? AND ?", v.Field), vt.Start.Format(_MYSQL_FORM), vt.End.Format(_MYSQL_FORM))
 				case TimeRange: //只支持timerange
-					b.Where(fmt.Sprintf("T.`%s` BETWEEN ? AND ?", v.Field), vt.Start, vt.End)
+					b.Where(fmt.Sprintf("T.`%s` BETWEEN ? AND ?", v.Field), vt.Start.Format(_MYSQL_FORM), vt.End.Format(_MYSQL_FORM))
 				default:
 					//nothing
 				}
