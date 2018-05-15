@@ -1107,10 +1107,16 @@ func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 				p = pp
 			}
 		}
+		readTag := true
+		if len(opts) > 1 {
+			if force, ok := opts[1].(bool); ok && force {
+				readTag = false // 强制读取
+			}
+		}
 		if p != nil {
-			err = builder.Select(GetDbFields(m, true)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
+			err = builder.Select(GetDbFields(m, readTag)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 		} else {
-			err = builder.Select(GetDbFields(m, true)).Find(ms)
+			err = builder.Select(GetDbFields(m, readTag)).Find(ms)
 		}
 		if err != nil && err != sql.ErrNoRows {
 			//支持出错
