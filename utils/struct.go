@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -468,4 +469,42 @@ func Instance(ob interface{}) interface{} {
 		}
 	}
 	return ob
+}
+
+// StringMap, turn a struct to map[string]string
+func StringMap(i interface{}, opts ...string) map[string]string {
+	tag := "json"
+	if len(opts) > 0 {
+		tag = opts[0]
+	}
+	sm := make(map[string]string)
+	if fields := ReadStructFields(i, true, tag); fields != nil {
+		v := reflect.ValueOf(i)
+		for _, field := range fields {
+			fn := field.Tags[tag].Name
+			fv := FieldByIndex(v, field.Index)
+			options := field.Tags[tag].Options
+			fts := fv.Type().String()
+			// fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
+			if !options.Contains("omitempty") || !IsEmptyValue(fv) {
+				// 不为空 or 没有设置`omitempty`
+				switch fts {
+				case "string":
+					sm[fn] = fv.String()
+				case "*string":
+					sm[fn] = fv.Elem().String()
+				case "int", "int64":
+					fvi := fv.Int()
+					sm[fn] = strconv.FormatInt(fvi, 10)
+				case "*int", "*int64":
+					fvi := fv.Elem().Int()
+					sm[fn] = strconv.FormatInt(fvi, 10)
+				default: // json encode
+					fvb, _ := json.Marshal(fv.Interface())
+					sm[fn] = string(fvb)
+				}
+			}
+		}
+	}
+	return sm
 }
