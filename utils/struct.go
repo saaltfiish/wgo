@@ -474,8 +474,12 @@ func Instance(ob interface{}) interface{} {
 // StringMap, turn a struct to map[string]string
 func StringMap(i interface{}, opts ...string) map[string]string {
 	tag := "json"
-	if len(opts) > 0 {
+	must := ""
+	if len(opts) > 0 && opts[0] != "" {
 		tag = opts[0]
+	}
+	if len(opts) > 1 && opts[1] != "" {
+		must = opts[1]
 	}
 	sm := make(map[string]string)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
@@ -486,7 +490,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 			options := field.Tags[tag].Options
 			fts := fv.Type().String()
 			// fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
-			if !options.Contains("omitempty") || !IsEmptyValue(fv) {
+			if (must == "" || options.Contains(must)) && (!options.Contains("omitempty") || !IsEmptyValue(fv)) {
 				// 不为空 or 没有设置`omitempty`
 				switch fts {
 				case "string":
@@ -495,7 +499,9 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 					sm[fn] = fv.Elem().String()
 				case "int", "int64":
 					fvi := fv.Int()
-					sm[fn] = strconv.FormatInt(fvi, 10)
+					if !options.Contains("omitempty") || fvi > 0 { // IsEmptyValue没办法判断int, int64
+						sm[fn] = strconv.FormatInt(fvi, 10)
+					}
 				case "*int", "*int64":
 					fvi := fv.Elem().Int()
 					sm[fn] = strconv.FormatInt(fvi, 10)
@@ -507,4 +513,17 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 		}
 	}
 	return sm
+}
+
+// convert interface{} to struct
+func Convert(i interface{}, o interface{}) error {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, o)
+	if err != nil {
+		return err
+	}
+	return nil
 }
