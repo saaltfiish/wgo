@@ -494,7 +494,9 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 				// 不为空 or 没有设置`omitempty`
 				switch fts {
 				case "string":
-					sm[fn] = fv.String()
+					if !options.Contains("omitempty") || fv.String() != "" {
+						sm[fn] = fv.String()
+					}
 				case "*string":
 					sm[fn] = fv.Elem().String()
 				case "int", "int64":
@@ -516,14 +518,14 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 }
 
 // convert interface{} to struct
-func Convert(i interface{}, o interface{}) error {
+func Convert(i interface{}, o interface{}) (interface{}, error) {
 	b, err := json.Marshal(i)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = json.Unmarshal(b, o)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return o, nil
 }
