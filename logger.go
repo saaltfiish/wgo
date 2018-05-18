@@ -46,6 +46,13 @@ func (w *WGO) Debug(arg0 interface{}, args ...interface{}) {
 		nlog(arg0, args...)
 	}
 }
+func (w *WGO) Printf(format string, args ...interface{}) {
+	if w != nil {
+		w.Logger().Debug(format, args...)
+	} else {
+		nlog(format, args...)
+	}
+}
 
 /* }}} */
 
@@ -58,13 +65,6 @@ func (w *WGO) Info(arg0 interface{}, args ...interface{}) {
 		w.Logger().Info(arg0, args...)
 	} else {
 		nlog(arg0, args...)
-	}
-}
-func (w *WGO) Printf(format string, args ...interface{}) {
-	if w != nil {
-		w.Logger().Info(format, args...)
-	} else {
-		nlog(format, args...)
 	}
 }
 
