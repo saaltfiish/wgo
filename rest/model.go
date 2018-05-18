@@ -187,7 +187,7 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 		return
 	}
 	switch vt := con.(type) {
-	case string, int:
+	case string, int, int64:
 		b.Where(fmt.Sprintf("%s.`%s` = ?", tableAlias, field), vt)
 	case []string:
 		vs := bytes.Buffer{}
