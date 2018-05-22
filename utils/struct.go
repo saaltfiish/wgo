@@ -494,9 +494,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 				// 不为空 or 没有设置`omitempty`
 				switch fts {
 				case "string":
-					if !options.Contains("omitempty") || fv.String() != "" {
-						sm[fn] = fv.String()
-					}
+					sm[fn] = fv.String()
 				case "*string":
 					sm[fn] = fv.Elem().String()
 				case "int", "int64":
