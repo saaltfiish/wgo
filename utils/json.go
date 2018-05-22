@@ -8,6 +8,8 @@
 package utils
 
 import (
+	"encoding/json"
+
 	"github.com/bitly/go-simplejson"
 )
 
@@ -16,6 +18,15 @@ type (
 		json *simplejson.Json
 	}
 )
+
+// 转变量为json实例
+func ConvertJson(i interface{}) (*Json, error) {
+	b, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+	return NewJson(b)
+}
 
 func NewJson(body []byte) (*Json, error) {
 	if json, err := simplejson.NewJson(body); err != nil {
