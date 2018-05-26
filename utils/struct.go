@@ -420,6 +420,45 @@ func IsEmptyValue(v reflect.Value) bool {
 
 /* }}} */
 
+/* {{{ func IsZero(v reflect.Value) bool
+ *
+ */
+func IsZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return v.Len() == 0
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Ptr:
+		// fmt.Println("ptr")
+		if v.IsNil() {
+			return true
+		}
+		return IsZero(v.Elem())
+	case reflect.Interface:
+		// fmt.Printf("interface: %+v, %+v, %+v\n", v, v.IsNil(), v.Type())
+		return v.IsNil()
+	case reflect.Struct:
+		// fmt.Println("struct")
+		// return true if all fields are empty. else return false.
+		return v.Interface() == reflect.Zero(v.Type()).Interface()
+		// for i, n := 0, v.NumField(); i < n; i++ {
+		// 	if !isEmptyValue(v.Field(i), deref) {
+		// 		return false
+		// 	}
+		// }
+		// return true
+	default:
+		return true
+	}
+}
+
 /* {{{ func GetRealString(v reflect.Value) string
  *
  */
@@ -490,7 +529,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 			options := field.Tags[tag].Options
 			fts := fv.Type().String()
 			// fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
-			if (must == "" || options.Contains(must)) && (!options.Contains("omitempty") || !IsEmptyValue(fv)) {
+			if (must == "" || options.Contains(must)) && (!options.Contains("omitempty") || !IsZero(fv)) {
 				// 不为空 or 没有设置`omitempty`
 				switch fts {
 				case "string":
@@ -499,9 +538,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 					sm[fn] = fv.Elem().String()
 				case "int", "int64":
 					fvi := fv.Int()
-					if !options.Contains("omitempty") || fvi > 0 { // IsEmptyValue没办法判断int, int64
-						sm[fn] = strconv.FormatInt(fvi, 10)
-					}
+					sm[fn] = strconv.FormatInt(fvi, 10)
 				case "*int", "*int64":
 					fvi := fv.Elem().Int()
 					sm[fn] = strconv.FormatInt(fvi, 10)

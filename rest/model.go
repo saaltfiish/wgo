@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -702,6 +703,7 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 			if col.TagOptions.Contains(DBTAG_PK) {
 				f = col.Tag
 				fv := utils.FieldByIndex(mv, col.Index)
+				// Info("field: %s, value: %+v", f, fv)
 				v = ""
 				if fv.IsValid() && !utils.IsEmptyValue(fv) {
 					switch fv.Type().String() {
@@ -709,10 +711,17 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 						v = fv.Elem().String()
 					case "string":
 						v = fv.String()
+					case "*int":
+						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "*int64":
+						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "int64":
+						v = strconv.Itoa(int(fv.Int()))
 					default:
 						// nothing
 					}
 				}
+				// Info("field: %s, value: %+v, v: %s", f, fv, v)
 				if col.ExtOptions.Contains(TAG_GENERATE) && col.ExtTag != "" { //服务端生成并且有tag
 					ai = false
 				} else {
@@ -1051,6 +1060,20 @@ func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error) {
 	if m := rest.Model(); m != nil {
 		id := ""
 		if len(ext) > 0 {
+			switch rk := ext[0].(type) {
+			case string:
+				id = rk
+			case *string:
+				id = *rk
+			case *int:
+				id = strconv.Itoa(*rk)
+			case int:
+				id = strconv.Itoa(rk)
+			case int64:
+				id = strconv.FormatInt(rk, 10)
+			case *int64:
+				id = strconv.FormatInt(*rk, 10)
+			}
 			if rk, ok := ext[0].(string); ok && rk != "" {
 				id = rk
 			}
@@ -1058,7 +1081,7 @@ func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error) {
 			id = pv
 		}
 		if id == "" {
-			rest.Info("not found id")
+			// Info("not found id")
 			return 0, ErrNoRecord
 		}
 		db := rest.DBConn(WRITETAG)
