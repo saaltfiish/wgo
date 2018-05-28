@@ -47,11 +47,13 @@ const (
 	DBTAG_PK    = "pk"
 	DBTAG_LOGIC = "logic"
 
-	DBTAG      string = "db"
-	READTAG    string = "read"
-	WRITETAG   string = "write"
-	base       string = "0000-00-00 00:00:00.0000000"
-	timeFormat string = "2006-01-02 15:04:05.999999"
+	DBTAG           string = "db"
+	READTAG         string = "read"
+	WRITETAG        string = "write"
+	base            string = "0000-00-00 00:00:00.0000000"
+	timeFormat      string = "2006-01-02 15:04:05.999999"
+	timeISOFormat29 string = "2006-01-02T15:04:05.999Z07:00" // length: 29
+	timeISOFormat25 string = "2006-01-02T15:04:05Z07:00"     // length: 25
 
 	//tag
 	TAG_REQUIRED    = "R"     // 必填

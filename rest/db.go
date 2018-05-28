@@ -95,7 +95,8 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					if str == base[:len(str)] {
 						return nil
 					}
-					dt, err = time.ParseInLocation(timeFormat[:len(str)], str, time.Local)
+					// Info("format: %s, str: %s, location: %s", timeFormat[:len(str)], str, wgo.Env().Location.String())
+					dt, err = time.ParseInLocation(timeFormat[:len(str)], str, wgo.Env().Location)
 				default:
 					err = fmt.Errorf("Invalid Time-String: %s", str)
 					return err
@@ -104,7 +105,8 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					return err
 				}
 				//dt = dt.UTC()
-				dt = dt.Local()
+				// dt = dt.Local()
+				// dt = dt.In(wgo.Env().Location)
 				*(target.(**time.Time)) = &dt
 				return nil
 			}
@@ -122,7 +124,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					if str == base[:len(str)] {
 						return nil
 					}
-					dt, err = time.ParseInLocation(timeFormat[:len(str)], str, time.Local)
+					dt, err = time.ParseInLocation(timeFormat[:len(str)], str, wgo.Env().Location)
 				default:
 					err = fmt.Errorf("Invalid Time-String: %s", str)
 					return err
@@ -131,7 +133,8 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					return err
 				}
 				//dt = dt.UTC()
-				dt = dt.Local()
+				// dt = dt.Local()
+				// dt = dt.In(wgo.Env().Location)
 				*(target.(*time.Time)) = dt
 				return nil
 			}
