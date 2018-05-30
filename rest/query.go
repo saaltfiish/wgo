@@ -174,14 +174,24 @@ func (r *REST) setTimeRangeFromDate(p []string) {
 
 /* }}} */
 
-/* {{{ func (r *REST) setUserID()
+/* {{{ func (r *REST) SetUserID(opts ...interface{})
  * 获取header中的userid(如果有), 放到env中
  */
-func (r *REST) setUserID() {
-	c := r.Context()
-	if uid := c.UserID(); uid != "" {
-		// 目前只支持数字类型的userid
-		r.SetEnv(USERID_KEY, uid)
+func (r *REST) SetUserID(opts ...interface{}) {
+	ui := ""
+	if len(opts) > 0 {
+		if id, ok := opts[0].(string); ok && id != "" {
+			ui = id
+		}
+	}
+	if ui != "" {
+		r.SetEnv(USERID_KEY, ui)
+	} else {
+		c := r.Context()
+		if uid := c.UserID(); uid != "" {
+			// 目前只支持数字类型的userid
+			r.SetEnv(USERID_KEY, uid)
+		}
 	}
 }
 

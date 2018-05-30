@@ -31,7 +31,7 @@ func Init() wgo.MiddlewareFunc {
 			var p, pp string
 
 			// get user id
-			rest.setUserID()
+			rest.SetUserID()
 
 			// 处理起始时间
 			rest.setTimeRangeFromStartEnd()

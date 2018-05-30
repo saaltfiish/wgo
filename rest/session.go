@@ -37,16 +37,24 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 	}
 
 	var err error
-	if value, err = RedisGet(key); value != nil {
+	if value = rest.GetEnv(SESSION_KEY); value != nil {
+		// 内存里找到, 返回
+		return
+	} else if value, err = RedisGet(key); value != nil {
 		//c.Info("find auth from cookie(%s): %s", scfg.Key, key)
-		rest.SetEnv(SESSION_KEY, value)
+		rest.SaveSession(value)
 	} else {
-		c.Info("not find auth from cookie(%s): %s", scfg.Key, err.Error())
+		c.Warn("not find auth from cookie(%s): %s", scfg.Key, err.Error())
 	}
 	return
 }
 
 // save session
+func (rest *REST) SaveSession(session interface{}) {
+	rest.SetEnv(SESSION_KEY, session)
+}
+
+// set session
 func (rest *REST) SetSession(key string, opts ...interface{}) {
 	// save to cache
 	rest.Debug("set session, key: %s, opts: %+v", key, opts)
