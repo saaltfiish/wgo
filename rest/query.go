@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"wgo"
-	"wgo/utils"
 )
 
 //时间段
@@ -180,13 +179,25 @@ func (r *REST) setTimeRangeFromDate(p []string) {
  */
 func (r *REST) setUserID() {
 	c := r.Context()
-	if uid := c.UserID(); utils.IsInt(uid) {
+	if uid := c.UserID(); uid != "" {
 		// 目前只支持数字类型的userid
 		r.SetEnv(USERID_KEY, uid)
 	}
 }
 
 /* }}} */
+
+// get get user id
+func (r *REST) GetUserID() string {
+	ui := r.GetEnv(USERID_KEY)
+	if ui == nil {
+		return r.Context().UserID()
+	}
+	if _, ok := ui.(string); !ok {
+		return r.Context().UserID()
+	}
+	return ui.(string)
+}
 
 /* {{{ func (r *REST) setTimeRangeFromStartEnd() {
  * 时间段信息

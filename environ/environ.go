@@ -77,7 +77,11 @@ func init() {
 	defaultPidFile = filepath.Join(defaultWorkDir, "run", executeName+".pid")
 
 	// location
-	defaultLocation, _ = time.LoadLocation(defaultLoc)
+	var err error
+	defaultLocation, err = time.LoadLocation(defaultLoc)
+	if err != nil {
+		panic(fmt.Sprintf("[PANIC] load location failed: %s", err))
+	}
 }
 
 /* {{{ func New() *Environ
@@ -159,13 +163,13 @@ func (env *Environ) WithConfig() *Environ {
 		if loc, err := time.LoadLocation(etz); err == nil {
 			env.Location = loc
 		} else {
-			fmt.Printf("load zone(%s) error: %s\n", etz, err)
+			fmt.Printf("load zone(%s) from env error: %s\n", etz, err)
 		}
 	} else if tz := cfg.String(CFG_KEY_TIMEZONE); tz != "" {
 		if loc, err := time.LoadLocation(tz); err == nil {
 			env.Location = loc
 		} else {
-			fmt.Printf("load zone(%s) error: %s\n", tz, err)
+			fmt.Printf("load zone(%s) from cfg error: %s\n", tz, err)
 		}
 	}
 	if env.Location == nil {

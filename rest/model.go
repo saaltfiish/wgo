@@ -869,8 +869,20 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 						fv.Set(reflect.ValueOf(&userid))
 					case "string":
 						fv.Set(reflect.ValueOf(userid))
+					case "int":
+						ui, _ := strconv.Atoi(userid)
+						fv.Set(reflect.ValueOf(ui))
+					case "*int":
+						ui, _ := strconv.Atoi(userid)
+						fv.Set(reflect.ValueOf(&ui))
+					case "int64":
+						ui64, _ := strconv.ParseInt(userid, 10, 64)
+						fv.Set(reflect.ValueOf(ui64))
+					case "*int64":
+						ui64, _ := strconv.ParseInt(userid, 10, 64)
+						fv.Set(reflect.ValueOf(&ui64))
 					default:
-						return nil, fmt.Errorf("field(%s) must be string, not %s", col.Tag, fv.Kind().String())
+						return nil, fmt.Errorf("field(%s) must be string/int(64), not %s", col.Tag, fv.Kind().String())
 					}
 				}
 			case "time": //如果没有传值, 就是当前时间
