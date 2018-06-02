@@ -270,7 +270,7 @@ func (rest *REST) OnUpdate(i interface{}) (interface{}, error) {
 		return nil, err
 	} else {
 		if affected <= 0 {
-			c.Info("OnUpdate not affected any record")
+			c.Info("[OnUpdate]not affected any record")
 		}
 		return m, nil
 	}
