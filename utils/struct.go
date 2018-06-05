@@ -527,6 +527,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 			fn := field.Tags[tag].Name
 			fv := FieldByIndex(v, field.Index)
 			options := field.Tags[tag].Options
+			fmt.Printf("filed: %s, value: %+v", fn, fv)
 			fts := fv.Type().String()
 			fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
 			if (must == "" || options.Contains(must)) && (!options.Contains("omitempty") || !IsZero(fv)) {
