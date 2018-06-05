@@ -528,7 +528,7 @@ func StringMap(i interface{}, opts ...string) map[string]string {
 			fv := FieldByIndex(v, field.Index)
 			options := field.Tags[tag].Options
 			fts := fv.Type().String()
-			// fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
+			fmt.Printf("field name: %s, value: %+v, type: %s\n", fn, fv, fts)
 			if (must == "" || options.Contains(must)) && (!options.Contains("omitempty") || !IsZero(fv)) {
 				// 不为空 or 没有设置`omitempty`
 				switch fts {
