@@ -1014,6 +1014,8 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 	} else if len(ext) == 1 { // 只有一个, 为传入pk
 		if id, ok := ext[0].(string); ok && id != "" {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
+		} else if id, ok := ext[0].(int); ok && id > 0 {
+			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
 		}
 	} else if len(ext) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
