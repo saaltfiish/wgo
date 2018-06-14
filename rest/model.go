@@ -786,10 +786,10 @@ func (rest *REST) Fill(j []byte) error {
 	if m := rest.Model(); m == nil {
 		return fmt.Errorf("[Fill] not found model")
 	} else if err := json.Unmarshal(j, m); err != nil {
-		rest.new = m
 		return err
 	} else {
 		rest.SetModel(m)
+		rest.new = m
 		rest.filled = true
 	}
 	return nil
