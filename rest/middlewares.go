@@ -121,13 +121,18 @@ func Init() wgo.MiddlewareFunc {
 
 			// access info
 			if ac := c.Access(); ac != nil {
-				ac.Service.Endpoint = rest.endpoint
+				if ep := rest.Options(EndpointKey); ep != nil && ep.(string) != "" {
+					ac.Service.Endpoint = ep.(string)
+				} else {
+					Warn("not found endpoint")
+				}
 				ac.Service.Action = rest.action
 				if rk := c.Param(RowkeyKey); rk != "" {
 					ac.Service.RowKey = rk
 				}
-				ac.Service.Old = rest.older
 				ac.Service.User.Id = rest.GetUserID()
+				ac.Service.New = rest.new
+				ac.Service.Old = rest.older
 			}
 
 			return restError

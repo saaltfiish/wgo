@@ -106,58 +106,60 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	// wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 	// wgo.PUT("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 
-	rest.Builtin(flag)
+	rest.Builtin(flag).SetOptions(EndpointKey, endpoint)
 	return rest
 }
 
 // 内置方法
-func (rest *REST) Builtin(flag int, ms ...interface{}) {
+func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 	endpoint := rest.endpoint
 
 	if rest.defaultms != nil && len(rest.defaultms) > 0 {
 		ms = append(rest.defaultms, ms...)
 	}
 
+	routes := make([]*whttp.Route, 0)
 	if flag&GM_HEAD > 0 {
 		// HEAD /{endpoint}
-		wgo.HEAD("/"+endpoint, rest.RESTHead(), ms...)
+		routes = append(routes, wgo.HEAD("/"+endpoint, rest.RESTHead(), ms...)...)
 	}
 	if flag&GM_GET > 0 {
 		// GET /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		Debug("[Builtin]GET %s", path)
-		wgo.GET(path, rest.RESTGet(), ms...)
+		// Debug("[Builtin]GET %s", path)
+		routes = append(routes, wgo.GET(path, rest.RESTGet(), ms...)...)
 	}
 	if flag&GM_LIST > 0 {
 		// GET /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
-		wgo.GET(path, rest.RESTSearch(), ms...)
+		routes = append(routes, wgo.GET(path, rest.RESTSearch(), ms...)...)
 	}
 	if flag&GM_RPT > 0 {
 		// POST /{endpoint}/{rpt_tag}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
-		wgo.POST(path, rest.RESTSearch(), ms...)
+		routes = append(routes, wgo.POST(path, rest.RESTSearch(), ms...)...)
 	}
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
-		wgo.POST(path, rest.RESTPost(), ms...)
+		routes = append(routes, wgo.POST(path, rest.RESTPost(), ms...)...)
 	}
 	if flag&GM_DELETE > 0 {
 		// DELETE /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		wgo.DELETE(path, rest.RESTDelete(), ms...)
+		routes = append(routes, wgo.DELETE(path, rest.RESTDelete(), ms...)...)
 	}
 	if flag&GM_PATCH > 0 {
 		// PATCH /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		wgo.PATCH(path, rest.RESTPatch(), ms...)
+		routes = append(routes, wgo.PATCH(path, rest.RESTPatch(), ms...)...)
 	}
 	if flag&GM_PUT > 0 {
 		// PUT /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		wgo.PUT(path, rest.RESTPut(), ms...)
+		routes = append(routes, wgo.PUT(path, rest.RESTPut(), ms...)...)
 	}
+	return Routes{routes}
 }
 
 // Func
@@ -252,6 +254,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 			c.Error("DidCreate error: %s", err)
 			return rest.NotOK(err)
 		} else { // all done
+			c.Debug("set rest new: %+v", m)
 			if r, err = action.Trigger(r.(Model)); err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
@@ -401,38 +404,41 @@ func (rest *REST) Add(method, path string, h wgo.HandlerFunc, ms ...interface{})
 	//Debug("method: %s, path: %s, model: %v", method, path, rest.Model())
 	switch strings.ToUpper(method) {
 	case "GET":
-		return Routes{wgo.GET(path, h, ms...)}
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	case "POST":
-		return Routes{wgo.POST(path, h, ms...)}
+		return Routes{wgo.POST(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	case "DELETE":
-		return Routes{wgo.DELETE(path, h, ms...)}
+		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	case "PATCH":
-		return Routes{wgo.PATCH(path, h, ms...)}
+		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	case "PUT":
-		return Routes{wgo.PUT(path, h, ms...)}
+		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	case "HEAD":
-		return Routes{wgo.HEAD(path, h, ms...)}
+		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	default:
-		return Routes{wgo.GET(path, h, ms...)}
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
 	}
 }
 
+func optionKey(key string) string {
+	return fmt.Sprintf("%s:%s", RESTKey, key)
+}
+
 // options
-func (rs Routes) SetOptions(k string, v interface{}) {
-	rs.Routes.SetOptions("rest", whttp.Options{k: v})
+func (rs Routes) SetOptions(k string, v interface{}) Routes {
+	rs.Routes.SetOptions(optionKey(k), v)
+	return rs
 }
 
 // skip auth
-func (rs Routes) Free() {
-	rs.SetOptions(SKIPAUTH_KEY, true)
+func (rs Routes) Free() Routes {
+	return rs.SetOptions(SKIPAUTH_KEY, true)
 }
 
 func (rest *REST) Options(k string) interface{} {
 	if c := rest.Context(); c != nil {
-		if opts := c.Options("rest"); opts != nil {
-			if opt, ok := opts.(whttp.Options)[k]; ok {
-				return opt
-			}
+		if opt := c.Options(optionKey(k)); opt != nil {
+			return opt
 		}
 	}
 	return nil

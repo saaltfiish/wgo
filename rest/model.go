@@ -444,6 +444,34 @@ func NewModel(i interface{}) Model {
 	return rest.NewModel(i)
 }
 
+// SetModel
+func (rest *REST) SetModel(m Model) Model {
+	rest.model = m
+	// 注入m
+	rest.importTo(m)
+	return m
+}
+
+// 把rest注入i
+func (rest *REST) importTo(i interface{}, fields ...string) {
+	field := "REST"
+	if len(fields) > 0 {
+		field = fields[0]
+	}
+	if fv := utils.FieldByName(i, field); fv.IsValid() {
+		if fv.Kind() == reflect.Ptr {
+			fv.Set(reflect.ValueOf(rest))
+		} else {
+			fv.Set(reflect.ValueOf(rest).Elem())
+		}
+	}
+}
+
+// Model
+func (rest *REST) Model() Model {
+	return rest.model
+}
+
 // 基于变量创建全新的model,  i的值保留
 func SetModel(i interface{}) Model {
 	rest := new(REST)
@@ -789,7 +817,12 @@ func (rest *REST) Fill(j []byte) error {
 		return err
 	} else {
 		rest.SetModel(m)
-		rest.new = m
+		if reflect.ValueOf(m).Kind() == reflect.Ptr {
+			// Info("fill to new: %+v", reflect.Indirect(reflect.ValueOf(m)))
+			rest.new = reflect.Indirect(reflect.ValueOf(m)).Interface()
+		} else {
+			rest.new = m
+		}
 		rest.filled = true
 	}
 	return nil

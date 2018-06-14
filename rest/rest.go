@@ -2,11 +2,9 @@
 package rest
 
 import (
-	"reflect"
 	"strings"
 
 	"wgo"
-	"wgo/utils"
 	"wgo/whttp"
 )
 
@@ -22,7 +20,7 @@ type REST struct {
 	conditions []*Condition                `db:"-"`
 	pagination *Pagination                 `db:"-"`
 	fields     []string                    `db:"-"`
-	new        Model                       `db:"-"`
+	new        interface{}                 `db:"-"`
 	older      Model                       `db:"-"`
 	filled     bool                        `db:"-"` //是否有内容
 	defaultms  []interface{}               `db:"-"` // 默认的middlewares
@@ -45,34 +43,6 @@ func NewREST(c *wgo.Context) (rest *REST) {
 	rest.env = make(map[interface{}]interface{})
 	c.SetExt(rest)
 	return
-}
-
-// SetModel
-func (rest *REST) SetModel(m Model) Model {
-	rest.model = m
-	// 注入m
-	rest.importTo(m)
-	return m
-}
-
-// 把rest注入i
-func (rest *REST) importTo(i interface{}, fields ...string) {
-	field := "REST"
-	if len(fields) > 0 {
-		field = fields[0]
-	}
-	if fv := utils.FieldByName(i, field); fv.IsValid() {
-		if fv.Kind() == reflect.Ptr {
-			fv.Set(reflect.ValueOf(rest))
-		} else {
-			fv.Set(reflect.ValueOf(rest).Elem())
-		}
-	}
-}
-
-// Model
-func (rest *REST) Model() Model {
-	return rest.model
 }
 
 // release

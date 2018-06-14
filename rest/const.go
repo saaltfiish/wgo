@@ -23,6 +23,7 @@ const (
 	ACTION_OTHER  = "O"
 
 	//env key
+	RESTKey           = "_rest_"
 	RequestIDKey      = "_reqid_"
 	SaveBodyKey       = "_sb_"
 	NoLogKey          = "_nl_"
