@@ -21,20 +21,21 @@ type (
 	}
 	// access log
 	AccessLog struct {
-		Ts      string  `json:"t,omitempty"`     // timestamp
-		Ver     string  `json:"v,omitempty"`     // server version
-		Host    string  `json:"h,omitempty"`     // server host
-		Service string  `json:"s,omitempty"`     // 服务ID(服务发现管理)
-		SName   string  `json:"n,omitempty"`     // 服务名(服务发现管理)
-		Dura    float64 `json:"d"`               // 持续时间, 单位毫秒
-		ReqID   string  `json:"rid,omitempty"`   // request-id, 首次访问由服务端生成, 各端传播
-		Env     string  `json:"env,omitempty"`   // 服务环境(testing,production等)
-		Err     int     `json:"err"`             // 错误码(成功为0)
-		Msg     string  `json:"msg,omitempty"`   // 错误信息
-		CIP     string  `json:"cip,omitempty"`   // 客户端IP
-		Proto   string  `json:"proto,omitempty"` // 协议 `[ "http", "rpc" ]`
-		Call    Call    `json:"call,omitempty"`  // 调用信息
-		App     App     `json:"app,omitempty"`   // 应用程序信息
+		Ts      string  `json:"t,omitempty"`       // timestamp
+		Ver     string  `json:"v,omitempty"`       // server version
+		Host    string  `json:"h,omitempty"`       // server host
+		SId     string  `json:"s,omitempty"`       // 服务ID(服务发现管理)
+		SName   string  `json:"n,omitempty"`       // 服务名(服务发现管理)
+		Dura    float64 `json:"d"`                 // 持续时间, 单位毫秒
+		ReqID   string  `json:"rid,omitempty"`     // request-id, 首次访问由服务端生成, 各端传播
+		Env     string  `json:"env,omitempty"`     // 服务环境(testing,production等)
+		Err     int     `json:"err"`               // 错误码(成功为0)
+		Msg     string  `json:"msg,omitempty"`     // 错误信息
+		CIP     string  `json:"cip,omitempty"`     // 客户端IP
+		Proto   string  `json:"proto,omitempty"`   // 协议 `[ "http", "rpc" ]`
+		Call    Call    `json:"call,omitempty"`    // 调用信息
+		App     App     `json:"app,omitempty"`     // 应用程序信息
+		Service Service `json:"service,omitempty"` // 服务信息
 	}
 
 	App struct {
@@ -49,7 +50,6 @@ type (
 		Referer  string      `json:"referer,omitempty"` // referer header(最长128字节)
 		Ct       string      `json:"ct,omitempty"`      // content-type
 		Encoding string      `json:"enc,omitempty"`     // 压缩编码
-		User     User        `json:"user,omitempty"`    // 客户信息
 		Ext      interface{} `json:"ext,omitempty"`     // 额外信息
 	}
 	User struct {
@@ -63,17 +63,29 @@ type (
 		From  string `json:"from,omitempty"` // 调用端服务ID(服务发现管理), 可为空
 		To    string `json:"to,omitempty"`   // 向下调用服务ID, 如果有多个, 用逗号分隔
 	}
+
+	// service
+	Service struct {
+		Endpoint string      `json:"ep,omitempty"`
+		Action   string      `json:"act,omitempty"`
+		Desc     string      `json:"desc,omitempty"`
+		RowKey   string      `json:"rk,omitempty"`
+		User     User        `json:"user,omitempty"` // 客户信息
+		Old      interface{} `json:"old,omitempty"`
+		New      interface{} `json:"new,omitempty"`
+	}
 )
 
 func NewAccessLog() *AccessLog {
 	ac := &AccessLog{
-		Ver:     getVersion(),
-		Host:    Env().Hostname,
-		SName:   Env().ServiceName, // 服务名, 这个代码应该'自知'
-		Service: Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
-		Env:     Env().ServiceEnv,  // 服务环境, 这个应该从配置中心拿到
-		Call:    Call{},
-		App: App{
+		Ver:   getVersion(),
+		Host:  Env().Hostname,
+		SId:   Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
+		SName: Env().ServiceName, // 服务名, 这个代码应该'自知'
+		Env:   Env().ServiceEnv,  // 服务环境, 这个应该从配置中心拿到
+		Call:  Call{},
+		App:   App{},
+		Service: Service{
 			User: User{},
 		},
 	}
@@ -101,10 +113,16 @@ func (ac *AccessLog) Reset(t time.Time) {
 	ac.App.RespLen = 0
 	ac.App.UA = ""
 	ac.App.Referer = ""
-	ac.App.User.IP = ""
-	ac.App.User.Id = ""
-	ac.App.User.ExtId = ""
-	ac.App.User.Sid = ""
+	ac.Service.Endpoint = ""
+	ac.Service.Action = ""
+	ac.Service.Desc = ""
+	ac.Service.RowKey = ""
+	ac.Service.New = nil
+	ac.Service.Old = nil
+	ac.Service.User.IP = ""
+	ac.Service.User.Id = ""
+	ac.Service.User.ExtId = ""
+	ac.Service.User.Sid = ""
 }
 
 // 获取版本号
@@ -169,8 +187,10 @@ func Access() MiddlewareFunc {
 			ac.App.Ct = c.ContentType()
 			ac.App.Encoding = c.ContentEncoding()
 			// user
-			ac.App.User.IP = c.UserIP()
-			ac.App.User.Id = c.UserID()
+			ac.Service.User.IP = c.UserIP()
+			if ac.Service.User.Id == "" {
+				ac.Service.User.Id = c.UserID()
+			}
 
 			if sa, err := json.Marshal(ac); err != nil {
 				c.Logger().Error("serialize access data failed: %s", err)

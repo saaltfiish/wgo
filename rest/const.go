@@ -15,6 +15,13 @@ const (
 	GM_ALL  = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT
 	GM_NONE = 0
 
+	// action
+	ACTION_CREATE = "C"
+	ACTION_READ   = "R"
+	ACTION_UPDATE = "U"
+	ACTION_DELETE = "D"
+	ACTION_OTHER  = "O"
+
 	//env key
 	RequestIDKey      = "_reqid_"
 	SaveBodyKey       = "_sb_"

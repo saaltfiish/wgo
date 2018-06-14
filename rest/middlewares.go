@@ -22,13 +22,14 @@ func Init() wgo.MiddlewareFunc {
 			// action
 			switch m := c.Request().(whttp.Request).Method(); m {
 			case "POST", "PUT":
-				rest.SetAction("creating")
+				rest.SetAction(ACTION_CREATE)
 			case "PATCH":
-				rest.SetAction("updating")
+				rest.SetAction(ACTION_UPDATE)
+			case "DELETE":
+				rest.SetAction(ACTION_DELETE)
 			default:
+				rest.SetAction(ACTION_READ)
 			}
-			var ct int
-			var p, pp string
 
 			// get user id
 			rest.SetUserID()
@@ -37,6 +38,8 @@ func Init() wgo.MiddlewareFunc {
 			rest.setTimeRangeFromStartEnd()
 
 			// 参数表
+			var ct int
+			var p, pp string
 			params := c.QueryParams()
 			for k, v := range params {
 				switch k { //处理参数
@@ -114,7 +117,20 @@ func Init() wgo.MiddlewareFunc {
 			//记录分页信息
 			rest.SetEnv(PaginationKey, NewPagination(p, pp))
 
-			return next(c)
+			restError := next(c)
+
+			// access info
+			if ac := c.Access(); ac != nil {
+				ac.Service.Endpoint = rest.endpoint
+				ac.Service.Action = rest.action
+				if rk := c.Param(RowkeyKey); rk != "" {
+					ac.Service.RowKey = rk
+				}
+				ac.Service.Old = rest.older
+				ac.Service.User.Id = rest.GetUserID()
+			}
+
+			return restError
 		}
 
 	}

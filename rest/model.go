@@ -777,7 +777,7 @@ func (rest *REST) Filter() (Model, error) {
 /* }}} */
 
 /* {{{ func (rest *REST) Fill(j []byte) error
- * 根据条件获取一条记录, model为表结构
+ * 填充新对象
  */
 func (rest *REST) Fill(j []byte) error {
 	if rest.filled == true {
@@ -786,6 +786,7 @@ func (rest *REST) Fill(j []byte) error {
 	if m := rest.Model(); m == nil {
 		return fmt.Errorf("[Fill] not found model")
 	} else if err := json.Unmarshal(j, m); err != nil {
+		rest.new = m
 		return err
 	} else {
 		rest.SetModel(m)

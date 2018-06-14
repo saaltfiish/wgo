@@ -182,6 +182,8 @@ func (r *REST) SetUserID(opts ...interface{}) {
 	if len(opts) > 0 {
 		if id, ok := opts[0].(string); ok && id != "" {
 			ui = id
+		} else if idp, ok := opts[0].(*string); ok && idp != nil {
+			ui = *idp
 		}
 	}
 	if ui != "" {

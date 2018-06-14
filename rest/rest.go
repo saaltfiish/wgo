@@ -22,6 +22,7 @@ type REST struct {
 	conditions []*Condition                `db:"-"`
 	pagination *Pagination                 `db:"-"`
 	fields     []string                    `db:"-"`
+	new        Model                       `db:"-"`
 	older      Model                       `db:"-"`
 	filled     bool                        `db:"-"` //是否有内容
 	defaultms  []interface{}               `db:"-"` // 默认的middlewares
@@ -113,12 +114,12 @@ func (rest *REST) Action() string {
 
 // creating
 func (rest *REST) Creating() bool {
-	return rest.action == "creating"
+	return rest.action == ACTION_CREATE
 }
 
 // updating
 func (rest *REST) Updating() bool {
-	return rest.action == "updating"
+	return rest.action == ACTION_UPDATE
 }
 
 // response
