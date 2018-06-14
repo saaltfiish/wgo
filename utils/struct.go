@@ -283,9 +283,14 @@ func typeStructColumns(t reflect.Type, underscore bool, tags ...string) (cols []
 		index := make([]int, 0)
 		f := t.Field(i)
 		index = append(index, i)
-		if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct , 也就是嵌套
+		// if f.Anonymous && f.Type.Kind() == reflect.Struct { //匿名struct , 也就是嵌套
+		if f.Anonymous && (f.Type.Kind() == reflect.Struct || f.Type.Kind() == reflect.Ptr && f.Type.Elem().Kind() == reflect.Struct) {
+			ft := f.Type
+			if f.Type.Kind() == reflect.Ptr && f.Type.Elem().Kind() == reflect.Struct {
+				ft = f.Type.Elem()
+			}
 			// Recursively add nested fields in embedded structs.
-			subcols := typeStructColumns(f.Type, underscore, tags...)
+			subcols := typeStructColumns(ft, underscore, tags...)
 			// 如果重名则不append, drop
 			for _, subcol := range subcols {
 				shouldAppend := true
