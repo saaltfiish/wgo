@@ -131,7 +131,10 @@ func Init() wgo.MiddlewareFunc {
 					ac.Service.RowKey = rk
 				}
 				ac.Service.User.Id = rest.GetUserID()
-				ac.Service.New = rest.new
+				if la := rest.Options(LimitAccess); la == nil {
+					// 如果设置了LimitAccess, 就不记录传入的body, 主要针对登录密码
+					ac.Service.New = rest.new
+				}
 				ac.Service.Old = rest.older
 			}
 

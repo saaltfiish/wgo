@@ -435,6 +435,11 @@ func (rs Routes) Free() Routes {
 	return rs.SetOptions(SKIPAUTH_KEY, true)
 }
 
+// 限制记录access, 毕竟总不能把密码明文记下来吧
+func (rs Routes) LimitAccess() Routes {
+	return rs.SetOptions(LimitAccess, true)
+}
+
 func (rest *REST) Options(k string) interface{} {
 	if c := rest.Context(); c != nil {
 		if opt := c.Options(optionKey(k)); opt != nil {

@@ -50,6 +50,7 @@ const (
 	PERMISSION_KEY    = "_perm_"
 	EXT_KEY           = "_ext_"
 	SKIPAUTH_KEY      = "_skipauth_"
+	LimitAccess       = "_limitaccess_"
 
 	// db tag
 	DBTAG_PK    = "pk"
