@@ -11,7 +11,13 @@ import (
 )
 
 const (
+	// level
+	LVL_DEV        = "dev"
+	LVL_TESTING    = "testing"
+	LVL_PRODUCTION = "production"
+
 	defaultLoc         = "Asia/Shanghai"
+	defaultAppLevel    = LVL_DEV
 	defaultDaemonize   = false
 	defaultEnableCache = true
 	defaultDockerize   = false
@@ -22,6 +28,7 @@ var (
 	environ *Environ
 
 	hostname    string
+	level       string = defaultAppLevel
 	executePath string
 	executeDir  string
 	executeName string
@@ -84,10 +91,15 @@ func init() {
 	}
 }
 
-/* {{{ func New() *Environ
+/* {{{ func New(opts ...interface{}) *Environ
  *
  */
-func New() *Environ {
+func New(opts ...interface{}) *Environ {
+	if len(opts) > 0 {
+		if lvl, ok := opts[0].(string); ok && lvl != "" {
+			level = lvl
+		}
+	}
 	w := new(Environ).WithDefaults()
 	return w
 }
@@ -105,6 +117,10 @@ func (env *Environ) WithDefaults() *Environ {
 	env.Dockerize = defaultDockerize
 	env.EnableCache = defaultEnableCache
 	env.DebugMode = defaultDebugMode
+	if level == LVL_DEV {
+		// 生产环境默认不debug
+		env.DebugMode = true
+	}
 	env.WorkDir = defaultWorkDir
 	env.AppDir = executeDir
 	env.PidFile = defaultPidFile

@@ -1,6 +1,8 @@
 package environ
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,12 +66,17 @@ func (l *logger) Init(cfg *Config) {
 	if l.logs = BuildLogs(cfg); len(l.logs) > 0 {
 		for _, log := range l.logs {
 			if log.Format == "" {
-				log.Format = "%T%E[%L] %M" // default format
+				log.Format = defaultFormat // default format
 			}
 			l.Start(wlog.LogConfig(log))
 		}
 	} else {
 		panic("[PANIC] start logger failed!")
+	}
+	// for app level
+	if level == LVL_PRODUCTION {
+		// 如果是生产环境, 则只放出error以上的日志
+		l.Limit(wlog.ERROR)
 	}
 }
 
@@ -143,19 +150,34 @@ func (env *Environ) AddConsole() {
 		env.Logger().Start(wlog.LogConfig{
 			Type:   "console",
 			Tag:    "WGO",
-			Format: "%T%E[%C] %M",
-			Level:  "INFO|WARNING|ERROR|FATAL",
+			Format: defaultFormat,
+			Level:  defaultLevel,
 		})
 	}
 }
 
 /* }}} */
 
+// native log
+func nlog(arg0 interface{}, args ...interface{}) {
+	switch first := arg0.(type) {
+	case string:
+		// Use the first string as a format string
+		log.Printf(first, args...)
+	default:
+		log.Printf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+	}
+}
+
 /* {{{ func Debug()
  *
  */
 func (env *Environ) Debug(arg0 interface{}, args ...interface{}) {
-	env.Logger().Debug(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Debug(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 }
 
 /* }}} */
@@ -164,7 +186,11 @@ func (env *Environ) Debug(arg0 interface{}, args ...interface{}) {
  *
  */
 func (env *Environ) Info(arg0 interface{}, args ...interface{}) {
-	env.Logger().Info(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Info(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 }
 
 /* }}} */
@@ -173,7 +199,11 @@ func (env *Environ) Info(arg0 interface{}, args ...interface{}) {
  *
  */
 func (env *Environ) Warn(arg0 interface{}, args ...interface{}) {
-	env.Logger().Warn(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Warn(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 }
 
 /* }}} */
@@ -182,7 +212,11 @@ func (env *Environ) Warn(arg0 interface{}, args ...interface{}) {
  *
  */
 func (env *Environ) Error(arg0 interface{}, args ...interface{}) {
-	env.Logger().Error(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Error(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 }
 
 /* }}} */
@@ -191,7 +225,11 @@ func (env *Environ) Error(arg0 interface{}, args ...interface{}) {
  *
  */
 func (env *Environ) Log(arg0 interface{}, args ...interface{}) {
-	env.Logger().Error(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Error(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 }
 
 /* }}} */
@@ -200,7 +238,11 @@ func (env *Environ) Log(arg0 interface{}, args ...interface{}) {
  *
  */
 func (env *Environ) Fatal(arg0 interface{}, args ...interface{}) {
-	env.Logger().Fatal(arg0, args...)
+	if env != nil && env.logger != nil {
+		env.logger.Fatal(arg0, args...)
+	} else {
+		nlog(arg0, args...)
+	}
 	time.Sleep(10 * time.Millisecond)
 	os.Exit(1)
 }

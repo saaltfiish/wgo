@@ -1,6 +1,7 @@
 package wgo
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -80,7 +81,7 @@ func (w *WGO) Register() *WGO {
  */
 func Init() {
 	// init env(include read configuration, init logger)
-	env := environ.New().WithConfig().Register()
+	env := environ.New(AppLevel).WithConfig().Register()
 
 	// build wgo with env, and register
 	New(env).Register()
@@ -99,6 +100,7 @@ func Init() {
 	// add servers
 	if scs := environ.ServersConfig(Cfg()); len(scs) > 0 {
 		for _, sc := range scs {
+			sc.Name = fmt.Sprintf("%s %s", Env().ProcName, Version())
 			AddServer(sc)
 		}
 	}
@@ -275,19 +277,6 @@ func (w *WGO) serve() {
 	}
 
 	wg.Wait()
-}
-
-/* }}} */
-
-/*Version 获取版本号 {{{ func Version() (ver string)
- * 获取版本号
- */
-func Version() (ver string) {
-	if ver = Cfg().String(environ.CFG_KEY_VERSION); ver == "" {
-		// 如果配置文件没定义则返回wgo的版本
-		ver = VERSION
-	}
-	return
 }
 
 /* }}} */

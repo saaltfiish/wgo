@@ -78,7 +78,7 @@ type (
 
 func NewAccessLog() *AccessLog {
 	ac := &AccessLog{
-		Ver:   getVersion(),
+		Ver:   VERSION,
 		Host:  Env().Hostname,
 		SId:   Env().ServiceId,   // 服务id, 这个应该从配置中心拿到
 		SName: Env().ServiceName, // 服务名, 这个代码应该'自知'
@@ -123,14 +123,6 @@ func (ac *AccessLog) Reset(t time.Time) {
 	ac.Service.User.Id = ""
 	ac.Service.User.ExtId = ""
 	ac.Service.User.Sid = ""
-}
-
-// 获取版本号
-func getVersion() (ver string) {
-	if Env().ServiceVer != "" {
-		return Env().ServiceVer
-	}
-	return "unknown"
 }
 
 // 记录access日志

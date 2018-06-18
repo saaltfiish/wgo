@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	//"strings"
+	"strings"
 
 	"wgo/utils"
 	"wgo/whttp"
@@ -109,7 +109,8 @@ func Prepare() MiddlewareFunc {
 			err = next(c)
 
 			if c.ServerMode() == "http" {
-				c.response.(whttp.Response).Header().Set(whttp.HeaderServer, "WGO")
+				c.response.(whttp.Response).Header().
+					Set(whttp.HeaderServer, fmt.Sprintf("%s %s", strings.ToUpper(Env().ProcName), Version()))
 			}
 			if requestId != "" { // 放后面执行, 保证新鲜
 				//c.Warn("set requestid header: %s", requestId)

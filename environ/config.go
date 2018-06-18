@@ -9,8 +9,9 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
-	"github.com/spf13/viper"
 	"wgo/utils"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -33,7 +34,6 @@ const (
 	CFG_KEY_ADDR        = "addr"
 	CFG_KEY_PORT        = "port"
 	CFG_KEY_HOSTS       = "hosts"
-	CFG_KEY_VERSION     = "version"
 	CFG_KEY_ACCESS      = "access"
 )
 
