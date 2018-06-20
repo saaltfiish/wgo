@@ -66,13 +66,13 @@ type (
 
 	// service
 	Service struct {
-		Endpoint string      `json:"ep,omitempty"`
-		Action   string      `json:"act,omitempty"`
-		Desc     string      `json:"desc,omitempty"`
-		RowKey   string      `json:"rk,omitempty"`
-		User     User        `json:"user,omitempty"` // 客户信息
-		Old      interface{} `json:"old,omitempty"`
-		New      interface{} `json:"new,omitempty"`
+		Endpoint string `json:"ep,omitempty"`
+		Action   string `json:"act,omitempty"`
+		Desc     string `json:"desc,omitempty"`
+		RowKey   string `json:"rk,omitempty"`
+		User     User   `json:"user,omitempty"` // 客户信息
+		Old      string `json:"old,omitempty"`
+		New      string `json:"new,omitempty"`
 	}
 )
 
@@ -117,8 +117,8 @@ func (ac *AccessLog) Reset(t time.Time) {
 	ac.Service.Action = ""
 	ac.Service.Desc = ""
 	ac.Service.RowKey = ""
-	ac.Service.New = nil
-	ac.Service.Old = nil
+	ac.Service.New = ""
+	ac.Service.Old = ""
 	ac.Service.User.IP = ""
 	ac.Service.User.Id = ""
 	ac.Service.User.ExtId = ""

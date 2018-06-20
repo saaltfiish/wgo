@@ -440,7 +440,12 @@ func (rs Routes) Free() Routes {
 
 // 限制记录access, 毕竟总不能把密码明文记下来吧
 func (rs Routes) LimitAccess() Routes {
-	return rs.SetOptions(LimitAccess, true)
+	return rs.SetOptions(LimitAccessKey, true)
+}
+
+// desc string
+func (rs Routes) Desc(desc string) Routes {
+	return rs.SetOptions(DescKey, desc)
 }
 
 func (rest *REST) Options(k string) interface{} {

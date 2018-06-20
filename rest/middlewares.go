@@ -2,6 +2,7 @@
 package rest
 
 import (
+	"encoding/json"
 	"strings"
 
 	"wgo"
@@ -121,21 +122,41 @@ func Init() wgo.MiddlewareFunc {
 
 			// access info
 			if ac := c.Access(); ac != nil {
+				// endpoint
 				if ep := rest.Options(EndpointKey); ep != nil && ep.(string) != "" {
 					ac.Service.Endpoint = ep.(string)
 				} else {
 					Warn("not found endpoint")
 				}
+
+				// action
 				ac.Service.Action = rest.action
 				if rk := c.Param(RowkeyKey); rk != "" {
 					ac.Service.RowKey = rk
 				}
+
+				// user info
 				ac.Service.User.Id = rest.GetUserID()
-				if la := rest.Options(LimitAccess); la == nil {
+
+				// new & old
+				if la := rest.Options(LimitAccessKey); la == nil && rest.new != nil {
 					// 如果设置了LimitAccess, 就不记录传入的body, 主要针对登录密码
-					ac.Service.New = rest.new
+					if _, ok := rest.new.(string); ok {
+						ac.Service.New = rest.new.(string)
+					} else if nb, err := json.Marshal(rest.new); err == nil {
+						ac.Service.New = string(nb)
+					}
 				}
-				ac.Service.Old = rest.older
+				if ob, err := json.Marshal(rest.older); err == nil {
+					ac.Service.Old = string(ob)
+				}
+
+				// desc
+				if d := rest.Options(DescKey); d != nil {
+					if desc, ok := d.(string); ok {
+						ac.Service.Desc = desc
+					}
+				}
 			}
 
 			return restError
