@@ -134,11 +134,6 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 		path := fmt.Sprintf("/%s", endpoint)
 		routes = append(routes, wgo.GET(path, rest.RESTSearch(), ms...)...)
 	}
-	if flag&GM_RPT > 0 {
-		// POST /{endpoint}/{rpt_tag}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
-		routes = append(routes, wgo.POST(path, rest.RESTSearch(), ms...)...)
-	}
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
@@ -158,6 +153,14 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 		// PUT /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
 		routes = append(routes, wgo.PUT(path, rest.RESTPut(), ms...)...)
+	}
+
+	// reporting
+	if flag&GM_RPT > 0 {
+		// POST /{endpoint}/{rpt_tag}
+		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
+		// Debug("[rest.Builtin] path: %s", path)
+		routes = append(routes, wgo.GET(path, rest.RESTSearch(), ms...)...)
 	}
 	return Routes{routes}
 }

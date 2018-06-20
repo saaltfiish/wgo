@@ -1,7 +1,6 @@
 package wgo
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -100,7 +99,7 @@ func Init() {
 	// add servers
 	if scs := environ.ServersConfig(Cfg()); len(scs) > 0 {
 		for _, sc := range scs {
-			sc.Name = fmt.Sprintf("%s %s", Env().ProcName, Version())
+			// sc.Name = fmt.Sprintf("%s %s", Env().ProcName, Version())
 			AddServer(sc)
 		}
 	}
