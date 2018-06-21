@@ -11,7 +11,7 @@ import (
 	"wgo"
 	"wgo/utils"
 
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 )
 
 type ReportInfo struct {
@@ -40,6 +40,8 @@ type Report struct {
 	rest         *REST
 	search       *elastic.SearchService
 	params       []string          // 支持参数
+	excludes     []string          // source fields exclude
+	includes     []string          // source fields include
 	dimensions   Worlds            // 维度
 	qs           []elastic.Query   // 根据条件形成的多个query
 	filters      map[string]string // 条件term查询, 需要在nested agg中filter
@@ -105,7 +107,7 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		rest:       rest,
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
-		search:     ElasticClient.Search().Index(es["index"]).Type(es[base.(Model).TableName()]),
+		search:     ElasticClient.Search().Index(es["index"]),
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
@@ -121,6 +123,39 @@ func (rpt *Report) Params(params ...string) *Report {
 	for _, p := range params {
 		if rpt.rest.Context().QueryParam(p) != "" { // 只有当前端传了这个条件, 才有效
 			rpt.params = append(rpt.params, p)
+		}
+	}
+	return rpt
+}
+
+// source exclude
+func (rpt *Report) Exclude(fields ...string) *Report {
+	if rpt.excludes == nil {
+		rpt.excludes = make([]string, 0)
+	}
+	for _, field := range fields {
+		sfn := rpt.SearchFieldName(field)
+		// rpt.rest.Debug("exclude field: %s", field, sfn)
+		if sfn != "" {
+			rpt.excludes = append(rpt.excludes, sfn)
+		} else {
+			rpt.excludes = append(rpt.excludes, field)
+		}
+	}
+	return rpt
+}
+
+// source include
+func (rpt *Report) Include(fields ...string) *Report {
+	if rpt.includes == nil {
+		rpt.includes = make([]string, 0)
+	}
+	for _, field := range fields {
+		sfn := rpt.SearchFieldName(field)
+		if sfn != "" {
+			rpt.includes = append(rpt.includes, sfn)
+		} else {
+			rpt.includes = append(rpt.includes, field)
 		}
 	}
 	return rpt
@@ -342,7 +377,7 @@ func (rpt *Report) Build() (r Result, err error) {
 	if rpt.id == "" { // 搜索查询
 		// build aggs
 		tsField := rpt.SearchFieldName(rpt.timestamp.field)
-		// rpt.rest.Context().Info("ts field: %s", tsField)
+		rpt.rest.Context().Info("ts(%s) search field: %s", rpt.timestamp.field, tsField)
 		// start/end
 		rpt.search = rpt.search.Aggregation(RTKEY_START, MinAgg(tsField)).Aggregation(RTKEY_END, MaxAgg(tsField))
 
@@ -386,6 +421,14 @@ func (rpt *Report) Build() (r Result, err error) {
 					rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, ""))
 				}
 			}
+		}
+
+		// source filters
+		if len(rpt.includes) > 0 {
+			rpt.search.FetchSourceContext(elastic.NewFetchSourceContext(true).Include(rpt.includes...))
+		}
+		if len(rpt.excludes) > 0 {
+			rpt.search.FetchSourceContext(elastic.NewFetchSourceContext(true).Exclude(rpt.excludes...))
 		}
 	}
 

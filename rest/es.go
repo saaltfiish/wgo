@@ -8,7 +8,7 @@ import (
 
 	"wgo"
 
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 )
 
 var ElasticClient *elastic.Client
