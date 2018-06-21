@@ -51,6 +51,7 @@ type Report struct {
 	interval     string            // 时间段 [hour, day, month, year]
 	aggregations Aggregations      // 子聚合
 	pagination   *Pagination       // 是否可分页
+	keywordField string            // 是否采用多字段模式(主字段text可搜索, 副字段keyword可查询, 这里显示副字段名称)
 	id           string
 }
 
@@ -111,6 +112,14 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
+	}
+	return rpt
+}
+
+// keyword field
+func (rpt *Report) KeywordField(kwf string) *Report {
+	if kwf != "" {
+		rpt.keywordField = kwf
 	}
 	return rpt
 }
@@ -203,12 +212,23 @@ func (rpt *Report) Field(field string, opts ...string) (sf utils.StructField) {
 }
 
 // 获取完整字段(包含各种嵌套, 以'.'分隔, for es)
-func (rpt *Report) SearchFieldName(rf string, opts ...string) string {
+func (rpt *Report) SearchFieldName(rf string, opts ...interface{}) string {
 	tag := RPT_TAG
+	kwf := ""
 	if len(opts) > 0 {
-		tag = opts[0]
+		if t, ok := opts[0].(string); ok {
+			tag = t
+		}
+	}
+	if len(opts) > 1 {
+		if useKWF, ok := opts[1].(bool); ok && useKWF && rpt.keywordField != "" {
+			kwf = rpt.keywordField
+		}
 	}
 	field := rpt.Field(rf, tag)
+	if kwf != "" {
+		return field.Tags[FIELD_TAG].Name + "." + kwf
+	}
 	return field.Tags[FIELD_TAG].Name
 }
 
@@ -406,7 +426,7 @@ func (rpt *Report) Build() (r Result, err error) {
 				field := rpt.Field(agg.field, tag)
 				switch rtype := reportType(field); rtype {
 				case RPT_SUM, RPT_TERM: // 只有sum, term才能做summary
-					// rpt.rest.Info("summary field: %s", agg.field)
+					rpt.rest.Info("summary field: %s", agg.field)
 					rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, ""))
 				}
 			}
@@ -587,7 +607,7 @@ func (rpt *Report) prepare() error {
 						rpt.matchPhraseQuery(con.Field, con.Is)
 					case RPT_TERM:
 						// rpt.rest.Context().Info("condition. field: %s, value: %s", con.Field, con.Is)
-						rpt.termsQuery(con.Field, con.Is)
+						rpt.TermsQuery(con.Field, con.Is)
 					}
 				}
 			}
@@ -655,18 +675,19 @@ func (rpt *Report) matchPhraseQuery(field string, text interface{}) {
 }
 
 // terms query
-func (rpt *Report) termsQuery(field string, text interface{}) {
+func (rpt *Report) TermsQuery(field string, text interface{}) *Report {
 	if rpt.qs == nil {
 		rpt.qs = make([]elastic.Query, 0)
 	}
 	f := rpt.Field(field, RPT_TAG)
-	sfn := rpt.SearchFieldName(field, RPT_TAG)
-	// rpt.rest.Info("[termsQuery] field: %s, text: %#q", field, text)
+	sfn := rpt.SearchFieldName(field, RPT_TAG, true)
+	// rpt.rest.Info("[TermsQuery] field: %s, text: %#q", field, text)
 	v := []interface{}{}
 	switch text.(type) {
 	case string:
-		rpt.filters[field] = text.(string)
-		v = append(v, text)
+		value := text.(string)
+		rpt.filters[field] = value
+		v = append(v, value)
 	case []string:
 		if len(text.([]string)) > 0 {
 			for _, t := range text.([]string) {
@@ -683,16 +704,17 @@ func (rpt *Report) termsQuery(field string, text interface{}) {
 	if f.Path != "" { // nested
 		rpt.qs = append(rpt.qs, elastic.NewNestedQuery(f.Path, elastic.NewTermsQuery(sfn, v...)))
 	} else {
-		// rpt.rest.Info("terms query, field: %s, value: %#q", sfn, v)
+		rpt.rest.Info("[TermsQuery], field: %s, value: %#q", sfn, v)
 		rpt.qs = append(rpt.qs, elastic.NewTermsQuery(sfn, v...))
 	}
+	return rpt
 }
 
 // build term sagg
 func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
 	field := rpt.Field(agg.field, RPT_TAG)
 	tsField := rpt.SearchFieldName(rpt.timestamp.field)
-	tmp := TermsAgg(rpt.SearchFieldName(agg.field, RPT_TAG))
+	tmp := TermsAgg(rpt.SearchFieldName(agg.field, RPT_TAG, true)).Missing("_empty_")
 	// properties
 	if len(agg.properties) > 0 {
 		for _, p := range agg.properties {
@@ -722,7 +744,7 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 	//当前term在条件查询中, 则先fitler一下
 	if v, ok := rpt.filters[agg.field]; ok && v != "" {
 		//rpt.rest.Context().Info("add filter. field: %s, value: %s", agg.field, v)
-		eagg = FilterAgg(rpt.SearchFieldName(agg.field, RPT_TAG), v).SubAggregation(agg.field, eagg)
+		eagg = FilterAgg(rpt.SearchFieldName(agg.field, RPT_TAG, true), v).SubAggregation(agg.field, eagg)
 		agg.wraps = append(agg.wraps, RPT_FILTER)
 	}
 	// nested agg, 同时在同一nested path下无需nestedagg多次
@@ -780,7 +802,7 @@ func (rpt *Report) buildFiltersAgg(agg *Aggregation, path string) (eagg elastic.
 	//当前term在条件查询中, 则先fitler一下
 	if v, ok := rpt.filters[agg.field]; ok && v != "" {
 		//rpt.rest.Context().Info("add filter. field: %s, value: %s", agg.field, v)
-		eagg = FilterAgg(rpt.SearchFieldName(agg.field, RPT_TAG), v).SubAggregation(agg.field, eagg)
+		eagg = FilterAgg(rpt.SearchFieldName(agg.field, RPT_TAG, true), v).SubAggregation(agg.field, eagg)
 		agg.wraps = append(agg.wraps, RPT_FILTER)
 	}
 	// nested agg, 同时在同一nested path下无需nestedagg多次
