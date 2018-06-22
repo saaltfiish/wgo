@@ -137,22 +137,22 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
-		routes = append(routes, wgo.POST(path, rest.RESTPost(), ms...)...)
+		routes = append(routes, wgo.POST(path, rest.RESTPost(), ms...).SetOptions(optionKey(DescKey), "Create")...)
 	}
 	if flag&GM_DELETE > 0 {
 		// DELETE /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.DELETE(path, rest.RESTDelete(), ms...)...)
+		routes = append(routes, wgo.DELETE(path, rest.RESTDelete(), ms...).SetOptions(optionKey(DescKey), "Delete")...)
 	}
 	if flag&GM_PATCH > 0 {
 		// PATCH /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PATCH(path, rest.RESTPatch(), ms...)...)
+		routes = append(routes, wgo.PATCH(path, rest.RESTPatch(), ms...).SetOptions(optionKey(DescKey), "Update")...)
 	}
 	if flag&GM_PUT > 0 {
 		// PUT /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PUT(path, rest.RESTPut(), ms...)...)
+		routes = append(routes, wgo.PUT(path, rest.RESTPut(), ms...).SetOptions(optionKey(DescKey), "Reset")...)
 	}
 
 	// reporting

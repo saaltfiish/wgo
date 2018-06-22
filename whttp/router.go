@@ -191,11 +191,12 @@ func (r *Route) abandon(ms ...interface{}) {
 }
 
 // set route options
-func (r *Route) setOptions(key string, value interface{}) {
+func (r *Route) SetOptions(key string, value interface{}) *Route {
 	if r.opts == nil {
 		r.opts = make(Options)
 	}
 	r.opts[key] = value
+	return r
 }
 
 // cache options
@@ -227,7 +228,7 @@ func (r *Route) cache(opts ...interface{}) {
 		"params":  params,
 		"headers": headers,
 	}
-	r.setOptions("cache", cacheOpts)
+	r.SetOptions("cache", cacheOpts)
 }
 
 func (rs Routes) Use(ms ...interface{}) Routes {
@@ -244,7 +245,7 @@ func (rs Routes) Abandon(ms ...interface{}) Routes {
 }
 func (rs Routes) SetOptions(key string, value interface{}) Routes {
 	for _, r := range rs {
-		r.setOptions(key, value)
+		r.SetOptions(key, value)
 	}
 	return rs
 }
