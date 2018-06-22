@@ -4,7 +4,6 @@ package rest
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"wgo"
 
@@ -15,26 +14,32 @@ var ElasticClient *elastic.Client
 
 func OpenElasticSearch() (err error) {
 	ElasticClient, err = elastic.NewClient(
-		elastic.SetURL(es["addr"]),
+		elastic.SetURL(es[RCK_ES_ADDR]),
 		elastic.SetSniff(false),
-		elastic.SetBasicAuth(es["user"], es["password"]))
+		elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]))
 
 	if err != nil {
 		panic(err)
 	}
 	ctx := context.Background()
 	var exists bool
-	exists, err = ElasticClient.IndexExists(es["index"]).Do(ctx)
+	exists, err = ElasticClient.IndexExists(es[RCK_REPORTING_INDEX]).Do(ctx)
 	if err != nil {
 		panic(err)
 	} else if !exists {
-		panic("index not exists!")
+		panic(fmt.Sprintf("reporting index(%s) not exists!", es[RCK_REPORTING_INDEX]))
+	}
+	exists, err = ElasticClient.IndexExists(es[RCK_LOGS_INDEX]).Do(ctx)
+	if err != nil {
+		panic(err)
+	} else if !exists {
+		panic(fmt.Sprintf("logs index(%s) not exists!", es[RCK_LOGS_INDEX]))
 	}
 	return
 }
 
-func SearchService() *elastic.SearchService {
-	return ElasticClient.Search().Index(es["index"])
+func SearchService(index string) *elastic.SearchService {
+	return ElasticClient.Search().Index(index)
 }
 
 // get field
@@ -59,33 +64,6 @@ func GetFieldSum(bucket *elastic.AggregationBucketKeyItem, f string) int {
 		return int(*v.Value)
 	}
 	return 0
-}
-
-// es search prepare
-func (rest *REST) SearchPrepare() {
-	// time range
-	qs := make([]elastic.Query, 0)
-	c := rest.Context()
-	if tr := rest.GetEnv(TimeRangeKey); tr != nil {
-		rs := tr.(*TimeRange).Start.UTC().Format("2006-01-02T15:04:05Z07:00")
-		re := tr.(*TimeRange).End.UTC().Format("2006-01-02T15:04:05Z07:00")
-		Debug("[SearchPrepare]range, start: %s, end: %s", rs, re)
-		rangeField := "created"
-		if rangeBy := c.QueryParam("range_by"); rangeBy != "" {
-			switch strings.ToLower(rangeBy) {
-			case "start_time":
-				rangeField = "ticket.show.start_time"
-			case "created":
-			default:
-			}
-		}
-		qs = append(qs, elastic.NewRangeQuery(rangeField).Gte(rs).Lte(re).TimeZone("+08:00"))
-	}
-
-	// term
-	cons := rest.Conditions()
-	if len(cons) > 0 {
-	}
 }
 
 type Filter struct {

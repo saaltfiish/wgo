@@ -110,7 +110,7 @@ func Auth() wgo.MiddlewareFunc {
 		scfg.Domain = ".gladsheim.cn"
 	}
 	// env conn string
-	if tc := os.Getenv("session.redis.conn"); tc != "" {
+	if tc := os.Getenv(AECK_REDIS_ADDR); tc != "" {
 		if len(scfg.Redis) > 0 {
 			scfg.Redis[0]["conn"] = tc
 		} else {

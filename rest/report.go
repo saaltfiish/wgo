@@ -38,6 +38,7 @@ type Report struct {
 	base         interface{}
 	fields       utils.StructFields
 	rest         *REST
+	indexName    string
 	search       *elastic.SearchService
 	params       []string          // 支持参数
 	excludes     []string          // source fields exclude
@@ -109,9 +110,39 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		base:       base,
 		fields:     fields,
 		rest:       rest,
+		indexName:  es[RCK_REPORTING_INDEX],
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
-		search:     ElasticClient.Search().Index(es["index"]),
+		search:     SearchService(es[RCK_REPORTING_INDEX]),
+		// search:     ElasticClient.Search().Index(es["index"]),
+	}
+	if len(params) > 0 {
+		rpt.Params(params...)
+	}
+	// time range
+	if tr := rpt.rest.GetEnv(TimeRangeKey); tr != nil {
+		// 传入了时间段参数, 参数优先
+		rpt.timeRange = tr.(*TimeRange)
+	}
+	return rpt
+}
+
+// NewLogs
+func (rest *REST) NewLogs(base interface{}, params ...string) *Report {
+	sf := utils.ReadStructFields(base, true, FIELD_TAG, RPT_TAG) // 读json, report两种tag
+	fields := utils.ScanStructFields(sf, FIELD_TAG, "", "")
+	// for _, f := range fields {
+	// 	rest.Info("field: %s, report: %s", f.Tags[FIELD_TAG].Name, f.Tags["report"].Name)
+	// }
+	rpt := &Report{
+		base:       base,
+		fields:     fields,
+		rest:       rest,
+		indexName:  es[RCK_LOGS_INDEX],
+		dimensions: make(Worlds, 0),
+		filters:    make(map[string]string),
+		search:     SearchService(es[RCK_LOGS_INDEX]),
+		// search:     ElasticClient.Search().Index(es["index"]),
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
@@ -665,7 +696,7 @@ func (rpt *Report) idsQuery() {
 		rpt.qs = make([]elastic.Query, 0)
 	}
 	rpt.search = rpt.search.Size(1)
-	rpt.qs = append(rpt.qs, elastic.NewIdsQuery(es[rpt.base.(Model).TableName()]).Ids(rpt.id))
+	rpt.qs = append(rpt.qs, elastic.NewIdsQuery(rpt.indexName).Ids(rpt.id))
 }
 
 // range query

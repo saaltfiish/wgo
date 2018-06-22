@@ -33,7 +33,7 @@ func RegisterConfig(tags ...interface{}) {
 		panic("not found config")
 	}
 	// open dbs
-	if dns := os.Getenv("rest.db"); dns != "" { // params dns overwrite config file
+	if dns := os.Getenv(AECK_DB); dns != "" { // params dns overwrite config file
 		OpenDB("db", dns)
 	} else if len(db) > 0 {
 		for tag, dns := range db {
@@ -43,10 +43,22 @@ func RegisterConfig(tags ...interface{}) {
 
 	// es setting
 	if len(es) > 0 {
-		if ea := os.Getenv("rest.esaddr"); ea != "" { // 可以通过环境变量传入es地址
-			es["addr"] = ea
+		if ea := os.Getenv(AECK_ES_ADDR); ea != "" { // 可以通过环境变量传入es地址
+			es[RCK_ES_ADDR] = ea
 		}
-		Debug("es addr: %s, index: %s, user: %s, password: %s", es["addr"], es["index"], es["user"], es["password"])
+		if ri := os.Getenv(AECK_REPORTING_INDEX); ri != "" {
+			es[RCK_REPORTING_INDEX] = ri
+		}
+		if li := os.Getenv(AECK_LOGS_INDEX); li != "" {
+			es[RCK_LOGS_INDEX] = li
+		}
+		Debug("es addr: %s, user: %s, password: %s, indexes: %s, %s", es[RCK_ES_ADDR], es[RCK_ES_USER], es[RCK_ES_PWD], es[RCK_REPORTING_INDEX], es[RCK_LOGS_INDEX])
+		if _, ok := es[RCK_REPORTING_INDEX]; !ok {
+			es[RCK_REPORTING_INDEX] = "reporting"
+		}
+		if _, ok := es[RCK_LOGS_INDEX]; !ok {
+			es[RCK_LOGS_INDEX] = "asgard-logs"
+		}
 		OpenElasticSearch()
 	}
 

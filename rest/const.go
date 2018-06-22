@@ -22,6 +22,18 @@ const (
 	ACTION_DELETE = "D"
 	ACTION_OTHER  = "O"
 
+	// app env config key
+	AECK_REDIS_ADDR      = "session.redis.conn"
+	AECK_DB              = "rest.db"
+	AECK_ES_ADDR         = "rest.esaddr"
+	AECK_REPORTING_INDEX = "rest.reportingindex"
+	AECK_LOGS_INDEX      = "rest.logsindex"
+	// rest config key
+	RCK_ES_ADDR         = "addr"
+	RCK_ES_USER         = "user"
+	RCK_ES_PWD          = "password"
+	RCK_REPORTING_INDEX = "reporting_index"
+	RCK_LOGS_INDEX      = "logs_index"
 	//env key
 	RESTKey           = "_rest_"
 	RequestIDKey      = "_reqid_"
