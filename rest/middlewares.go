@@ -147,8 +147,10 @@ func Init() wgo.MiddlewareFunc {
 						ac.Service.New = string(nb)
 					}
 				}
-				if ob, err := json.Marshal(rest.older); err == nil {
-					ac.Service.Old = string(ob)
+				if rest.older != nil {
+					if ob, err := json.Marshal(rest.older); err == nil {
+						ac.Service.Old = string(ob)
+					}
 				}
 
 				// desc
