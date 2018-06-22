@@ -45,7 +45,9 @@ type Report struct {
 	dimensions   Worlds            // 维度
 	qs           []elastic.Query   // 根据条件形成的多个query
 	filters      map[string]string // 条件term查询, 需要在nested agg中filter
+	size         int               // 聚合的size
 	timestamp    *Timestamp        // 时间戳字段
+	timeRange    *TimeRange        // 定义的时间段
 	summary      Aggregations      // summary负责统计
 	dics         Aggregations      // 字典
 	interval     string            // 时间段 [hour, day, month, year]
@@ -88,6 +90,7 @@ type Timestamp struct {
 // 聚合
 type Aggregation struct {
 	field        string
+	size         int
 	filters      []Filter
 	properties   Aggregations // 属性, 即附加字段, 跟field一般为 1:1关系, 一般取最近一个值
 	aggregations Aggregations
@@ -113,6 +116,17 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 	if len(params) > 0 {
 		rpt.Params(params...)
 	}
+	// time range
+	if tr := rpt.rest.GetEnv(TimeRangeKey); tr != nil {
+		// 传入了时间段参数, 参数优先
+		rpt.timeRange = tr.(*TimeRange)
+	}
+	return rpt
+}
+
+// keyword field
+func (rpt *Report) Size(size int) *Report {
+	rpt.size = size
 	return rpt
 }
 
@@ -124,15 +138,27 @@ func (rpt *Report) KeywordField(kwf string) *Report {
 	return rpt
 }
 
+// set default time range, 传入一个天数, 代表追溯天数
+func (rpt *Report) From(days int) *Report {
+	if days > 0 && rpt.timeRange == nil {
+		tr := new(TimeRange)
+		tr.Start = time.Now().AddDate(0, 0, 0-days).In(wgo.Env().Location)
+		tr.End = time.Now().In(wgo.Env().Location)
+		rpt.timeRange = tr
+	}
+	return rpt
+}
+
 // parms
 func (rpt *Report) Params(params ...string) *Report {
 	if rpt.params == nil {
 		rpt.params = make([]string, 0)
 	}
 	for _, p := range params {
-		if rpt.rest.Context().QueryParam(p) != "" { // 只有当前端传了这个条件, 才有效
-			rpt.params = append(rpt.params, p)
-		}
+		// if rpt.rest.Context().QueryParam(p) != "" { // 只有当前端传了这个条件, 才有效
+		// 	rpt.params = append(rpt.params, p)
+		// }
+		rpt.params = append(rpt.params, p)
 	}
 	return rpt
 }
@@ -183,7 +209,11 @@ func (rpt *Report) Summary(fields ...string) *Report {
 		rpt.summary = make(Aggregations, 0)
 	}
 	for _, field := range fields {
-		rpt.summary = append(rpt.summary, NewAggregation(field))
+		agg := NewAggregation(field)
+		if rpt.size > 0 {
+			agg.Size(rpt.size)
+		}
+		rpt.summary = append(rpt.summary, agg)
 	}
 	return rpt
 }
@@ -281,6 +311,12 @@ func (agg *Aggregation) Properties(properties ...string) *Aggregation {
 	return agg
 }
 
+// size
+func (agg *Aggregation) Size(size int) *Aggregation {
+	agg.size = size
+	return agg
+}
+
 func (agg *Aggregation) Filters(filters ...Filter) *Aggregation {
 	if agg.filters == nil {
 		agg.filters = make([]Filter, 0)
@@ -375,6 +411,9 @@ func (rpt *Report) Aggregation(agg *Aggregation) *Report {
 // add dic, 利用agg实现字典
 func (rpt *Report) Dic(field string, properties ...string) *Report {
 	agg := NewAggregation(field, properties...)
+	if rpt.size > 0 {
+		agg.Size(rpt.size)
+	}
 	if rpt.dics == nil {
 		rpt.dics = make(Aggregations, 0)
 	}
@@ -397,7 +436,7 @@ func (rpt *Report) Build() (r Result, err error) {
 	if rpt.id == "" { // 搜索查询
 		// build aggs
 		tsField := rpt.SearchFieldName(rpt.timestamp.field)
-		rpt.rest.Context().Info("ts(%s) search field: %s", rpt.timestamp.field, tsField)
+		// rpt.rest.Info("ts(%s) search field: %s", rpt.timestamp.field, tsField)
 		// start/end
 		rpt.search = rpt.search.Aggregation(RTKEY_START, MinAgg(tsField)).Aggregation(RTKEY_END, MaxAgg(tsField))
 
@@ -637,16 +676,15 @@ func (rpt *Report) rangeQuery() {
 	// 没有查询条件, 或者没有指定all_time=true的时候, 进行时间段查询
 	if len(rpt.params) <= 0 || strings.ToLower(rpt.rest.Context().QueryParam(PARAM_ALLTIME)) != "true" {
 		// time range
-		tr := rpt.rest.GetEnv(TimeRangeKey)
-		if tr == nil { // 默认为当天
+		if rpt.timeRange == nil { // 没传入timerange参数, 也没有设置默认timerange, 当天
 			dtr := new(TimeRange)
 			y, m, d := time.Now().Date()
 			dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
 			dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
-			tr = dtr
+			rpt.timeRange = dtr
 		}
-		rs := tr.(*TimeRange).Start.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
-		re := tr.(*TimeRange).End.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
+		rs := rpt.timeRange.Start.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
+		re := rpt.timeRange.End.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 		rpt.Info.Start = rs
 		rpt.Info.End = re
 		rangeField := rpt.SearchFieldName(rpt.timestamp.field)
@@ -715,6 +753,9 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 	field := rpt.Field(agg.field, RPT_TAG)
 	tsField := rpt.SearchFieldName(rpt.timestamp.field)
 	tmp := TermsAgg(rpt.SearchFieldName(agg.field, RPT_TAG, true)).Missing("_empty_")
+	if agg.size > 0 {
+		tmp.Size(agg.size)
+	}
 	// properties
 	if len(agg.properties) > 0 {
 		for _, p := range agg.properties {
