@@ -19,17 +19,24 @@ type ObjectStorage struct {
 	client *minio.Client
 }
 
-var objectStorage = &ObjectStorage{}
+func NewObjectStorage(endpoint, accessKey, secteKey string, secure bool) (*ObjectStorage, error) {
+	minioClient, err := minio.New(endpoint, accessKey, secteKey, secure)
+	if err != nil {
+		return nil, err
+	}
+	return &ObjectStorage{
+		client: minioClient,
+	}, nil
+}
 
 // open minio
 func openObjectStorage() error {
-	if minioClient, err := minio.New(mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool)); err != nil {
+	if _, err := minio.New(mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool)); err != nil {
 		Error("open minio error: %s", err)
 		return err
 	} else {
-		objectStorage.client = minioClient
 		Debug("open object storage ok")
-		// if err := objectStorage.SetBucketRead("avatars", "12/33"); err != nil {
+		// if err := os.SetBucketRead("avatars", "12/33"); err != nil {
 		// 	Debug("set policy error: %s", err)
 		// }
 	}
@@ -43,6 +50,7 @@ func (o *ObjectStorage) SetBucketRead(bucketName, objectPrefix string) error {
 
 // pub object
 func PutObject(bucketName, objectName, contentType string, reader io.Reader, objectSize int64) (string, error) {
+	objectStorage, _ := NewObjectStorage(mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool))
 	_, err := objectStorage.PutObject(bucketName, objectName, contentType, reader, objectSize)
 	url := fmt.Sprintf("%s/%s/%s", mio["cdn"].(string), mio["bucket"].(string), objectName)
 	return url, err
