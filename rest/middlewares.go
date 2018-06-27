@@ -31,6 +31,11 @@ func Init() wgo.MiddlewareFunc {
 			default:
 				rest.SetAction(ACTION_READ)
 			}
+			if ca := rest.Options(CustomActionKey); ca != nil {
+				if cas, ok := ca.(string); ok {
+					rest.SetAction(cas)
+				}
+			}
 
 			// get user id
 			rest.SetUserID()

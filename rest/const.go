@@ -63,6 +63,7 @@ const (
 	EXT_KEY           = "_ext_"
 	SKIPAUTH_KEY      = "_skipauth_"
 	LimitAccessKey    = "_limitaccess_"
+	CustomActionKey   = "_customaction_"
 	DescKey           = "_desc_"
 
 	// db tag

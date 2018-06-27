@@ -443,6 +443,11 @@ func (rs Routes) LimitAccess() Routes {
 	return rs.SetOptions(LimitAccessKey, true)
 }
 
+// 自定义act
+func (rs Routes) CustomAction(act string) Routes {
+	return rs.SetOptions(CustomActionKey, act)
+}
+
 // desc string
 func (rs Routes) Desc(desc string) Routes {
 	return rs.SetOptions(DescKey, desc)
