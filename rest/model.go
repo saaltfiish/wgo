@@ -537,7 +537,12 @@ func (rest *REST) Range(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_RANGE, field, value))
 }
 func (rest *REST) Join(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_JOIN, field, value))
+	js := strings.SplitN(field, ".", 2)
+	// join的field一定是 `table.field`
+	if js[0] != "" && js[1] != "" {
+		return rest.SetConditions(NewCondition(CTYPE_JOIN, js[0], NewCondition(CTYPE_IS, js[1], value)))
+	}
+	return rest
 }
 func (rest *REST) Order(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_ORDER, field, value))

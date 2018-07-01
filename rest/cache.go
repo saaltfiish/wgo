@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"wgo/wcache"
+	wcache "wgo/cache"
 )
 
 var cache *wcache.Cache

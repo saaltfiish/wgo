@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"wgo/wcache"
+	wcache "wgo/cache"
 	"wgo/whttp"
 )
 

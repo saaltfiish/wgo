@@ -1,5 +1,5 @@
 // Package wcache provides ...
-package wcache
+package cache
 
 import (
 	"errors"

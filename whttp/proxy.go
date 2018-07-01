@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
+	wcache "wgo/cache"
 	"wgo/environ"
 	"wgo/server"
-	"wgo/wcache"
 	"wgo/whttp/fasthttp"
 	"wgo/whttp/standard"
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"wgo"
-	"wgo/wcache"
+	wcache "wgo/cache"
 	"wgo/whttp"
 )
 

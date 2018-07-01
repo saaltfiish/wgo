@@ -4,6 +4,7 @@ package wgo
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 
 	"wgo/utils"
@@ -52,6 +53,27 @@ type JobRoute struct {
 	handler JobHandler
 }
 
+// handler wrapper
+func handlerWrapper(h JobHandler) JobHandler {
+	return func(job *Job) interface{} {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch r := r.(type) {
+				case error:
+					err = r
+				default:
+					err = fmt.Errorf("%v", r)
+				}
+				stack := make([]byte, 4<<10)
+				length := runtime.Stack(stack, true)
+				Error("[%s %s", err, stack[:length])
+			}
+		}()
+		return h(job)
+	}
+}
+
 // new job
 func NewJob(pl interface{}, opts ...interface{}) *Job {
 	method := ""
@@ -94,7 +116,8 @@ func (jw *JobWorker) Run(sn int) {
 						handler = route.handler
 					}
 				}
-				job.result <- handler(job)
+				// wrap handler
+				job.result <- handlerWrapper(handler)(job)
 			case <-jw.quit:
 				// we have received a signal to stop
 				return
