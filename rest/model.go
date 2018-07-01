@@ -29,7 +29,7 @@ type Model interface {
 	Gt(string, interface{}) Model
 	Lt(string, interface{}) Model
 	Range(string, interface{}) Model
-	Join(string, interface{}) Model
+	Join(string, interface{}, ...interface{}) Model
 	Order(string, interface{}) Model
 	Page(string, interface{}) Model
 	Raw(string, interface{}) Model
@@ -536,11 +536,12 @@ func (rest *REST) Lt(field string, value interface{}) Model {
 func (rest *REST) Range(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_RANGE, field, value))
 }
-func (rest *REST) Join(field string, value interface{}) Model {
+func (rest *REST) Join(field string, value interface{}, opts ...interface{}) Model {
 	js := strings.SplitN(field, ".", 2)
 	// join的field一定是 `table.field`
 	if js[0] != "" && js[1] != "" {
-		return rest.SetConditions(NewCondition(CTYPE_JOIN, js[0], NewCondition(CTYPE_IS, js[1], value)))
+		vs := []interface{}{NewCondition(CTYPE_IS, js[1], value)}
+		return rest.SetConditions(NewCondition(CTYPE_JOIN, js[0], append(vs, opts...)...))
 	}
 	return rest
 }
@@ -1502,6 +1503,7 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				}
 			}
 			if v.Join != nil { //关联查询
+				Debug("join found: %+v", v.Join)
 				if vt, ok := v.Join.(*Condition); ok && vt.Is != nil {
 					joinTable := v.Field // 字段名就是表名称
 					joinField := vt.Field
