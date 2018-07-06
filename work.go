@@ -65,9 +65,9 @@ func handlerWrapper(h JobHandler) JobHandler {
 				default:
 					err = fmt.Errorf("%v", r)
 				}
-				stack := make([]byte, 4<<10)
-				length := runtime.Stack(stack, true)
-				Error("[%s %s", err, stack[:length])
+				stack := make([]byte, 64<<10)
+				length := runtime.Stack(stack, false)
+				Error("[wgo.work] %s %s", err, stack[:length])
 			}
 		}()
 		return h(job)

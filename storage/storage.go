@@ -72,9 +72,11 @@ func (s *Storage) Put(key string, val interface{}, timeout time.Duration, opts .
 	tried := 0
 	for tried < 5 {
 		tried++
-		if err := s.nodes[idx].Put(key, val, timeout, opts...); err == nil {
+		err := s.nodes[idx].Put(key, val, timeout, opts...)
+		if err == nil {
 			break
 		}
+		Warn("[Put:%d] error: %s", idx, err)
 	}
 	Debug("[Put]idx: %d, key: %s, tried: %d", idx, key, tried)
 	return nil

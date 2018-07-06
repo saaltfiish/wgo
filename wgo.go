@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"wgo/cluster"
 	"wgo/daemon"
 	"wgo/environ"
 	"wgo/server"
@@ -95,7 +94,6 @@ func Init() {
 	server.SetLogger(Logger())
 	wrpc.SetLogger(Logger())
 	storage.SetLogger(Logger())
-	cluster.SetLogger(Logger())
 
 	// 处理命令
 	if tag := environ.CommandTag(); tag != "" {

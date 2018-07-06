@@ -112,7 +112,7 @@ func (rc *Cache) Put(key string, val interface{}, timeout time.Duration, opts ..
 	args := []interface{}{
 		realKey,
 		val,
-		"NX", int64(timeout / time.Second),
+		"EX", int64(timeout / time.Second),
 	}
 	if len(opts) > 0 {
 		if nx, ok := opts[0].(bool); ok && nx == true {
