@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/garyburd/redigo/redis"
-	"gitlab.intra.wepiao.com/arch/wcache/core"
+
+	"wgo/storage/core"
 )
 
 var (
 	// DefaultKey the collection name of redis for cache adapter.
-	DefaultKey = "wcache_redis"
+	DefaultKey = "storage_redis"
 )
 
 // Cache is Redis cache adapter.
@@ -46,6 +47,12 @@ func (rc *Cache) Get(key string) interface{} {
 		return v
 	}
 	return nil
+}
+
+// Get and Set
+func (rc *Cache) GetSet(key string, value interface{}) (interface{}, error) {
+	realKey := rc.prefix + key
+	return rc.do("GETSET", realKey, value)
 }
 
 // Get cache from redis.
@@ -97,26 +104,33 @@ ERROR:
 	return rv
 }
 
-// Put put cache to redis.
-func (rc *Cache) Put(key string, val interface{}, timeout time.Duration) error {
+// Put put key/value to redis. nx 代表只有不存在时才set = setnx
+func (rc *Cache) Put(key string, val interface{}, timeout time.Duration, opts ...interface{}) error {
 	var err error
 	realKey := rc.prefix + key
-	if _, err = rc.do("SETEX", realKey, int64(timeout/time.Second), val); err != nil {
-		//fmt.Printf("key: %s, realkey: %s, put failed: %s\n", key, realKey, err.Error())
-		return err
+	cmd := "SET"
+	args := []interface{}{
+		realKey,
+		val,
+		"NX", int64(timeout / time.Second),
 	}
-	//fmt.Printf("key: %s, realkey: %s, put successful\n", key, realKey)
-
-	//if _, err = rc.do("HSET", rc.key, realKey, true); err != nil {
-	//	return err
-	//}
+	if len(opts) > 0 {
+		if nx, ok := opts[0].(bool); ok && nx == true {
+			args = append(args, "NX")
+		}
+	}
+	// if _, err = rc.do("SETEX", realKey, int64(timeout/time.Second), val); err != nil {
+	// 	//fmt.Printf("key: %s, realkey: %s, put failed: %s\n", key, realKey, err.Error())
+	// 	return err
+	// }
+	_, err = rc.do(cmd, args...)
 	return err
 }
 
 // Delete delete cache in redis.
 func (rc *Cache) Delete(key string) error {
-	realKey := rc.prefix + key
 	var err error
+	realKey := rc.prefix + key
 	if _, err = rc.do("DEL", realKey); err != nil {
 		return err
 	}

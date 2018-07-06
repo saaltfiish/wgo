@@ -191,12 +191,12 @@ func (env *Environ) WithConfig() *Environ {
 	if env.Location == nil {
 		env.Location, _ = time.LoadLocation(defaultLoc)
 	}
-	// init logger
+	// init logger, 在environ初始化logger目的是为了尽可能早的初始化logger
 	env.Logger().Init(cfg)
 
 	env.cfg = cfg
 
-	return env
+	return env.Register()
 }
 
 /* }}} */

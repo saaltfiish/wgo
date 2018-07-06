@@ -6,9 +6,10 @@ import (
 
 type Cache interface {
 	Get(key string) interface{}
+	GetSet(key string, val interface{}) (interface{}, error)
 	HGet(key string, filed string) interface{}
 	GetMulti(keys []string) []interface{}
-	Put(key string, val interface{}, timeout time.Duration) error
+	Put(key string, val interface{}, timeout time.Duration, opts ...interface{}) error
 	Delete(key string) error
 	Incr(key string) (int, error)
 	Decr(key string) (int, error)

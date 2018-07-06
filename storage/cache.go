@@ -1,12 +1,9 @@
-package wcache
+package storage
 
 import (
 	"fmt"
-	"gitlab.intra.wepiao.com/arch/wcache/core"
-	"gitlab.intra.wepiao.com/arch/wcache/file"
-	"gitlab.intra.wepiao.com/arch/wcache/memcache"
-	"gitlab.intra.wepiao.com/arch/wcache/memory"
-	"gitlab.intra.wepiao.com/arch/wcache/redis"
+	"wgo/storage/core"
+	"wgo/storage/redis"
 )
 
 // Register makes a cache adapter available by the adapter name.
@@ -36,8 +33,5 @@ func NewCache(adapterName, config string) (adapter core.Cache, err error) {
 }
 
 func init() {
-	Register("file", file.NewFileCache)
-	Register("memory", memory.NewMemoryCache)
-	Register("memcache", memcache.NewMemCache)
 	Register("redis", redis.NewRedisCache)
 }

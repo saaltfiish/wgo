@@ -2,6 +2,7 @@
 package rest
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -23,6 +24,11 @@ type SessionConfig struct {
 
 var scfg *SessionConfig = new(SessionConfig)
 
+// cache key
+func cacheKey(key string) (ck string) {
+	return fmt.Sprintf("%s:%s", scfg.Prefix, key)
+}
+
 // get session
 func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 	c := rest.Context()
@@ -40,7 +46,7 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 	if value = rest.GetEnv(SESSION_KEY); value != nil {
 		// 内存里找到, 返回
 		return
-	} else if value, err = RedisGet(key); value != nil {
+	} else if value, err = RedisGet(cacheKey(key)); value != nil {
 		//c.Info("find auth from cookie(%s): %s", scfg.Key, key)
 		rest.SaveSession(value)
 	} else {
@@ -58,7 +64,7 @@ func (rest *REST) SaveSession(session interface{}) {
 func (rest *REST) SetSession(key string, opts ...interface{}) {
 	// save to cache
 	rest.Debug("set session, key: %s, opts: %+v", key, opts)
-	RedisSet(key, opts[0], scfg.Life)
+	RedisSet(cacheKey(key), opts[0], scfg.Life)
 	// expire
 	expire := time.Time{}
 	if len(opts) > 1 {
@@ -83,7 +89,7 @@ func (rest *REST) DelSession(opts ...string) (key string) {
 		return
 	}
 
-	RedisDel(key)
+	RedisDel(cacheKey(key))
 	c.SetCookie(wgo.NewCookie(scfg.Key, "", scfg.Path, scfg.Domain, time.Now().Add(time.Duration(scfg.Life)*time.Second), scfg.Security, scfg.HTTPOnly))
 
 	return
@@ -109,15 +115,15 @@ func Auth() wgo.MiddlewareFunc {
 	if scfg.Domain == "" {
 		scfg.Domain = ".gladsheim.cn"
 	}
-	// env conn string
+	// get storage
 	if tc := os.Getenv(AECK_REDIS_ADDR); tc != "" {
-		if len(scfg.Redis) > 0 {
-			scfg.Redis[0]["conn"] = tc
-		} else {
-			scfg.Redis = []map[string]string{map[string]string{"conn": tc, "db": "0"}}
-		}
+		// 如果环境变量传入, 优先
+		scfg.Redis = []map[string]string{map[string]string{"conn": tc, "db": "0"}}
 	}
-	OpenRedis(scfg)
+	if len(scfg.Redis) > 0 {
+		// 如果设置了redis信息, 则使用(session使用的storage可与底层wgo不同)
+		OpenRedis(scfg)
+	}
 	return func(next wgo.HandlerFunc) wgo.HandlerFunc {
 		return func(c *wgo.Context) (err error) {
 

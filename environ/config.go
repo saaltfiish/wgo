@@ -28,6 +28,7 @@ const (
 	CFG_KEY_TIMEZONE    = "time_zone"
 	CFG_KEY_LOGS        = "logs"
 	CFG_KEY_SERVERS     = "servers"
+	CFG_KEY_STORAGE     = "storage"
 	CFG_KEY_ENGINE      = "engine"
 	CFG_KEY_MODE        = "mode"
 	CFG_KEY_LISTEN      = "listen"
@@ -257,7 +258,10 @@ func (cfg *Config) IsSet(key string) bool {
  */
 func Sub(key string) *Config { return environ.Cfg().Sub(key) }
 func (cfg *Config) Sub(key string) *Config {
-	return NewConfig(cfg.v.Sub(key))
+	if cfg.v.IsSet(key) {
+		return NewConfig(cfg.v.Sub(key))
+	}
+	return nil
 }
 
 /* }}} */

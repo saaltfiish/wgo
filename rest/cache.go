@@ -26,8 +26,12 @@ func LocalDel(key string) bool {
 }
 
 func RedisGet(key string) (value interface{}, err error) {
-	if value = Storage.Get(key); value == nil {
-		err = fmt.Errorf("not found %s in redis", key)
+	if s := restStorage(); s != nil {
+		if value = s.Get(key); value == nil {
+			err = fmt.Errorf("not found %s in redis", key)
+		}
+	} else {
+		err = fmt.Errorf("not found storage")
 	}
 	return
 }
@@ -39,10 +43,18 @@ func RedisSet(key string, value interface{}, expireSeconds int) error {
 	} else {
 		vb, _ = json.Marshal(value)
 	}
-	return Storage.Put(key, vb, time.Duration(expireSeconds)*time.Second)
+	if s := restStorage(); s != nil {
+		return s.Put(key, vb, time.Duration(expireSeconds)*time.Second)
+	} else {
+		return fmt.Errorf("not found storage")
+	}
 }
 
 func RedisDel(key string) bool {
-	Storage.Delete(key)
-	return true
+	if s := restStorage(); s != nil {
+		s.Delete(key)
+		return true
+	} else {
+		return false
+	}
 }
