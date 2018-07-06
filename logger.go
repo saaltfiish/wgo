@@ -19,6 +19,33 @@ type (
 	}
 )
 
+/* {{{ Logger() logger
+ * get logger
+ */
+func Logger() logger { return wgo.Logger() }
+func (w *WGO) Logger() logger {
+	if w.logger == nil { // 这里env就是logger, 只要实现了logger接口的都可set
+		w.SetLogger(w.Env())
+	}
+	return w.logger
+}
+
+/* }}} */
+
+/* {{{ func SetLogger(l logger)
+ *
+ */
+func SetLogger(l logger) {
+	wgo.SetLogger(l)
+}
+func (w *WGO) SetLogger(l logger) {
+	if w != nil {
+		w.logger = l
+	}
+}
+
+/* }}} */
+
 /* {{{ func nlog(arg0 interface{}, args ...interface{})
  * native log
  */

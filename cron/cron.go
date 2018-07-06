@@ -18,6 +18,13 @@ type Cron struct {
 	location *time.Location
 }
 
+var cron *Cron
+
+func (c *Cron) Register() *Cron {
+	cron = c
+	return cron
+}
+
 // Job is an interface for submitted cron jobs.
 type Job interface {
 	Run()
