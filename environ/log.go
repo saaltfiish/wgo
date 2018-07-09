@@ -23,18 +23,10 @@ const (
 )
 
 type (
-	Log wlog.LogConfig
-
-	Logs []Log
-
 	logger struct {
-		logs Logs
+		logs []wlog.LogConfig
 		wlog.Logger
 	}
-)
-
-var (
-	logs Logs
 )
 
 /* {{{ func newLogger() *logger
@@ -68,6 +60,9 @@ func (l *logger) Init(cfg *Config) {
 			if log.Format == "" {
 				log.Format = defaultFormat // default format
 			}
+			if environ != nil {
+				log.Location = environ.Location
+			}
 			l.Start(wlog.LogConfig(log))
 		}
 	} else {
@@ -83,7 +78,7 @@ func (l *logger) Init(cfg *Config) {
 /* {{{ func LogConig(lc Log)
  *
  */
-func LogConig(lc Log) wlog.LogConfig {
+func LogConig(lc wlog.LogConfig) wlog.LogConfig {
 	return wlog.LogConfig(lc)
 }
 
@@ -92,9 +87,9 @@ func LogConig(lc Log) wlog.LogConfig {
 /* {{{ func BuildLogs(cfg *Config)
  *
  */
-func BuildLogs(cfg *Config) Logs {
+func BuildLogs(cfg *Config) []wlog.LogConfig {
+	logs := make([]wlog.LogConfig, 0)
 	if cfg.Get(CFG_KEY_LOGS) != nil {
-		logs = Logs{}
 		if err := cfg.UnmarshalKey(CFG_KEY_LOGS, &logs); err != nil {
 			panic(err)
 		}
@@ -109,8 +104,8 @@ func BuildLogs(cfg *Config) Logs {
 /* {{{ func DefaultLogs() Logs
  *
  */
-func DefaultLogs() Logs {
-	log := Log{
+func DefaultLogs() []wlog.LogConfig {
+	log := wlog.LogConfig{
 		Type:    defaultType,
 		Tag:     defaultTag,
 		Format:  defaultFormat,
@@ -121,7 +116,7 @@ func DefaultLogs() Logs {
 		MaxDays: defaultMaxDays,
 		Mkdir:   defaultMkdir,
 	}
-	return Logs{log}
+	return []wlog.LogConfig{log}
 }
 
 /* }}} */

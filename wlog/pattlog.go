@@ -17,7 +17,7 @@ const (
 )
 
 // Known format codes:
-// %T - Time (2006-01-02 15:04:05.000)
+// %T - Time (2006-01-02T15:04:05.000Z07:00)
 // %L - Level (FNST, FINE, DEBG, TRAC, WARN, EROR, CRIT)
 // %C - colored Level, for console logging
 // %S - timestamp

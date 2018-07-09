@@ -146,6 +146,8 @@ func (env *Environ) Register() *Environ {
  */
 func WithConfig() *Environ { return environ.WithConfig() }
 func (env *Environ) WithConfig() *Environ {
+	env.Register()
+
 	cfg := env.Cfg()
 
 	if pn := cfg.String(CFG_KEY_PROCNAME); pn != "" {
@@ -196,7 +198,7 @@ func (env *Environ) WithConfig() *Environ {
 
 	env.cfg = cfg
 
-	return env.Register()
+	return env
 }
 
 /* }}} */

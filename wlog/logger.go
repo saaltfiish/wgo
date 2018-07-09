@@ -57,6 +57,7 @@ type (
 		Daily    bool   `mapstructure:"daily"`
 		MaxDays  int    `mapstructure:"max_days"`
 		Mkdir    bool   `mapstructure:"mkdir"`
+		Location *time.Location
 	}
 
 	Level struct {
@@ -81,9 +82,10 @@ type (
 
 	// Filter filter
 	Filter struct {
-		Tag   string
-		Type  string
-		Level Level
+		Tag      string
+		Type     string
+		Level    Level
+		Location *time.Location
 		//LevelStr string
 		LogWriter
 	}
@@ -129,7 +131,7 @@ func (log Logger) Start(cfg LogConfig) {
 		//	BuildLevel(cfg.Level),
 		//	writer,
 		//)
-		log[cfg.Tag] = &Filter{Tag: cfg.Tag, Type: strings.ToLower(cfg.Type), Level: BuildLevel(cfg.Level), LogWriter: writer}
+		log[cfg.Tag] = &Filter{Tag: cfg.Tag, Type: strings.ToLower(cfg.Type), Level: BuildLevel(cfg.Level), Location: cfg.Location, LogWriter: writer}
 	}
 
 }
@@ -165,10 +167,14 @@ func (log Logger) intLogf(lvl Level, arg0 interface{}, args ...interface{}) (rec
 		}
 
 		// Make the log record
+		created := time.Now()
+		if filter.Location != nil {
+			created = created.In(filter.Location)
+		}
 		rec = &LogRecord{
 			Tag:     filter.Tag,
 			Level:   lvl,
-			Created: time.Now(),
+			Created: created,
 			Message: msg,
 		}
 
