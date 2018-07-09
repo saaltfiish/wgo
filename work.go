@@ -12,6 +12,7 @@ import (
 
 type Job struct {
 	id      string
+	context *Context
 	method  string
 	payload interface{}
 	result  chan interface{}
@@ -19,6 +20,9 @@ type Job struct {
 
 func (j *Job) ID() string {
 	return j.id
+}
+func (j *Job) Context() *Context {
+	return j.context
 }
 func (j *Job) Method() string {
 	return j.method
@@ -75,25 +79,15 @@ func handlerWrapper(h JobHandler) JobHandler {
 }
 
 // new job
-func NewJob(pl interface{}, opts ...interface{}) *Job {
-	method := ""
-	id := ""
-	if len(opts) > 0 {
-		if m, ok := opts[0].(string); ok && m != "" {
-			method = m
-		}
-	}
-	if len(opts) > 1 {
-		if r, ok := opts[1].(string); ok && r != "" {
-			id = r
-		}
-	}
+func NewJob(c *Context, method string, pl interface{}, opts ...interface{}) *Job {
+	id := c.RequestID()
 	// generate random job id
 	if id == "" {
 		id = utils.FastRequestId(16)
 	}
 	return &Job{
 		id:      id,
+		context: c,
 		method:  method,
 		payload: pl,
 		result:  make(chan interface{}, 1),
@@ -213,55 +207,44 @@ func (wp *WorkerPool) dispatch() {
 }
 
 // push job, 异步
-func Push(i interface{}, opts ...interface{}) {
+func (c *Context) Push(method string, i interface{}, opts ...interface{}) {
 	if wp != nil {
-		wp.push(i, opts...)
+		wp.push(c, method, i, opts...)
 	}
 }
 
 // req job, 同步
-func Req(i interface{}, opts ...interface{}) (interface{}, error) {
+func (c *Context) Req(method string, i interface{}, opts ...interface{}) (interface{}, error) {
 	if wp != nil {
-		return wp.req(i, opts...)
+		return wp.req(c, method, i, opts...)
 	}
 	return nil, fmt.Errorf("not found worker pool")
 }
 
-func PushTo(name string, i interface{}, opts ...interface{}) {
+func (c *Context) PushTo(name string, method string, i interface{}, opts ...interface{}) {
 	for _, work := range wgo.works {
 		if work.Name() == name {
-			work.push(i, opts...)
+			work.push(c, method, i, opts...)
 		}
 	}
 }
 
-func ReqTo(name string, i interface{}, opts ...interface{}) (interface{}, error) {
+func (c *Context) ReqTo(name string, method string, i interface{}, opts ...interface{}) (interface{}, error) {
 	for _, work := range wgo.works {
 		if work.Name() == name {
-			return work.req(i, opts...)
+			return work.req(c, method, i, opts...)
 		}
 	}
 	return nil, fmt.Errorf("not found worker pool")
 }
 
-func (work *WorkerPool) push(i interface{}, opts ...interface{}) {
-	if job, ok := i.(*Job); ok {
-		// 如果直接传入job, 欣然接受, 忽略opts
-		work.queue <- job
-	} else {
-		// 封装为job, method为空, 这样默认handler会处理这个job
-		work.queue <- NewJob(i, opts...)
-	}
+func (work *WorkerPool) push(c *Context, method string, i interface{}, opts ...interface{}) {
+	// 封装为job, method为空, 这样默认handler会处理这个job
+	work.queue <- NewJob(c, method, i, opts...)
 }
-func (work *WorkerPool) req(i interface{}, opts ...interface{}) (interface{}, error) {
-	var job *Job
-	if ijob, ok := i.(*Job); ok {
-		// 如果直接传入job, 欣然接受, 忽略opts
-		job = ijob
-	} else {
-		// 封装为job, method为空, 这样默认handler会处理这个job
-		job = NewJob(i, opts...)
-	}
+func (work *WorkerPool) req(c *Context, method string, i interface{}, opts ...interface{}) (interface{}, error) {
+	// 封装为job, method为空, 这样默认handler会处理这个job
+	job := NewJob(c, method, i, opts...)
 	work.queue <- job
 	// waiting result, timeout in 60 seconds
 	to := time.Tick(60 * time.Second)

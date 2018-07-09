@@ -125,6 +125,15 @@ func (ac *AccessLog) Reset(t time.Time) {
 	ac.Service.User.Sid = ""
 }
 
+// clone
+func (ac *AccessLog) Clone() *AccessLog {
+	nac := NewAccessLog()
+	nac.Ts = time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
+	nac.ReqID = ac.ReqID
+	nac.CIP = ac.CIP
+	return nac
+}
+
 // 记录access日志
 // access应该是最外层的middleware
 func Access() MiddlewareFunc {
@@ -142,6 +151,10 @@ func Access() MiddlewareFunc {
 			c.Flush() // 主要为了standard http
 
 			ac := c.Access()
+			// client ip
+			ac.CIP = c.ClientIP()
+			// request id
+			ac.ReqID = c.RequestID()
 
 			// error
 			if err != nil {
@@ -155,10 +168,6 @@ func Access() MiddlewareFunc {
 			}
 			// server mode
 			ac.Proto = c.ServerMode()
-			// client ip
-			ac.CIP = c.ClientIP()
-			// request id
-			ac.ReqID = c.RequestID()
 			// dura
 			ac.Dura = utils.Round(c.Sub().Seconds()*1000, 3)
 			// call
