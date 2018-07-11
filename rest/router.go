@@ -257,7 +257,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 			c.Error("DidCreate error: %s", err)
 			return rest.NotOK(err)
 		} else { // all done
-			c.Debug("set rest new: %+v", m)
+			// c.Debug("set rest new: %+v", m)
 			if r, err = action.Trigger(r.(Model)); err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
