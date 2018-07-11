@@ -71,7 +71,7 @@ func (j *Job) SaveAccessLog() {
 	ac.Service.User.Id = c.UserID()
 	ac.Service.Endpoint = j.Work()
 	ac.Service.Desc = j.Method()
-	ac.Service.Action = "C"
+	// ac.Service.Action = "C"
 	// new & old, new对应对外请求, old对应对外请求的返回
 	if j.req != nil {
 		if nb, err := json.Marshal(j.req); err == nil {
