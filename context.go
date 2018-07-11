@@ -20,6 +20,7 @@ type (
 		mux      server.Mux
 		request  interface{} // 具体的request在各自包内定义
 		response interface{} // 具体的response在各自包内定义
+		job      *Job        // job
 		auth     bool
 		encoding string
 		node     interface{} // router node
@@ -35,9 +36,6 @@ type (
 		noCache  bool
 		ext      interface{} // 额外信息
 	}
-
-	// HandlerFunc defines an interface to serve wgo requests
-	HandlerFunc func(*Context) error
 )
 
 // Generator
@@ -45,6 +43,18 @@ func NewContext() interface{} {
 	return &Context{
 		access: NewAccessLog(),
 	}
+}
+
+// clone
+func (c *Context) Clone() *Context {
+	nc := &Context{}
+	nc.context = ctx.Background()
+	nc.mode = "job"
+	nc.start = time.Now()
+	nc.access = c.Access().Clone()
+	nc.reqID = c.RequestID()
+	nc.logger = c.logger
+	return nc
 }
 
 func (c *Context) Access() *AccessLog {
@@ -73,6 +83,10 @@ func (c *Context) Err() error {
 
 func (c *Context) Value(key interface{}) interface{} {
 	return c.context.Value(key)
+}
+
+func (c *Context) Job() *Job {
+	return c.job
 }
 
 func (c *Context) Request() interface{} {

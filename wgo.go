@@ -12,20 +12,22 @@ import (
 	"wgo/server"
 	"wgo/storage"
 	"wgo/whttp"
+	"wgo/wlog"
 	"wgo/wrpc"
 )
 
 type (
 	// WGO options
 	WGO struct {
-		lock    sync.Mutex
-		cfg     *environ.Config  // 配置参数
-		env     *environ.Environ // 环境参数
-		logger  logger           // 日志
-		storage *storage.Storage
-		cron    *cron.Cron
-		works   []*WorkerPool
-		servers Servers
+		lock     sync.Mutex
+		cfg      *environ.Config  // 配置参数
+		env      *environ.Environ // 环境参数
+		logger   logger           // 日志
+		accessor wlog.Logger
+		storage  *storage.Storage
+		cron     *cron.Cron
+		works    []*WorkerPool
+		servers  Servers
 
 		Daemon *daemon.Daemon // 守护进程
 	}
@@ -117,9 +119,9 @@ func Init() {
 	}
 
 	// default middleware
-	Use(Access())
 	Use(Recover())
 	Use(Prepare())
+	Use(Access())
 	if env.EnableCache {
 		Use(Cache())
 	}
@@ -193,8 +195,8 @@ func (w *WGO) Run() {
 /* }}} */
 
 // add work
-func AddWork(label string, max int, jf JobHandler) *WorkerPool { return wgo.AddWork(label, max, jf) }
-func (w *WGO) AddWork(label string, max int, jf JobHandler) *WorkerPool {
+func AddWork(label string, max int, jf HandlerFunc) *WorkerPool { return wgo.AddWork(label, max, jf) }
+func (w *WGO) AddWork(label string, max int, jf HandlerFunc) *WorkerPool {
 	if len(w.works) <= 0 {
 		w.works = make([]*WorkerPool, 0)
 	}

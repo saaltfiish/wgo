@@ -15,6 +15,9 @@ import (
 
 // default middlewares
 type (
+	// HandlerFunc defines an interface to serve wgo requests
+	HandlerFunc func(*Context) error
+
 	MiddlewareFunc func(HandlerFunc) HandlerFunc
 
 	// RecoverConfig defines the config for recover middleware.

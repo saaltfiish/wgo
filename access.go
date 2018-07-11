@@ -144,17 +144,17 @@ func Access() MiddlewareFunc {
 				return next(c)
 			}
 
-			if err = next(c); err != nil {
-				c.ERROR(err) // 这里必须处理error, 否则access抓不到
-			}
-
-			c.Flush() // 主要为了standard http
-
 			ac := c.Access()
 			// client ip
 			ac.CIP = c.ClientIP()
 			// request id
 			ac.ReqID = c.RequestID()
+
+			if err = next(c); err != nil {
+				c.ERROR(err) // 这里必须处理error, 否则access抓不到
+			}
+
+			c.Flush() // 主要为了standard http
 
 			// error
 			if err != nil {
@@ -194,7 +194,7 @@ func Access() MiddlewareFunc {
 			}
 
 			if sa, err := json.Marshal(ac); err != nil {
-				c.Logger().Error("serialize access data failed: %s", err)
+				c.Error("serialize access data failed: %s", err)
 			} else {
 				accessor.Access(string(sa))
 			}
@@ -205,40 +205,45 @@ func Access() MiddlewareFunc {
 }
 
 // get access logger(accessor)
-func Accessor() wlog.Logger {
-	ac := &AccessConfig{}
-	if err := wgo.Cfg().UnmarshalKey(environ.CFG_KEY_ACCESS, ac); err == nil { // 有配置
-		accessor := make(wlog.Logger)
-		if ac.Path != "" { // file
-			accessor.Start(wlog.LogConfig{
-				Type:    "file",
-				Tag:     "_AC_",
-				Format:  "%M",
-				Level:   "ACCESS",
-				Path:    ac.Path,
-				Maxsize: 1 << 28,
-				Daily:   true,
-				MaxDays: 30,
-				Mkdir:   true,
-			})
-			return accessor
-		} else if ac.Addr != "" { // syslog
-			if ac.Thread < 1 {
-				ac.Thread = 10 //default
-			}
+func Accessor() wlog.Logger { return wgo.Accessor() }
+func (w *WGO) Accessor() wlog.Logger {
+	if w.accessor == nil {
+		ac := &AccessConfig{}
+		if err := wgo.Cfg().UnmarshalKey(environ.CFG_KEY_ACCESS, ac); err == nil { // 有配置
+			accessor := make(wlog.Logger)
+			if ac.Path != "" { // file
+				accessor.Start(wlog.LogConfig{
+					Type:    "file",
+					Tag:     "_AC_",
+					Format:  "%M",
+					Level:   "ACCESS",
+					Path:    ac.Path,
+					Maxsize: 1 << 28,
+					Daily:   true,
+					MaxDays: 30,
+					Mkdir:   true,
+				})
+				// return accessor
+				w.accessor = accessor
+			} else if ac.Addr != "" { // syslog
+				if ac.Thread < 1 {
+					ac.Thread = 10 //default
+				}
 
-			accessor.Start(wlog.LogConfig{
-				Type:    "syslog",
-				Tag:     "_AC_",
-				Format:  "%M",
-				Level:   "ACCESS",
-				Network: ac.Network,
-				Addr:    ac.Addr,
-				Thread:  ac.Thread,
-				Prefix:  ac.Prefix,
-			})
-			return accessor
+				accessor.Start(wlog.LogConfig{
+					Type:    "syslog",
+					Tag:     "_AC_",
+					Format:  "%M",
+					Level:   "ACCESS",
+					Network: ac.Network,
+					Addr:    ac.Addr,
+					Thread:  ac.Thread,
+					Prefix:  ac.Prefix,
+				})
+				// return accessor
+				w.accessor = accessor
+			}
 		}
 	}
-	return nil
+	return w.accessor
 }
