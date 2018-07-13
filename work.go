@@ -19,6 +19,7 @@ type Job struct {
 	method   string
 	payload  interface{}
 	result   interface{}
+	ext      interface{}
 	req      []interface{} // 对外的请求
 	resp     []interface{} // 对外请求的返回
 	err      *server.ServerError
@@ -50,6 +51,13 @@ func (j *Job) SetResult(i interface{}) error {
 	j.result = i
 	return nil
 }
+func (j *Job) Ext() interface{} {
+	return j.ext
+}
+func (j *Job) SetExt(i interface{}) error {
+	j.ext = i
+	return nil
+}
 func (j *Job) Response() {
 	j.SaveAccessLog()
 	if j.err != nil {
@@ -58,6 +66,13 @@ func (j *Job) Response() {
 		j.response <- j.result
 	}
 }
+
+// 继续处理job, 上一阶段的result作为下一阶段的payload
+func (j *Job) Continue() {
+	j.payload = j.result
+	j.result = nil
+}
+
 func (j *Job) SaveReq(i interface{}) {
 	j.req = append(j.req, i)
 }
@@ -77,23 +92,20 @@ func (j *Job) SaveAccessLog() {
 		if nb, err := json.Marshal(j.req); err == nil {
 			ac.Service.New = string(nb)
 		}
+		// clear
+		j.req = nil
 	}
 	if j.resp != nil {
 		if nb, err := json.Marshal(j.resp); err == nil {
 			ac.Service.Old = string(nb)
 		}
+		j.resp = nil
 	}
 	if sa, err := json.Marshal(ac); err != nil {
 		c.Error("serialize access data failed: %s", err)
 	} else {
 		Accessor().Access(string(sa))
 	}
-}
-
-// 继续处理job, 上一阶段的result作为下一阶段的payload
-func (j *Job) Continue() {
-	j.payload = j.result
-	j.result = nil
 }
 
 func (c *Context) NewJob(name, method string, pl interface{}, opts ...interface{}) *Job {

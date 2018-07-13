@@ -158,12 +158,16 @@ func (log Logger) intLogf(lvl Level, arg0 interface{}, args ...interface{}) (rec
 		}
 
 		var msg string
-		switch first := arg0.(type) {
-		case string:
-			// Use the first string as a format string
-			msg = fmt.Sprintf(first, args...)
-		default:
-			msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+		if len(args) > 0 {
+			switch first := arg0.(type) {
+			case string:
+				// Use the first string as a format string
+				msg = fmt.Sprintf(first, args...)
+			default:
+				msg = fmt.Sprintf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
+			}
+		} else if m, ok := arg0.(string); ok && m != "" {
+			msg = m
 		}
 
 		// Make the log record

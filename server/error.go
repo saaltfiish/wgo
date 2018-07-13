@@ -51,7 +51,8 @@ func WrapError(err error) *ServerError {
 
 // imp error
 func (e *ServerError) Error() string {
-	return fmt.Sprintf("error: code = %d message = %s", e.Code, e.Message)
+	// return fmt.Sprintf("error: code = %d message = %s", e.Code, e.Message)
+	return fmt.Sprintf("%s(%d)", e.Message, e.Code)
 }
 
 func (e *ServerError) Status() int {
