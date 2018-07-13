@@ -14,6 +14,7 @@ import (
 
 type Job struct {
 	id       string
+	start    time.Time
 	context  *Context // 异步job直接使用Context会有问题, todo: 应该clone一个context
 	work     string
 	method   string
@@ -82,8 +83,12 @@ func (j *Job) SaveResp(i interface{}) {
 func (j *Job) SaveAccessLog() {
 	c := j.Context()
 	ac := c.Access().Clone()
+	// dura
+	ac.Dura = utils.Round(time.Now().Sub(j.start).Seconds()*1000, 3)
+	j.start = time.Now()
 	// user info
 	ac.Service.User.Id = c.UserID()
+	ac.Service.User.IP = c.ClientIP()
 	ac.Service.Endpoint = j.Work()
 	ac.Service.Desc = j.Method()
 	// ac.Service.Action = "C"
@@ -116,6 +121,7 @@ func (c *Context) NewJob(name, method string, pl interface{}, opts ...interface{
 	}
 	c.job = &Job{
 		id:       id,
+		start:    time.Now(),
 		context:  c,
 		work:     name,
 		method:   method,
