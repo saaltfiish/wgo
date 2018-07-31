@@ -281,12 +281,14 @@ func (rpt *Report) SearchFieldName(rf string, opts ...interface{}) string {
 			tag = t
 		}
 	}
-	if len(opts) > 1 {
+	field := rpt.Field(rf, tag)
+	if kwf == "" && field.Tags[RPT_TAG].Options.Contains(RPT_KEYWORD) {
+		kwf = RPT_KEYWORD
+	} else if len(opts) > 1 {
 		if useKWF, ok := opts[1].(bool); ok && useKWF && rpt.keywordField != "" {
 			kwf = rpt.keywordField
 		}
 	}
-	field := rpt.Field(rf, tag)
 	if kwf != "" {
 		return field.Tags[FIELD_TAG].Name + "." + kwf
 	}
@@ -406,6 +408,15 @@ func (rpt *Report) Daily() *Report {
 		panic("can not interval reporting")
 	}
 	rpt.Interval(INTVL_DAY)
+	return rpt
+}
+
+// hourly, interval = hour
+func (rpt *Report) Hourly() *Report {
+	if rpt.timestamp == nil || rpt.timestamp.field == "" {
+		panic("can not interval reporting")
+	}
+	rpt.Interval(INTVL_HOUR)
 	return rpt
 }
 

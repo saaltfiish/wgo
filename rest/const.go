@@ -150,12 +150,13 @@ const (
 	FIELD_TAG = "json"
 	RPT_TAG   = "report"
 
-	RPT_NESTED = "nested"
-	RPT_TERM   = "term"
-	RPT_SUM    = "sum"
-	RPT_SEARCH = "search"
-	RPT_FILTER = "filter"
-	RPT_RANGE  = "range"
+	RPT_NESTED  = "nested"
+	RPT_TERM    = "term"
+	RPT_SUM     = "sum"
+	RPT_SEARCH  = "search"
+	RPT_KEYWORD = "keyword" // 包含multifield, 并且为`keyword`
+	RPT_FILTER  = "filter"
+	RPT_RANGE   = "range"
 
 	RTKEY_RESULTS = "_results_"
 	RTKEY_COUNT   = "_count_"
