@@ -7,7 +7,7 @@ clone:
     image: plugins/git
     pull: true
     tags: true
-    depth: 10
+    depth: 1
 
 pipeline:
   build:
