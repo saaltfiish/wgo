@@ -4,16 +4,18 @@ workspace:
 
 clone:
   git:
-    # image: plugins/git
-    image: alpine/git
-    pull: true
-    commands:
-      - git init
-      - git remote add origin https://gitlab.gladsheim.cn/arch/wgo.git
-      - git config --global core.compression 0
-      - git fetch --tags --depth 1 origin +refs/heads/master
-      - git reset --hard -q master
-      - git submodule update --init --recursive
+    image: plugins/git
+    tags: true
+    depth: 50
+    # image: alpine/git
+    # pull: true
+    # commands:
+    #   - git init
+    #   - git remote add origin https://gitlab.gladsheim.cn/arch/wgo.git
+    #   - git config --global core.compression 0
+    #   - git fetch --tags --depth 1 origin +refs/heads/master
+    #   - git reset --hard -q master
+    #   - git submodule update --init --recursive
 
 pipeline:
   build:
