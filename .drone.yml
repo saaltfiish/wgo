@@ -4,9 +4,16 @@ workspace:
 
 clone:
   git:
-    image: plugins/git
-    tags: true
-    depth: 50
+    # image: plugins/git
+    image: alpine/git
+    pull: true
+    commands:
+      - git init
+      - git remote add origin https://gitlab.gladsheim.cn/arch/wgo.git
+      - git config –-global http.postBuffer 524288000
+      - git fetch --tags --depth=50 origin +refs/heads/master
+      - git reset --hard -q master
+      - git submodule update --init --recursive
 
 pipeline:
   build:
