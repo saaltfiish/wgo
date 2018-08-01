@@ -5,7 +5,7 @@ workspace:
 clone:
   git:
     image: plugins/git
-    tags: true
+    tags: false
     depth: 50
     command_timeout: 600
 
