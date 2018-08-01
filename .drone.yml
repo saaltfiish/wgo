@@ -5,9 +5,9 @@ workspace:
 clone:
   git:
     image: plugins/git
-    tags: false
-    depth: 50
-    command_timeout: 600
+    pull: true
+    tags: true
+    depth: 10
 
 pipeline:
   build:
