@@ -37,7 +37,7 @@ func New() (eng *Engine) {
 			ReduceMemoryUsage:  true,
 			Concurrency:        100000,
 			ReadTimeout:        180 * time.Second,
-			WriteTimeout:       30 * time.Second,
+			WriteTimeout:       90 * time.Second,
 			MaxRequestBodySize: 64 * 1024 * 1024,
 			ReadBufferSize:     16 * 1024,
 			LogAllErrors:       true,

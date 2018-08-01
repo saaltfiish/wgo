@@ -58,7 +58,7 @@ var Transport = &http.Transport{
 
 	DialContext: (&net.Dialer{
 		Timeout:   90 * time.Second,
-		KeepAlive: 30 * time.Second,
+		KeepAlive: 90 * time.Second,
 		DualStack: true,
 	}).DialContext,
 	MaxIdleConns:          100,
