@@ -402,6 +402,24 @@ func (rpt *Report) Timestamp(fields ...string) *Report {
 	return rpt
 }
 
+// monthly, interval = month
+func (rpt *Report) Monthly() *Report {
+	if rpt.timestamp == nil || rpt.timestamp.field == "" {
+		panic("can not interval reporting")
+	}
+	rpt.Interval(INTVL_MONTH)
+	return rpt
+}
+
+// weekly, interval = week
+func (rpt *Report) Weekly() *Report {
+	if rpt.timestamp == nil || rpt.timestamp.field == "" {
+		panic("can not interval reporting")
+	}
+	rpt.Interval(INTVL_WEEK)
+	return rpt
+}
+
 // daily, interval = day
 func (rpt *Report) Daily() *Report {
 	if rpt.timestamp == nil || rpt.timestamp.field == "" {
