@@ -2,6 +2,7 @@
 package rest
 
 import (
+	"fmt"
 	"strings"
 
 	"wgo"
@@ -9,21 +10,22 @@ import (
 )
 
 type REST struct {
-	Count      int64                       `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
-	Sum        float64                     `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
-	endpoint   string                      `db:"-"`
-	model      Model                       `db:"-"`
-	action     string                      `db:"-"`
-	ctx        *wgo.Context                `db:"-"`
-	env        map[interface{}]interface{} `db:"-"`
-	keeper     Keeper                      `db:"-"`
-	conditions []*Condition                `db:"-"`
-	pagination *Pagination                 `db:"-"`
-	fields     []string                    `db:"-"`
-	new        interface{}                 `db:"-"`
-	older      Model                       `db:"-"`
-	filled     bool                        `db:"-"` //是否有内容
-	defaultms  []interface{}               `db:"-"` // 默认的middlewares
+	Count int64   `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
+	Sum   float64 `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
+
+	endpoint   string        `db:"-"`
+	model      Model         `db:"-"`
+	action     string        `db:"-"`
+	ctx        *wgo.Context  `db:"-"`
+	keeper     Keeper        `db:"-"`
+	conditions []*Condition  `db:"-"`
+	pagination *Pagination   `db:"-"`
+	fields     []string      `db:"-"`
+	new        interface{}   `db:"-"`
+	older      Model         `db:"-"`
+	filled     bool          `db:"-"` //是否有内容
+	defaultms  []interface{} `db:"-"` // 默认的middlewares
+	// env        map[interface{}]interface{} `db:"-"`
 }
 
 func init() {
@@ -40,7 +42,7 @@ func init() {
 func NewREST(c *wgo.Context) (rest *REST) {
 	rest = new(REST)
 	rest.ctx = c
-	rest.env = make(map[interface{}]interface{})
+	// rest.env = make(map[interface{}]interface{})
 	c.SetExt(rest)
 	return
 }
@@ -60,18 +62,31 @@ func (rest *REST) SetContext(c *wgo.Context) {
 	rest.ctx = c
 }
 
+// values
+func (rest *REST) Set(key string, val interface{}) {
+	rest.ctx.Set(key, val)
+}
+
+func (rest *REST) Get(key string) interface{} {
+	return rest.ctx.Get(key)
+}
+
 // env
 func (rest *REST) SetEnv(k string, v interface{}) {
 	if k != "" {
-		rest.env[k] = v
+		// rest.env[k] = v
+		ek := fmt.Sprintf("%s:%s", RESTKey, k)
+		rest.ctx.Set(ek, v)
 	}
 }
 
 func (rest *REST) GetEnv(k string) interface{} {
-	if v, ok := rest.env[k]; ok {
-		return v
-	}
-	return nil
+	// if v, ok := rest.env[k]; ok {
+	// 	return v
+	// }
+	// return nil
+	ek := fmt.Sprintf("%s:%s", RESTKey, k)
+	return rest.ctx.Get(ek)
 }
 
 // action

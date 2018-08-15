@@ -36,6 +36,7 @@ const (
 	RCK_LOGS_INDEX      = "logs_index"
 	//env key
 	RESTKey           = "_rest_"
+	ReportKey         = "_report_"
 	RequestIDKey      = "_reqid_"
 	SaveBodyKey       = "_sb_"
 	NoLogKey          = "_nl_"

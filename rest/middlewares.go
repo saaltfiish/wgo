@@ -101,7 +101,7 @@ func Init() wgo.MiddlewareFunc {
 						for _, of := range os {
 							if of != "" {
 								//c.Info("[or condition][or field: %s]", of)
-								rest.setCondition(NewCondition(CTYPE_OR, of, NewCondition(ct, k, cv))) // k代表同类的or条件
+								rest.SetParamConds(NewCondition(CTYPE_OR, of, NewCondition(ct, k, cv))) // k代表同类的or条件
 							}
 						}
 					} else {
@@ -116,7 +116,7 @@ func Init() wgo.MiddlewareFunc {
 								ct = CTYPE_JOIN
 							}
 						}
-						rest.setCondition(NewCondition(ct, k, cv))
+						rest.SetParamConds(NewCondition(ct, k, cv))
 					}
 				}
 			}

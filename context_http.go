@@ -73,14 +73,6 @@ func (c *Context) Cookies() []server.Cookie { // interface{} = []http.Cookie
 	return c.request.(whttp.Request).Cookies()
 }
 
-func (c *Context) Set(key string, val interface{}) {
-	c.context = ctx.WithValue(c.context, key, val)
-}
-
-func (c *Context) Get(key string) interface{} {
-	return c.context.Value(key)
-}
-
 func (c *Context) Bind(i interface{}) error {
 	return c.mux.(*whttp.Mux).Binder().Bind(i, c.request.(whttp.Request))
 }
@@ -171,7 +163,7 @@ func (c *Context) HTTPReset(req whttp.Request, res whttp.Response) {
 	c.node = nil
 	c.reqID = ""
 	c.noCache = false
-	c.ext = nil
+	// c.ext = nil
 }
 
 func (c *Context) HTML(code int, html string) (err error) {

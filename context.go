@@ -34,7 +34,7 @@ type (
 		mode     string
 		access   *AccessLog
 		noCache  bool
-		ext      interface{} // 额外信息
+		// ext      interface{} // 额外信息
 	}
 )
 
@@ -81,6 +81,14 @@ func (c *Context) Err() error {
 	return c.context.Err()
 }
 
+func (c *Context) Set(key string, val interface{}) {
+	c.context = ctx.WithValue(c.context, key, val)
+}
+
+func (c *Context) Get(key string) interface{} {
+	return c.context.Value(key)
+}
+
 func (c *Context) Value(key interface{}) interface{} {
 	return c.context.Value(key)
 }
@@ -106,11 +114,13 @@ func (c *Context) Sub() time.Duration {
 }
 
 func (c *Context) SetExt(ext interface{}) {
-	c.ext = ext
+	// c.ext = ext
+	c.Set("__!ext!__", ext)
 }
 
 func (c *Context) Ext() interface{} {
-	return c.ext
+	// return c.ext
+	return c.Get("__!ext!__")
 }
 
 func (c *Context) SetRequestID(rid string) {

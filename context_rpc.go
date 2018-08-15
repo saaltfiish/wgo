@@ -19,7 +19,7 @@ func (c *Context) RPCReset(req *wrpc.Request, res *wrpc.Response) {
 	c.node = nil
 	c.reqID = ""
 	c.noCache = false
-	c.ext = nil
+	// c.ext = nil
 }
 
 // rpc response

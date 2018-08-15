@@ -499,7 +499,7 @@ func (rest *REST) New() Model {
  *
  */
 func GetCondition(cs []*Condition, k string) (con *Condition, err error) {
-	if cs == nil {
+	if cs == nil || len(cs) == 0 {
 		err = fmt.Errorf("conditions empty")
 	} else {
 		for _, c := range cs {

@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -70,41 +69,47 @@ func NewPagination(page, perPage string) (p *Pagination) {
 
 /* }}} */
 
-/* {{{ func (r *REST) GetCondition(k string) (con *Condition, err error)
- * 设置参数查询条件
+/* {{{ func (r *REST) GetParamConds() []*Condition
+ * 获取参数条件
  */
-func (r *REST) GetCondition(k string) (con *Condition, err error) {
-	if cs := r.GetEnv(ConditionsKey); cs == nil {
-		//没有conditions,自动初始化
-		r.SetEnv(ConditionsKey, make([]*Condition, 0))
-		return nil, fmt.Errorf("Not found conditions! %s", ConditionsKey)
-	} else {
-		return GetCondition(cs.([]*Condition), k)
+func (r *REST) GetParamConds() []*Condition {
+	csI := r.GetEnv(ConditionsKey)
+	if csI != nil {
+		if conds, ok := csI.([]*Condition); ok {
+			return conds
+		}
 	}
+	return make([]*Condition, 0)
 }
 
 /* }}} */
 
-/* {{{ func (r *REST) setCondition(con *Condition) (err error) {
- *
+/* {{{ func (r *REST) SetParamConds(con *Condition) (err error) {
+ * 设置参数条件
  */
-func (r *REST) setCondition(con *Condition) {
-	//Debug("[setCondition][key: %s]%v", con.Field, con)
-	if ck := r.GetEnv(ConditionsKey); ck == nil {
-		//没有conditions,自动初始化
-		r.SetEnv(ConditionsKey, make([]*Condition, 0))
+func (r *REST) SetParamConds(con *Condition) {
+	// r.Debug("[SetParamConds][key: %s]%v", con.Field, con)
+	var conds []*Condition
+	csI := r.GetEnv(ConditionsKey)
+	if csI != nil {
+		if cds, ok := csI.([]*Condition); ok {
+			conds = cds
+		}
 	}
-	//rc.Env[ConditionsKey] = append(rc.Env[ConditionsKey].([]*Condition), con)
+	if conds == nil {
+		conds = make([]*Condition, 0)
+	}
 	set := false
-	for _, ec := range r.GetEnv(ConditionsKey).([]*Condition) {
+	for _, ec := range conds {
 		if ec.Field == con.Field {
 			ec.Merge(con)
 			set = true
 		}
 	}
 	if !set {
-		r.SetEnv(ConditionsKey, append(r.GetEnv(ConditionsKey).([]*Condition), con))
+		conds = append(conds, con)
 	}
+	r.SetEnv(ConditionsKey, conds)
 }
 
 /* }}} */

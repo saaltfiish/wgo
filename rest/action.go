@@ -69,9 +69,7 @@ func (rest *REST) PreGet(i interface{}) (interface{}, error) {
 	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_IS, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	if cons := rest.GetEnv(ConditionsKey); cons != nil { //从context里面获取参数条件
-		m.SetConditions(cons.([]*Condition)...)
-	}
+	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
 	// fields
 	if fs := rest.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
 		m.SetFields(fs.([]string)...)
@@ -138,9 +136,7 @@ func (rest *REST) PreSearch(i interface{}) (interface{}, error) {
 	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_RANGE, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	if cons := rest.GetEnv(ConditionsKey); cons != nil { //从context里面获取参数条件
-		m.SetConditions(cons.([]*Condition)...)
-	}
+	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
 	// fields
 	if fs := rest.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
 		m.SetFields(fs.([]string)...)
@@ -339,9 +335,7 @@ func (rest *REST) PreCheck(i interface{}) (interface{}, error) {
 	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_IS, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	if cons := rest.GetEnv(ConditionsKey); cons != nil { //从context里面获取参数条件
-		m.SetConditions(cons.([]*Condition)...)
-	}
+	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
 	return i, nil
 }
 

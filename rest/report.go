@@ -41,6 +41,7 @@ type Report struct {
 	indexName    string
 	search       *elastic.SearchService
 	params       []string          // 支持参数
+	mterms       []string          // 命中的terms查询
 	excludes     []string          // source fields exclude
 	includes     []string          // source fields include
 	dimensions   Worlds            // 维度
@@ -99,6 +100,16 @@ type Aggregation struct {
 }
 type Aggregations []*Aggregation
 
+// reporter
+func (rest *REST) Report() *Report {
+	if rI := rest.GetEnv(ReportKey); rI != nil {
+		if rpt, ok := rI.(*Report); ok {
+			return rpt
+		}
+	}
+	return nil
+}
+
 // NewReport
 func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 	sf := utils.ReadStructFields(base, true, FIELD_TAG, RPT_TAG) // 读json, report两种tag
@@ -124,6 +135,9 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		// 传入了时间段参数, 参数优先
 		rpt.timeRange = tr.(*TimeRange)
 	}
+	// save to context
+	rest.SetEnv(ReportKey, rpt)
+
 	return rpt
 }
 
@@ -180,7 +194,7 @@ func (rpt *Report) From(days int) *Report {
 	return rpt
 }
 
-// parms
+// params
 func (rpt *Report) Params(params ...string) *Report {
 	if rpt.params == nil {
 		rpt.params = make([]string, 0)
@@ -190,6 +204,17 @@ func (rpt *Report) Params(params ...string) *Report {
 		// 	rpt.params = append(rpt.params, p)
 		// }
 		rpt.params = append(rpt.params, p)
+	}
+	return rpt
+}
+
+// match term, 作用是相关聚合不需要increase了
+func (rpt *Report) MatchTerms(terms ...string) *Report {
+	if rpt.mterms == nil {
+		rpt.mterms = make([]string, 0)
+	}
+	for _, t := range terms {
+		rpt.mterms = append(rpt.mterms, t)
 	}
 	return rpt
 }
@@ -229,7 +254,7 @@ func (rpt *Report) Include(fields ...string) *Report {
 
 // condition
 func (rpt *Report) Condition(field string, v ...interface{}) *Report {
-	rpt.rest.setCondition(NewCondition(CTYPE_IS, field, v...))
+	rpt.rest.SetParamConds(NewCondition(CTYPE_IS, field, v...))
 	rpt.params = append(rpt.params, field)
 	return rpt
 }
@@ -502,7 +527,8 @@ func (rpt *Report) Build() (r Result, err error) {
 
 		// aggs
 		if rpt.interval != "" {
-			rpt.dimensions = rpt.dimensions.Increase(rpt.interval)
+			// rpt.dimensions = rpt.dimensions.Increase(rpt.interval)
+			rpt.dimensions = rpt.dimensions.Increase(rpt.timestamp.field)
 			tmp := DateHistogramAgg(tsField, rpt.interval)
 			if len(rpt.aggregations) > 0 {
 				rpt.dimensions = rpt.dimensions.Increase()
@@ -694,20 +720,18 @@ func (rpt *Report) prepare() error {
 
 		rpt.rangeQuery()
 
-		if cons := r.GetEnv(ConditionsKey); cons != nil {
-			// rpt.rest.Context().Info("cons: %d", len(cons.([]*Condition)))
-			for _, con := range cons.([]*Condition) {
-				if con.Is != nil && utils.InSliceIgnorecase(con.Field, rpt.params) {
-					// 参数的查询条件
-					field := rpt.Field(con.Field, RPT_TAG)
-					// rpt.rest.Context().Info("field: %s(%s), type: %s", con.Field, sfn, reportType(field))
-					switch rtype := reportType(field); rtype {
-					case RPT_SEARCH:
-						rpt.matchPhraseQuery(con.Field, con.Is)
-					case RPT_TERM:
-						// rpt.rest.Context().Info("condition. field: %s, value: %s", con.Field, con.Is)
-						rpt.TermsQuery(con.Field, con.Is)
-					}
+		for _, con := range r.GetParamConds() {
+			if con.Is != nil && utils.InSliceIgnorecase(con.Field, rpt.params) {
+				// 参数的查询条件
+				field := rpt.Field(con.Field, RPT_TAG)
+				// r.Info("field: %s(%s), type: %s", con.Field, field, reportType(field))
+				switch rtype := reportType(field); rtype {
+				case RPT_SEARCH:
+					rpt.matchPhraseQuery(con.Field, con.Is)
+				case RPT_TERM:
+					// rpt.rest.Context().Info("condition. field: %s, value: %s", con.Field, con.Is)
+					rpt.MatchTerms(con.Field)
+					rpt.TermsQuery(con.Field, con.Is)
 				}
 			}
 		}
@@ -923,7 +947,10 @@ func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) 
 	case RPT_TERM:
 		if len(opts) > 0 && opts[0] == true {
 			//rpt.rest.Context().Info("field: %s", agg.field)
-			rpt.dimensions = rpt.dimensions.Parallel(agg.field)
+			if !utils.InSliceIgnorecase(agg.field, rpt.mterms) {
+				// 聚合字段没有被term查询的时候, 平行维度
+				rpt.dimensions = rpt.dimensions.Parallel(agg.field)
+			}
 		}
 		if len(agg.filters) > 0 {
 			eagg = rpt.buildFiltersAgg(agg, path)
