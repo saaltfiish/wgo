@@ -167,7 +167,8 @@ const (
 	RTKEY_END     = "_end_"
 	RTKEY_DAILY   = "_daily_"
 	RTKEY_INTVL   = "_interval_"
-	RTKEY_DATE    = "_date_"
+	RTKEY_TIME    = "_time_"
+	RTKEY_MIR     = "_max_interval_range_"
 
 	INTVL_HOUR    = "hour"
 	INTVL_DAY     = "day"

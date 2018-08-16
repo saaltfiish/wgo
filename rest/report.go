@@ -14,6 +14,35 @@ import (
 	"github.com/olivere/elastic"
 )
 
+type Report struct {
+	Info   ReportInfo  `json:"info,omitempty"`
+	Result interface{} `json:"list"`
+
+	base         interface{}
+	fields       utils.StructFields
+	rest         *REST
+	indexName    string
+	search       *elastic.SearchService
+	limitation   map[string]interface{} // 限制
+	params       []string               // 支持参数
+	mterms       []string               // 命中的terms查询
+	excludes     []string               // source fields exclude
+	includes     []string               // source fields include
+	dimensions   Worlds                 // 维度
+	qs           []elastic.Query        // 根据条件形成的多个query
+	filters      map[string]string      // 条件term查询, 需要在nested agg中filter
+	size         int                    // 聚合的size
+	timestamp    *Timestamp             // 时间戳字段
+	timeRange    *TimeRange             // 定义的时间段
+	summary      Aggregations           // summary负责统计
+	dics         Aggregations           // 字典
+	interval     string                 // 时间段 [hour, day, month, year]
+	aggregations Aggregations           // 子聚合
+	pagination   *Pagination            // 是否可分页
+	keywordField string                 // 是否采用多字段模式(主字段text可搜索, 副字段keyword可查询, 这里显示副字段名称)
+	id           string
+}
+
 type ReportInfo struct {
 	Took       int64       `json:"took"`
 	Page       int         `json:"page,omitempty"`     //当前页面
@@ -25,39 +54,13 @@ type ReportInfo struct {
 	Ccy        string      `json:"ccy,omitempty"`
 	Start      string      `json:"start,omitempty"`
 	End        string      `json:"end,omitempty"`
+	First      string      `json:"first,omitempty"` // 第一条数据时间
+	Last       string      `json:"last,omitempty"`  // 最后一条数据时间
 	Summary    interface{} `json:"summary,omitempty"`
 	Dics       interface{} `json:"dics,omitempty"`
 }
 
 type Result map[string]interface{}
-
-type Report struct {
-	Info   ReportInfo  `json:"info,omitempty"`
-	Result interface{} `json:"list"`
-
-	base         interface{}
-	fields       utils.StructFields
-	rest         *REST
-	indexName    string
-	search       *elastic.SearchService
-	params       []string          // 支持参数
-	mterms       []string          // 命中的terms查询
-	excludes     []string          // source fields exclude
-	includes     []string          // source fields include
-	dimensions   Worlds            // 维度
-	qs           []elastic.Query   // 根据条件形成的多个query
-	filters      map[string]string // 条件term查询, 需要在nested agg中filter
-	size         int               // 聚合的size
-	timestamp    *Timestamp        // 时间戳字段
-	timeRange    *TimeRange        // 定义的时间段
-	summary      Aggregations      // summary负责统计
-	dics         Aggregations      // 字典
-	interval     string            // 时间段 [hour, day, month, year]
-	aggregations Aggregations      // 子聚合
-	pagination   *Pagination       // 是否可分页
-	keywordField string            // 是否采用多字段模式(主字段text可搜索, 副字段keyword可查询, 这里显示副字段名称)
-	id           string
-}
 
 type Worlds [][]string
 
@@ -125,6 +128,9 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
 		search:     SearchService(es[RCK_REPORTING_INDEX]),
+		limitation: map[string]interface{}{
+			RTKEY_MIR: float64(200), // interval报表最多200个数据点
+		},
 		// search:     ElasticClient.Search().Index(es["index"]),
 	}
 	if len(params) > 0 {
@@ -134,6 +140,13 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 	if tr := rpt.rest.GetEnv(TimeRangeKey); tr != nil {
 		// 传入了时间段参数, 参数优先
 		rpt.timeRange = tr.(*TimeRange)
+	} else {
+		// 没传入timerange参数, 默认当天
+		y, m, d := time.Now().In(wgo.Env().Location).Date()
+		dtr := new(TimeRange)
+		dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
+		dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
+		rpt.timeRange = dtr
 	}
 	// save to context
 	rest.SetEnv(ReportKey, rpt)
@@ -467,9 +480,45 @@ func (rpt *Report) Hourly() *Report {
 func (rpt *Report) Interval(inr string) *Report {
 	switch inr {
 	case INTVL_HOUR, INTVL_DAY, INTVL_WEEK, INTVL_MONTH, INTVL_QUARTER, INTVL_YEAR:
+		max := rpt.limitation[RTKEY_MIR].(float64)
 		rpt.interval = inr
+		// adjust time range,  如果超过max, 则start不变调整end
+		hs := rpt.timeRange.End.Sub(rpt.timeRange.Start).Hours()
+		count := float64(0)
+		switch inr {
+		case INTVL_HOUR:
+			count = hs
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max/24)*86400-1) * time.Second)
+			}
+		case INTVL_DAY:
+			count = hs / 24
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max)*86400-1) * time.Second)
+			}
+		case INTVL_WEEK:
+			count = hs / (24 * 7)
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max)*7*86400-1) * time.Second)
+			}
+		case INTVL_MONTH:
+			count = hs / (24 * 30)
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max)*30*86400-1) * time.Second)
+			}
+		case INTVL_QUARTER:
+			count = hs / (24 * 30 * 4)
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max)*30*4*86400-1) * time.Second)
+			}
+		case INTVL_YEAR:
+			count = hs / (24 * 365)
+			if count > max {
+				rpt.timeRange.End = rpt.timeRange.Start.Add(time.Duration(int32(max)*365*86400-1) * time.Second)
+			}
+		}
 	default:
-		rpt.rest.Context().Warn("unknown interval: %s", inr)
+		rpt.rest.Warn("unknown interval: %s", inr)
 	}
 	return rpt
 }
@@ -490,6 +539,18 @@ func (rpt *Report) Aggregation(agg *Aggregation) *Report {
 		rpt.aggregations = make(Aggregations, 0)
 	}
 	rpt.aggregations = rpt.aggregations.Push(agg)
+	return rpt
+}
+
+// add sum fields
+func (rpt *Report) Sum(properties ...string) *Report {
+	if rpt.aggregations == nil {
+		rpt.aggregations = make(Aggregations, 0)
+	}
+	for _, pf := range properties {
+		agg := NewAggregation(pf)
+		rpt.aggregations = rpt.aggregations.Push(agg)
+	}
 	return rpt
 }
 
@@ -528,7 +589,7 @@ func (rpt *Report) Build() (r Result, err error) {
 		// aggs
 		if rpt.interval != "" {
 			// rpt.dimensions = rpt.dimensions.Increase(rpt.interval)
-			rpt.dimensions = rpt.dimensions.Increase(rpt.timestamp.field)
+			rpt.dimensions = rpt.dimensions.Increase(RTKEY_TIME)
 			tmp := DateHistogramAgg(tsField, rpt.interval)
 			if len(rpt.aggregations) > 0 {
 				rpt.dimensions = rpt.dimensions.Increase()
@@ -608,12 +669,12 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
 		// rpt.rest.Info("end time: %s", sv.ValueAsString)
 		st, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", sv.ValueAsString)
-		rpt.Info.Start = st.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
+		rpt.Info.First = st.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
 	if ev, found := result.Aggregations.MaxBucket(RTKEY_END); found && ev.ValueAsString != "" {
 		// rpt.rest.Info("end time: %s", ev.ValueAsString)
 		et, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", ev.ValueAsString)
-		rpt.Info.End = et.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
+		rpt.Info.Last = et.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
 	r = make(Result)
 
@@ -667,14 +728,23 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		for _, intvlBucket := range intvl.Buckets {
 			empty := true
 			tr := make(Result)
-			tr[RTKEY_DATE] = *intvlBucket.KeyAsString
+			tr[RTKEY_TIME] = *intvlBucket.KeyAsString
 			if len(rpt.aggregations) > 0 {
 				for _, agg := range rpt.aggregations {
 					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
-					tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
-					if tr[agg.field] != nil && len(tr[agg.field].(Result)) > 0 {
-						// rpt.rest.Context().Info("result: %v", tr[agg.field])
-						empty = false
+					// tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
+					field := rpt.Field(agg.field, RPT_TAG)
+					switch rtype := reportType(field); rtype {
+					case RPT_SUM:
+						tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)[agg.field]
+						if tr[agg.field] != nil && tr[agg.field].(int) > 0 {
+							empty = false
+						}
+					default:
+						tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
+						if tr[agg.field] != nil && len(tr[agg.field].(Result)) > 0 {
+							empty = false
+						}
 					}
 				}
 			}
@@ -767,6 +837,7 @@ func (rpt *Report) rangeQuery() {
 			dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
 			rpt.timeRange = dtr
 		}
+		// 如果是interval报表, 则有要求
 		rs := rpt.timeRange.Start.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 		re := rpt.timeRange.End.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 		rpt.Info.Start = rs
@@ -1187,15 +1258,6 @@ func (r Result) ExtractTo(ob interface{}, ifs ...utils.StructField) (interface{}
 				} else {
 					found = true
 				}
-				// nob := r.ExtractTo(reflect.Indirect(reflect.New(fv.Type())).Interface(), f.SubFields...)
-				// // nob := r.ExtractTo(reflect.Zero(fv.Type()).Interface(), f.SubFields...)
-				// if !utils.IsEmptyValue(reflect.ValueOf(nob)) {
-				// 	if fv.Type().Kind() == reflect.Ptr {
-				// 		fv.Set(reflect.ValueOf(nob))
-				// 	} else {
-				// 		fv.Set(reflect.ValueOf(nob).Elem())
-				// 	}
-				// }
 			}
 		}
 	} else {
