@@ -42,6 +42,14 @@ func SearchService(index string) *elastic.SearchService {
 	return ElasticClient.Search().Index(index)
 }
 
+func BulkService(index string) *elastic.BulkService {
+	return ElasticClient.Bulk().Index(index)
+}
+
+func NewBulkIndexRequest() *elastic.BulkIndexRequest {
+	return elastic.NewBulkIndexRequest()
+}
+
 // get field
 func GetFieldString(bucket *elastic.AggregationBucketKeyItem, f string) string {
 	if aggs, found := bucket.Aggregations.Terms(f); found {
