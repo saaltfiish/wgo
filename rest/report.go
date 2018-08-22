@@ -141,12 +141,7 @@ func (rest *REST) NewReport(base interface{}, params ...string) *Report {
 		// 传入了时间段参数, 参数优先
 		rpt.timeRange = tr.(*TimeRange)
 	} else {
-		// 没传入timerange参数, 默认当天
-		y, m, d := time.Now().In(wgo.Env().Location).Date()
-		dtr := new(TimeRange)
-		dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
-		dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
-		rpt.timeRange = dtr
+		rpt.Today()
 	}
 	// save to context
 	rest.SetEnv(ReportKey, rpt)
@@ -204,6 +199,17 @@ func (rpt *Report) From(days int) *Report {
 		tr.End = time.Now().In(wgo.Env().Location)
 		rpt.timeRange = tr
 	}
+	return rpt
+}
+
+// set time range to today
+func (rpt *Report) Today() *Report {
+	// timerange设为当天
+	y, m, d := time.Now().In(wgo.Env().Location).Date()
+	dtr := new(TimeRange)
+	dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
+	dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
+	rpt.timeRange = dtr
 	return rpt
 }
 
@@ -831,11 +837,7 @@ func (rpt *Report) rangeQuery() {
 	if len(rpt.params) <= 0 || strings.ToLower(rpt.rest.Context().QueryParam(PARAM_ALLTIME)) != "true" {
 		// time range
 		if rpt.timeRange == nil { // 没传入timerange参数, 也没有设置默认timerange, 当天
-			dtr := new(TimeRange)
-			y, m, d := time.Now().Date()
-			dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
-			dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
-			rpt.timeRange = dtr
+			rpt.Today()
 		}
 		// 如果是interval报表, 则有要求
 		rs := rpt.timeRange.Start.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
