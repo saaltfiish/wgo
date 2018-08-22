@@ -144,11 +144,17 @@ func getTimeRange(s, e string) *TimeRange {
 	if ts, err := time.ParseInLocation(format, s, wgo.Env().Location); err == nil {
 		//Info("location: %v, ok", wgo.Env().Location)
 		tr.Start = ts
-		tr.End = ts.Add(step) //默认结束时间为开始时间加上步长
-		//只有成功获取了start, end才有意义
-		if te, err := time.ParseInLocation(format, e, wgo.Env().Location); err == nil && te.After(ts) {
-			// end 必须比 start 大
-			tr.End = te.Add(step)
+		if e != "" {
+			tr.End = ts.Add(step) //默认结束时间为开始时间加上步长
+			//只有成功获取了start, end才有意义
+			if te, err := time.ParseInLocation(format, e, wgo.Env().Location); err == nil && te.After(ts) {
+				// end 必须比 start 大
+				tr.End = te.Add(step)
+			}
+		} else {
+			// 没有传入end字符串, 默认为今天
+			y, m, d := time.Now().In(wgo.Env().Location).Date()
+			tr.End = time.Date(y, m, d, 23, 59, 59, 999000000, wgo.Env().Location)
 		}
 	}
 
@@ -228,10 +234,12 @@ func (r *REST) setTimeRangeFromStartEnd() {
 	}
 
 	if e = c.QueryParam(PARAM_END); e == "" {
-		return
+		// 没有传入end, 默认为当天
+		// return
+		c.Warn("[setTimeRangeFromStartEnd]not found end date, set to today")
 	}
 
-	if len(s) != len(e) {
+	if s != "" && e != "" && len(s) != len(e) {
 		//长度不一致,返回
 		return
 	}

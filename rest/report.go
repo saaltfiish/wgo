@@ -208,7 +208,7 @@ func (rpt *Report) Today() *Report {
 	y, m, d := time.Now().In(wgo.Env().Location).Date()
 	dtr := new(TimeRange)
 	dtr.Start = time.Date(y, m, d, 0, 0, 0, 0, wgo.Env().Location)
-	dtr.End = time.Date(y, m, d, 23, 59, 59, 0, wgo.Env().Location)
+	dtr.End = time.Date(y, m, d, 23, 59, 59, 999000000, wgo.Env().Location)
 	rpt.timeRange = dtr
 	return rpt
 }
