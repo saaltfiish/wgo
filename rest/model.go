@@ -77,6 +77,7 @@ type ListInfo struct {
 	PerPage *int        `json:"per_page,omitempty"` //每页元素个数
 	Total   int64       `json:"total"`              // 总数
 	Sum     interface{} `json:"sum,omitempty"`      //求和
+	Summary interface{} `json:"summary,omitempty"`
 }
 
 // build single page list from interface{}
