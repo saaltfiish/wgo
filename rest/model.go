@@ -43,20 +43,20 @@ type Model interface {
 	NewList() interface{} // 返回一个空结构列表
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
-	DBConn(string) *gorp.DbMap                   // 数据库连接
-	TableName() string                           // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
-	PKey() (string, string, bool)                // key字段,以及是否auto incr
-	ReadPrepare() (interface{}, error)           // 组条件
-	Row(...interface{}) (Model, error)           //获取单条记录
-	Rows(...interface{}) (interface{}, error)    //获取多条记录
-	List() (*List, error)                        // 获取多条记录并返回list
-	GetOlder(rk ...string) Model                 //获取旧记录
-	GetSum(...string) (*List, error)             //获取多条记录
-	GetCount() (int64, error)                    //获取多条记录
-	GetCountNSum() (int64, float64)              //获取count and sum
-	CreateRow() (Model, error)                   //创建单条记录
-	UpdateRow(ext ...interface{}) (int64, error) //更新记录
-	DeleteRow(rk string) (int64, error)          //更新记录
+	DBConn(string) *gorp.DbMap                       // 数据库连接
+	TableName() string                               // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
+	PKey() (string, string, bool)                    // key字段,以及是否auto incr
+	ReadPrepare(...interface{}) (interface{}, error) // 组条件
+	Row(...interface{}) (Model, error)               //获取单条记录
+	Rows(...interface{}) (interface{}, error)        //获取多条记录
+	List() (*List, error)                            // 获取多条记录并返回list
+	GetOlder(rk ...string) Model                     //获取旧记录
+	GetSum(...string) (*List, error)                 //获取多条记录
+	GetCount() (int64, error)                        //获取多条记录
+	GetCountNSum() (int64, float64)                  //获取count and sum
+	CreateRow() (Model, error)                       //创建单条记录
+	UpdateRow(ext ...interface{}) (int64, error)     //更新记录
+	DeleteRow(rk string) (int64, error)              //更新记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -1266,7 +1266,7 @@ func (rest *REST) List() (l *List, err error) {
 func (rest *REST) GetSum(d ...string) (l *List, err error) {
 	//c := m.GetCtx()
 	if m := rest.Model(); m != nil {
-		bi, _ := rest.ReadPrepare()
+		bi, _ := rest.ReadPrepare(true)
 		builder := bi.(*gorp.Builder)
 
 		l = new(List)
@@ -1413,10 +1413,16 @@ func (rest *REST) AddTable(tags ...string) Model {
 func (rest *REST) ImportDic(field string, dic ChecklistDic) {
 }
 
-/* {{{ func (rest *REST) ReadPrepare() (interface{}, error)
+/* {{{ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error)
  * 查询准备
  */
-func (rest *REST) ReadPrepare() (interface{}, error) {
+func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
+	disableOrder := false
+	if len(opts) > 0 {
+		if do, ok := opts[0].(bool); ok && do {
+			disableOrder = true
+		}
+	}
 	var m Model
 	if m = rest.Model(); m == nil {
 		err := fmt.Errorf("not found model")
@@ -1446,7 +1452,7 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 				}
 			}
 			//排序
-			if v.Order != nil {
+			if v.Order != nil && !disableOrder {
 				switch vt := v.Order.(type) {
 				case *OrderBy:
 					b.Order(fmt.Sprintf("T.`%s` %s", vt.Field, vt.Sort))
@@ -1552,27 +1558,29 @@ func (rest *REST) ReadPrepare() (interface{}, error) {
 		}
 	}
 
-	if cols := utils.ReadStructColumns(m, true); cols != nil {
-		pks := ""
-		for _, col := range cols {
-			//处理排序问题,如果之前有排序，这里就是二次排序,如果之前无排序,这里是首要排序
-			if col.TagOptions.Contains(DBTAG_PK) { // 默认为pk降序
-				pks = fmt.Sprintf("T.`%s` DESC", col.Tag)
-				if col.ExtOptions.Contains(TAG_AORDERBY) {
-					pks = fmt.Sprintf("T.`%s` ASC", col.Tag)
+	if !disableOrder {
+		if cols := utils.ReadStructColumns(m, true); cols != nil {
+			pks := ""
+			for _, col := range cols {
+				//处理排序问题,如果之前有排序，这里就是二次排序,如果之前无排序,这里是首要排序
+				if col.TagOptions.Contains(DBTAG_PK) { // 默认为pk降序
+					pks = fmt.Sprintf("T.`%s` DESC", col.Tag)
+					if col.ExtOptions.Contains(TAG_AORDERBY) {
+						pks = fmt.Sprintf("T.`%s` ASC", col.Tag)
+					}
+				} else if col.ExtOptions.Contains(TAG_ORDERBY) { // 默认为降序
+					b.Order(fmt.Sprintf("T.`%s` DESC", col.Tag))
+				} else if col.ExtOptions.Contains(TAG_AORDERBY) { //正排序
+					b.Order(fmt.Sprintf("T.`%s` ASC", col.Tag))
 				}
-			} else if col.ExtOptions.Contains(TAG_ORDERBY) { // 默认为降序
-				b.Order(fmt.Sprintf("T.`%s` DESC", col.Tag))
-			} else if col.ExtOptions.Contains(TAG_AORDERBY) { //正排序
-				b.Order(fmt.Sprintf("T.`%s` ASC", col.Tag))
+				// 处理逻辑删除
+				if col.TagOptions.Contains(DBTAG_LOGIC) {
+					b.Where(fmt.Sprintf("T.`%s` != -1", col.Tag))
+				}
 			}
-			// 处理逻辑删除
-			if col.TagOptions.Contains(DBTAG_LOGIC) {
-				b.Where(fmt.Sprintf("T.`%s` != -1", col.Tag))
+			if pks != "" { //pk排序放到最后
+				b.Order(pks)
 			}
-		}
-		if pks != "" { //pk排序放到最后
-			b.Order(pks)
 		}
 	}
 
