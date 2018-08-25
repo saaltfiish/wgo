@@ -114,24 +114,26 @@ func (rest *REST) Report() *Report {
 }
 
 // NewReport
-func (rest *REST) NewReport(base interface{}, params ...string) *Report {
+func (rest *REST) NewReport(base interface{}, opts ...string) *Report {
 	sf := utils.ReadStructFields(base, true, FIELD_TAG, RPT_TAG) // 读json, report两种tag
 	fields := utils.ScanStructFields(sf, FIELD_TAG, "", "")
-	// for _, f := range fields {
-	// 	rest.Info("field: %s, report: %s", f.Tags[FIELD_TAG].Name, f.Tags["report"].Name)
-	// }
+	indexName := es[RCK_REPORTING_INDEX]
+	params := []string{}
+	if len(opts) > 0 && opts[0] != "" {
+		indexName = opts[0]
+		params = opts[1:]
+	}
 	rpt := &Report{
 		base:       base,
 		fields:     fields,
 		rest:       rest,
-		indexName:  es[RCK_REPORTING_INDEX],
+		indexName:  indexName,
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
-		search:     SearchService(es[RCK_REPORTING_INDEX]),
+		search:     SearchService(indexName),
 		limitation: map[string]interface{}{
 			RTKEY_MIR: float64(200), // interval报表最多200个数据点
 		},
-		// search:     ElasticClient.Search().Index(es["index"]),
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
@@ -164,7 +166,6 @@ func (rest *REST) NewLogs(base interface{}, params ...string) *Report {
 		dimensions: make(Worlds, 0),
 		filters:    make(map[string]string),
 		search:     SearchService(es[RCK_LOGS_INDEX]),
-		// search:     ElasticClient.Search().Index(es["index"]),
 	}
 	if len(params) > 0 {
 		rpt.Params(params...)
@@ -174,6 +175,13 @@ func (rest *REST) NewLogs(base interface{}, params ...string) *Report {
 		// 传入了时间段参数, 参数优先
 		rpt.timeRange = tr.(*TimeRange)
 	}
+	return rpt
+}
+
+// set index
+func (rpt *Report) Search(name string) *Report {
+	rpt.indexName = name
+	rpt.search = SearchService(name)
 	return rpt
 }
 
@@ -920,6 +928,7 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 			spf := rpt.SearchFieldName(p.field)
 			switch rtype := reportType(pf); rtype {
 			case RPT_TERM:
+				// rpt.rest.Info("term properties: %+v, search field: %s, field: %s", agg.field, spf, pf)
 				tmp = tmp.SubAggregation(p.field, LatestField(spf, tsField))
 			case RPT_SUM:
 				if pf.Path != "" && pf.Path != field.Path { // 父聚合是agg
