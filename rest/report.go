@@ -28,7 +28,7 @@ type Report struct {
 	mterms       []string               // 命中的terms查询
 	excludes     []string               // source fields exclude
 	includes     []string               // source fields include
-	dimensions   Worlds                 // 维度
+	dimensions   Dimensions             // 维度
 	qs           []elastic.Query        // 根据条件形成的多个query
 	filters      map[string]string      // 条件term查询, 需要在nested agg中filter
 	size         int                    // 聚合的size
@@ -44,11 +44,12 @@ type Report struct {
 }
 
 type ReportInfo struct {
-	Took       int64       `json:"took"`
-	Page       int         `json:"page,omitempty"`     //当前页面
-	PerPage    int         `json:"per_page,omitempty"` //每页元素个数
-	Total      int64       `json:"total"`              // 总数
-	Dimensions Worlds      `json:"dimensions,omitempty"`
+	Took    int64 `json:"took"`
+	Page    int   `json:"page,omitempty"`     //当前页面
+	PerPage int   `json:"per_page,omitempty"` //每页元素个数
+	Total   int64 `json:"total"`              // 总数
+	/// Dimensions Worlds      `json:"dimensions,omitempty"`
+	Dimensions Dimensions  `json:"dimensions,omitempty"`
 	Tz         string      `json:"tz,omitempty"`
 	Interval   string      `json:"interval,omitempty"`
 	Ccy        string      `json:"ccy,omitempty"`
@@ -62,28 +63,37 @@ type ReportInfo struct {
 
 type Result map[string]interface{}
 
-type Worlds [][]string
+type Dimensions []string
+
+// type Worlds [][]string
 
 // 升维
-func (ws Worlds) Increase(worlds ...string) Worlds {
-	if ws == nil {
-		ws = make([][]string, 0)
-	}
-	if worlds == nil {
-		worlds = []string{}
-	}
-	ws = append(ws, worlds)
-	return ws
-}
+// func (ws Worlds) Increase(worlds ...string) Worlds {
+// 	if ws == nil {
+// 		ws = make([][]string, 0)
+// 	}
+// 	if worlds == nil {
+// 		worlds = []string{}
+// 	}
+// 	ws = append(ws, worlds)
+// 	return ws
+// }
 
 // 平行
-func (ws Worlds) Parallel(world string) Worlds {
-	if ws == nil {
-		ws = make([][]string, 0)
+// func (ws Worlds) Parallel(world string) Worlds {
+// 	if ws == nil {
+// 		ws = make([][]string, 0)
+// 	}
+// 	d := len(ws)
+// 	ws[d-1] = append(ws[d-1], world)
+// 	return ws
+// }
+func (ds Dimensions) Increase(d string) Dimensions {
+	if ds == nil {
+		ds = make([]string, 0)
 	}
-	d := len(ws)
-	ws[d-1] = append(ws[d-1], world)
-	return ws
+	ds = append(ds, d)
+	return ds
 }
 
 type Timestamp struct {
@@ -128,7 +138,7 @@ func (rest *REST) NewReport(base interface{}, opts ...string) *Report {
 		fields:     fields,
 		rest:       rest,
 		indexName:  indexName,
-		dimensions: make(Worlds, 0),
+		dimensions: make(Dimensions, 0),
 		filters:    make(map[string]string),
 		search:     SearchService(indexName),
 		limitation: map[string]interface{}{
@@ -163,7 +173,7 @@ func (rest *REST) NewLogs(base interface{}, params ...string) *Report {
 		fields:     fields,
 		rest:       rest,
 		indexName:  es[RCK_LOGS_INDEX],
-		dimensions: make(Worlds, 0),
+		dimensions: make(Dimensions, 0),
 		filters:    make(map[string]string),
 		search:     SearchService(es[RCK_LOGS_INDEX]),
 	}
@@ -606,7 +616,7 @@ func (rpt *Report) Build() (r Result, err error) {
 			rpt.dimensions = rpt.dimensions.Increase(RTKEY_TIME)
 			tmp := DateHistogramAgg(tsField, rpt.interval)
 			if len(rpt.aggregations) > 0 {
-				rpt.dimensions = rpt.dimensions.Increase()
+				// rpt.dimensions = rpt.dimensions.Increase()
 				for _, agg := range rpt.aggregations {
 					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
 					tmp = tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
@@ -614,7 +624,7 @@ func (rpt *Report) Build() (r Result, err error) {
 			}
 			rpt.search = rpt.search.Aggregation(RTKEY_INTVL, tmp)
 		} else if len(rpt.aggregations) > 0 {
-			rpt.dimensions = rpt.dimensions.Increase()
+			// rpt.dimensions = rpt.dimensions.Increase()
 			for _, agg := range rpt.aggregations {
 				rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, "", true))
 			}
@@ -942,7 +952,7 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 	}
 	// sub aggs
 	if len(agg.aggregations) > 0 {
-		rpt.dimensions = rpt.dimensions.Increase()
+		// rpt.dimensions = rpt.dimensions.Increase()
 		for _, subagg := range agg.aggregations {
 			tmp = tmp.SubAggregation(subagg.field, rpt.buildAgg(subagg, field.Path, true))
 		}
@@ -1000,7 +1010,7 @@ func (rpt *Report) buildFiltersAgg(agg *Aggregation, path string) (eagg elastic.
 	}
 	// sub aggs
 	if len(agg.aggregations) > 0 {
-		rpt.dimensions = rpt.dimensions.Increase()
+		// rpt.dimensions = rpt.dimensions.Increase()
 		for _, subagg := range agg.aggregations {
 			tmp = tmp.SubAggregation(subagg.field, rpt.buildAgg(subagg, field.Path, true))
 		}
@@ -1031,7 +1041,7 @@ func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) 
 			//rpt.rest.Context().Info("field: %s", agg.field)
 			if !utils.InSliceIgnorecase(agg.field, rpt.mterms) {
 				// 聚合字段没有被term查询的时候, 平行维度
-				rpt.dimensions = rpt.dimensions.Parallel(agg.field)
+				rpt.dimensions = rpt.dimensions.Increase(agg.field)
 			}
 		}
 		if len(agg.filters) > 0 {
