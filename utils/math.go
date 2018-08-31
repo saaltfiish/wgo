@@ -26,3 +26,9 @@ func IsInt(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
 }
+
+// int64 abs
+func Abs64(n int64) int64 {
+	y := n >> 63
+	return (n ^ y) - y
+}
