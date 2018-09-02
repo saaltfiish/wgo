@@ -580,13 +580,17 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			}
 			// time range
 			if col.ExtOptions.Contains(TAG_TIMERANGE) {
-				if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Is != nil {
+				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Range != nil || condition.Is != nil) {
 					// 直接对字段查询
-					Debug("[SetConditions]timerange: %s, %s", col.Tag, condition.Is)
-					if is, ok := condition.Is.([]string); ok && len(is) > 1 {
-						condition.Is = nil
-						condition.Range = getTimeRange(is[0], is[1])
+					Debug("[SetConditions]timerange: %s, %s, %+v", col.Tag, condition.Is, condition.Range)
+					if condition.Range != nil {
 						rest.conditions = append(rest.conditions, condition)
+					} else if condition.Is != nil {
+						if is, ok := condition.Is.([]string); ok && len(is) > 1 {
+							condition.Is = nil
+							condition.Range = getTimeRange(is[0], is[1])
+							rest.conditions = append(rest.conditions, condition)
+						}
 					}
 				} else if condition, e := GetCondition(cs, TAG_TIMERANGE); e == nil && condition.Is != nil {
 					condition.Field = col.Tag
