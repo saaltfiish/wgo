@@ -194,6 +194,7 @@ func (jr *JobRoute) Use(m MiddlewareFunc) *JobRoute {
 }
 
 func (hf HandlerFunc) Do(j *Job) {
+	c := j.Context()
 	defer func() {
 		if r := recover(); r != nil {
 			var err error
@@ -205,15 +206,14 @@ func (hf HandlerFunc) Do(j *Job) {
 			}
 			stack := make([]byte, 64<<10)
 			length := runtime.Stack(stack, false)
-			Error("[serve.job] %s %s", err, stack[:length])
+			c.Error("[job.panic] %s %s", err, stack[:length])
 			j.Error(err)
 			j.Response()
 		}
 	}()
-	c := j.Context()
 	err := hf(c)
 	if err != nil {
-		c.Error("serve job error: %s", err)
+		c.Warn("serve job error: %s", err)
 		j.Error(err)
 	}
 	j.Response()
