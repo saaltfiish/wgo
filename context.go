@@ -40,9 +40,11 @@ type (
 
 // Generator
 func NewContext() interface{} {
-	return &Context{
+	c := &Context{
 		access: NewAccessLog(),
 	}
+	c.SetLogger(Logger())
+	return c
 }
 
 // clone

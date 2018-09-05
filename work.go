@@ -19,6 +19,7 @@ type Job struct {
 	work     string
 	method   string
 	payload  interface{}
+	opts     []interface{}
 	result   interface{}
 	ext      interface{}
 	req      []interface{} // 对外的请求
@@ -41,6 +42,9 @@ func (j *Job) Method() string {
 }
 func (j *Job) Payload() interface{} {
 	return j.payload
+}
+func (j *Job) Opts() []interface{} {
+	return j.opts
 }
 func (j *Job) Error(err error) {
 	j.err = server.WrapError(err)
@@ -126,6 +130,7 @@ func (c *Context) NewJob(name, method string, pl interface{}, opts ...interface{
 		work:     name,
 		method:   method,
 		payload:  pl,
+		opts:     opts,
 		response: make(chan interface{}, 1),
 		req:      make([]interface{}, 0),
 		resp:     make([]interface{}, 0),
@@ -361,11 +366,23 @@ func (wp *WorkerPool) dispatch() {
 	}
 }
 
+func Push(method string, i interface{}, opts ...interface{}) {
+	c := NewContext().(*Context)
+	c.SetRequestID(utils.FastRequestId(16))
+	c.Push(method, i, opts...)
+}
+
 // push job, 异步
 func (c *Context) Push(method string, i interface{}, opts ...interface{}) {
 	if wp != nil {
 		wp.push(c, method, i, opts...)
 	}
+}
+
+func Req(method string, i interface{}, opts ...interface{}) (interface{}, error) {
+	c := NewContext().(*Context)
+	c.SetRequestID(utils.FastRequestId(16))
+	return c.Req(method, i, opts...)
 }
 
 // req job, 同步
@@ -376,12 +393,24 @@ func (c *Context) Req(method string, i interface{}, opts ...interface{}) (interf
 	return nil, fmt.Errorf("not found worker pool")
 }
 
+func PushTo(name string, method string, i interface{}, opts ...interface{}) {
+	c := NewContext().(*Context)
+	c.SetRequestID(utils.FastRequestId(16))
+	c.PushTo(name, method, i, opts...)
+}
+
 func (c *Context) PushTo(name string, method string, i interface{}, opts ...interface{}) {
 	for _, work := range wgo.works {
 		if work.Name() == name {
 			work.push(c, method, i, opts...)
 		}
 	}
+}
+
+func ReqTo(name string, method string, i interface{}, opts ...interface{}) (interface{}, error) {
+	c := NewContext().(*Context)
+	c.SetRequestID(utils.FastRequestId(16))
+	return c.ReqTo(name, method, i, opts...)
 }
 
 func (c *Context) ReqTo(name string, method string, i interface{}, opts ...interface{}) (interface{}, error) {

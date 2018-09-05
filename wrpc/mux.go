@@ -42,7 +42,7 @@ func NewMux(gen func() interface{}, conv func(...interface{}) []*Middleware) *Mu
 // NewContext returns a Context instance.
 func (m *Mux) NewContext(req *Request, res *Response) Context {
 	c := m.cgen().(Context)
-	c.SetLogger(m.logger)
+	// c.SetLogger(m.logger)
 	c.SetMux(m)
 	return c
 }

@@ -75,7 +75,7 @@ func (m *Mux) NewContext(req Request, res Response) Context {
 	c := m.cgen().(Context)
 	pvalues := make([]string, m.router.Depth())
 	c.SetParamValues(pvalues...)
-	c.SetLogger(m.logger)
+	// c.SetLogger(m.logger)
 	c.SetMux(m)
 	return c
 }
