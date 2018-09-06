@@ -17,7 +17,7 @@ func Init() wgo.MiddlewareFunc {
 	//wcache.SetLogger(wgo)
 	return func(next wgo.HandlerFunc) wgo.HandlerFunc {
 		return func(c *wgo.Context) (err error) {
-			rest := NewREST(c)
+			rest := GetREST(c)
 			defer rest.Release()
 
 			// action

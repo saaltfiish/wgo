@@ -430,13 +430,8 @@ func (con *Condition) Merge(oc *Condition) {
 /* }}} */
 
 // new model from context
-func RestFromContext(c *wgo.Context) *REST {
-	return c.Ext().(*REST)
-}
-
-// new model from context
 func ModelFromContext(c *wgo.Context, i interface{}) Model {
-	return RestFromContext(c).NewModel(i)
+	return GetREST(c).NewModel(i)
 }
 
 // 基于类型创建一个全新的model, i会被置为空

@@ -41,16 +41,26 @@ func init() {
 // new rest
 func NewREST(c *wgo.Context) (rest *REST) {
 	rest = new(REST)
-	rest.ctx = c
+	c.Set("__!rest!__", rest)
+	rest.SetContext(c)
 	// rest.env = make(map[interface{}]interface{})
-	c.SetExt(rest)
+	// c.SetExt(rest)
 	return
+}
+
+func GetREST(c *wgo.Context) *REST {
+	if r := c.Get("__!rest!__"); r != nil {
+		if rest, ok := r.(*REST); ok {
+			return rest
+		}
+	}
+	return NewREST(c)
 }
 
 // release
 func (rest *REST) Release() {
-	if rest.ctx != nil {
-		rest.ctx.SetExt(nil)
+	if rest.Context() != nil {
+		rest.Context().Set("__!rest!__", nil)
 	}
 }
 

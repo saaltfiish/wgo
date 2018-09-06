@@ -128,7 +128,7 @@ func Auth() wgo.MiddlewareFunc {
 		return func(c *wgo.Context) (err error) {
 
 			// cs用户端访问鉴权
-			if k, v := c.Ext().(*REST).Session(); k != "" && v != nil {
+			if k, v := GetREST(c).Session(); k != "" && v != nil {
 				c.Authorize() // 授权
 			} else {
 				// TODO, server端访问鉴权

@@ -169,7 +169,7 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 func (r *REST) RESTGet() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error {
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -204,7 +204,7 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 func (r *REST) RESTSearch() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error {
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -239,7 +239,7 @@ func (r *REST) RESTSearch() wgo.HandlerFunc {
 func (r *REST) RESTPost() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error {
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -273,7 +273,7 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 func (r *REST) RESTPatch() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error { //修改
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -309,7 +309,7 @@ func (r *REST) RESTPatch() wgo.HandlerFunc {
 func (r *REST) RESTPut() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error { //修改
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -339,7 +339,7 @@ func (r *REST) RESTPut() wgo.HandlerFunc {
 func (r *REST) RESTDelete() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error {
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -368,7 +368,7 @@ func (r *REST) RESTDelete() wgo.HandlerFunc {
 func (r *REST) RESTHead() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error { //检查字段
-		rest := c.Ext().(*REST)
+		rest := GetREST(c)
 		m := rest.NewModel(model)
 		action := m.(Action)
 		defer action.Defer(m)
@@ -438,6 +438,11 @@ func (rs Routes) Free() Routes {
 	return rs.SetOptions(SKIPAUTH_KEY, true)
 }
 
+// inner
+func (rs Routes) Inner() Routes {
+	return rs.SetOptions(INNERAUTH_KEY, true)
+}
+
 // 限制记录access, 毕竟总不能把密码明文记下来吧
 func (rs Routes) LimitAccess() Routes {
 	return rs.SetOptions(LimitAccessKey, true)
@@ -460,4 +465,18 @@ func (rest *REST) Options(k string) interface{} {
 		}
 	}
 	return nil
+}
+
+func (rest *REST) IsInner() bool {
+	if inner := rest.Options(INNERAUTH_KEY); inner != nil && inner.(bool) == true {
+		return true
+	}
+	return false
+}
+
+func (rest *REST) IsFree() bool {
+	if skip := rest.Options(SKIPAUTH_KEY); skip != nil && skip.(bool) == true {
+		return true
+	}
+	return false
 }

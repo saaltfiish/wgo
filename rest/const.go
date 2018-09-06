@@ -63,6 +63,7 @@ const (
 	PERMISSION_KEY    = "_perm_"
 	EXT_KEY           = "_ext_"
 	SKIPAUTH_KEY      = "_skipauth_"
+	INNERAUTH_KEY     = "_innerauth_"
 	LimitAccessKey    = "_limitaccess_"
 	CustomActionKey   = "_customaction_"
 	DescKey           = "_desc_"
