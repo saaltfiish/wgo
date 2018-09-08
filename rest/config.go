@@ -69,6 +69,26 @@ func RegisterConfig(tags ...interface{}) {
 	}
 }
 
+func SubConfig(key string) *environ.Config {
+	return config.Sub(key)
+}
+
+// 获取字符串子配置
+func ConfigString(key string) string {
+	if config != nil {
+		return config.String(key)
+	}
+	return ""
+}
+
+// string map
+func ConfigStringMapString(key string) map[string]string {
+	if config != nil {
+		return config.StringMapString(key)
+	}
+	return nil
+}
+
 // 获取深层config
 func GetConfig(rawVal interface{}, opts ...interface{}) error {
 	// default key app
