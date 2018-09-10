@@ -313,3 +313,14 @@ func ParseCondition(typ string, con *Condition) *Condition {
 }
 
 /* }}} */
+
+// 过滤空参数
+func parseParams(v []string) []string {
+	rv := make([]string, 0)
+	for _, vs := range v {
+		if vs != "" {
+			rv = append(rv, vs)
+		}
+	}
+	return rv
+}

@@ -48,6 +48,10 @@ func Init() wgo.MiddlewareFunc {
 			var p, pp string
 			params := c.QueryParams()
 			for k, v := range params {
+				v = parseParams(v)
+				if len(v) <= 0 {
+					continue
+				}
 				switch k { //处理参数
 				case PARAM_START, PARAM_END:
 					continue
