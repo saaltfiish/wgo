@@ -44,6 +44,7 @@ type Model interface {
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
 	DBConn(string) *gorp.DbMap                       // 数据库连接
+	Transaction() (*Transaction, error)              // transaction
 	TableName() string                               // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
 	PKey() (string, string, bool)                    // key字段,以及是否auto incr
 	ReadPrepare(...interface{}) (interface{}, error) // 组条件
@@ -701,6 +702,21 @@ func (rest *REST) DBConn(tag string) *gorp.DbMap {
 		return gorp.Using(dt)
 	}
 	return gorp.Using(DBTAG)
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) Transaction() (*Transaction, error)
+ * 获取transaction
+ */
+func (rest *REST) Transaction() (*Transaction, error) {
+	trans, err := rest.DBConn(WRITETAG).Begin()
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{
+		Transaction: trans,
+	}, nil
 }
 
 /* }}} */

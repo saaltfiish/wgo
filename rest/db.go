@@ -309,3 +309,36 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 }
 
 /* }}} */
+
+// transaction
+type Transaction struct {
+	*gorp.Transaction
+}
+
+func (t *Transaction) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return t.Transaction.Exec(query, args...)
+}
+
+func (t *Transaction) Commit() error {
+	return t.Transaction.Commit()
+}
+
+func (t *Transaction) Rollback() error {
+	return t.Transaction.Rollback()
+}
+
+func (t *Transaction) Get(i interface{}, keys ...interface{}) (interface{}, error) {
+	return t.Transaction.Get(i, keys...)
+}
+
+func (t *Transaction) Savepoint(name string) error {
+	return t.Transaction.Savepoint(name)
+}
+
+func (t *Transaction) ReleaseSavepoint(savepoint string) error {
+	return t.Transaction.ReleaseSavepoint(savepoint)
+}
+
+func (t *Transaction) SelectInt(query string, args ...interface{}) (int64, error) {
+	return t.Transaction.SelectInt(query, args...)
+}
