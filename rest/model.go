@@ -43,21 +43,21 @@ type Model interface {
 	NewList() interface{} // 返回一个空结构列表
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
-	DBConn(string) *gorp.DbMap                       // 数据库连接
-	Transaction() (*Transaction, error)              // transaction
-	TableName() string                               // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
-	PKey() (string, string, bool)                    // key字段,以及是否auto incr
-	ReadPrepare(...interface{}) (interface{}, error) // 组条件
-	Row(...interface{}) (Model, error)               //获取单条记录
-	Rows(...interface{}) (interface{}, error)        //获取多条记录
-	List() (*List, error)                            // 获取多条记录并返回list
-	GetOlder(rk ...string) Model                     //获取旧记录
-	GetSum(...string) (*List, error)                 //获取多条记录
-	GetCount() (int64, error)                        //获取多条记录
-	GetCountNSum() (int64, float64)                  //获取count and sum
-	CreateRow() (Model, error)                       //创建单条记录
-	UpdateRow(ext ...interface{}) (int64, error)     //更新记录
-	DeleteRow(rk string) (int64, error)              //更新记录
+	DBConn(string) *gorp.DbMap                        // 数据库连接
+	Transaction(...interface{}) (*Transaction, error) // transaction
+	TableName() string                                // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
+	PKey() (string, string, bool)                     // key字段,以及是否auto incr
+	ReadPrepare(...interface{}) (interface{}, error)  // 组条件
+	Row(...interface{}) (Model, error)                //获取单条记录
+	Rows(...interface{}) (interface{}, error)         //获取多条记录
+	List() (*List, error)                             // 获取多条记录并返回list
+	GetOlder(rk ...string) Model                      //获取旧记录
+	GetSum(...string) (*List, error)                  //获取多条记录
+	GetCount() (int64, error)                         //获取多条记录
+	GetCountNSum() (int64, float64)                   //获取count and sum
+	CreateRow() (Model, error)                        //创建单条记录
+	UpdateRow(ext ...interface{}) (int64, error)      //更新记录
+	DeleteRow(rk string) (int64, error)               //更新记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -706,17 +706,36 @@ func (rest *REST) DBConn(tag string) *gorp.DbMap {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Transaction() (*Transaction, error)
+/* {{{ func (rest *REST) Transaction(...ineterface{}) (*Transaction, error)
  * 获取transaction
  */
-func (rest *REST) Transaction() (*Transaction, error) {
+func (rest *REST) Transaction(opts ...interface{}) (*Transaction, error) {
+	if rest == nil {
+		return nil, fmt.Errorf("not rest model")
+	}
+	if rest.transaction != nil && !rest.transaction.Committed() {
+		// auto gen savepoint for this sub transaction
+		sp := utils.NewShortUUID()
+		rest.transaction.Savepoint(sp)
+		return rest.transaction, nil
+	}
+	// 可以传入一个Transaction来继承
+	if len(opts) > 0 {
+		if trans, ok := opts[0].(*Transaction); ok && trans != nil && !trans.Committed() {
+			sp := utils.NewShortUUID()
+			trans.Savepoint(sp)
+			rest.transaction = trans
+			return rest.transaction, nil
+		}
+	}
 	trans, err := rest.DBConn(WRITETAG).Begin()
 	if err != nil {
 		return nil, err
 	}
-	return &Transaction{
+	rest.transaction = &Transaction{
 		Transaction: trans,
-	}, nil
+	}
+	return rest.transaction, nil
 }
 
 /* }}} */

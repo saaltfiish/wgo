@@ -13,18 +13,19 @@ type REST struct {
 	Count int64   `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
 	Sum   float64 `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
 
-	endpoint   string        `db:"-"`
-	model      Model         `db:"-"`
-	action     string        `db:"-"`
-	ctx        *wgo.Context  `db:"-"`
-	keeper     Keeper        `db:"-"`
-	conditions []*Condition  `db:"-"`
-	pagination *Pagination   `db:"-"`
-	fields     []string      `db:"-"`
-	new        interface{}   `db:"-"`
-	older      Model         `db:"-"`
-	filled     bool          `db:"-"` //是否有内容
-	defaultms  []interface{} `db:"-"` // 默认的middlewares
+	endpoint    string        `db:"-"`
+	model       Model         `db:"-"`
+	transaction *Transaction  `db:"-"`
+	action      string        `db:"-"`
+	ctx         *wgo.Context  `db:"-"`
+	keeper      Keeper        `db:"-"`
+	conditions  []*Condition  `db:"-"`
+	pagination  *Pagination   `db:"-"`
+	fields      []string      `db:"-"`
+	new         interface{}   `db:"-"`
+	older       Model         `db:"-"`
+	filled      bool          `db:"-"` //是否有内容
+	defaultms   []interface{} `db:"-"` // 默认的middlewares
 	// env        map[interface{}]interface{} `db:"-"`
 }
 

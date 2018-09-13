@@ -81,6 +81,14 @@ func ConfigString(key string) string {
 	return ""
 }
 
+// float64
+func ConfigFloat(key string) float64 {
+	if config != nil {
+		return config.Float64(key)
+	}
+	return 0
+}
+
 // string map
 func ConfigStringMapString(key string) map[string]string {
 	if config != nil {
