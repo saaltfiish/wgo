@@ -357,7 +357,6 @@ func (t *TableMap) bindInsert(elem reflect.Value) (bindInstance, error) {
 		col := t.Columns[y]
 		fv := elem.FieldByName(col.fieldName)
 		if !col.isAutoIncr && strings.Index(col.StructField.Tag.Get("db"), "add_now") == -1 && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
-			//fmt.Printf("%s empty, skip\n", col.fieldName)
 			//不是pk, 不是自动加时间,但是为空
 			continue
 		}
@@ -373,7 +372,8 @@ func (t *TableMap) bindInsert(elem reflect.Value) (bindInstance, error) {
 					s2.WriteString(t.dbmap.Dialect.AutoIncrBindValue())
 					plan.autoIncrIdx = y
 					plan.autoIncrFieldName = col.fieldName
-				} else if strings.Index(col.StructField.Tag.Get("db"), "add_now") != -1 {
+				} else if strings.Index(col.StructField.Tag.Get("db"), "add_now") != -1 && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
+					// add_now忽略有值的字段（更灵活）
 					s2.WriteString(t.dbmap.Dialect.BindNow())
 				} else {
 					s2.WriteString(t.dbmap.Dialect.BindVar(x))
