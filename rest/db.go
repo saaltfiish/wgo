@@ -312,8 +312,8 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 
 // transaction
 type Transaction struct {
-	savepoint string
-	committed bool
+	savepoints []string
+	committed  bool
 
 	*gorp.Transaction
 }
@@ -324,9 +324,9 @@ func (t *Transaction) Exec(query string, args ...interface{}) (sql.Result, error
 
 // commit当前的savepoint, 如果没有savepoint, 则直接commit整个transaction
 func (t *Transaction) Commit() error {
-	if t.savepoint != "" {
+	if len(t.savepoints) > 0 {
 		// release current savepoint
-		return t.ReleaseSavepoint(t.savepoint)
+		return t.ReleaseSavepoint()
 	}
 	return t.CommitAll()
 }
@@ -347,9 +347,11 @@ func (t *Transaction) RollbackAll() error {
 }
 
 func (t *Transaction) Rollback() error {
-	if t.savepoint != "" {
+	if len(t.savepoints) > 0 {
 		// release current savepoint
-		return t.Transaction.RollbackToSavepoint(t.savepoint)
+		sp := t.savepoints[len(t.savepoints)-1]
+		t.savepoints = t.savepoints[:len(t.savepoints)-1]
+		return t.Transaction.RollbackToSavepoint(sp)
 	}
 	return t.RollbackAll()
 }
@@ -359,13 +361,17 @@ func (t *Transaction) Get(i interface{}, keys ...interface{}) (interface{}, erro
 }
 
 func (t *Transaction) Savepoint(name string) error {
-	t.savepoint = name
+	t.savepoints = append(t.savepoints, name)
 	return t.Transaction.Savepoint(name)
 }
 
-func (t *Transaction) ReleaseSavepoint(savepoint string) error {
-	t.savepoint = ""
-	return t.Transaction.ReleaseSavepoint(savepoint)
+func (t *Transaction) ReleaseSavepoint() error {
+	if len(t.savepoints) > 0 {
+		sp := t.savepoints[len(t.savepoints)-1]
+		t.savepoints = t.savepoints[:len(t.savepoints)-1]
+		return t.Transaction.ReleaseSavepoint(sp)
+	}
+	return fmt.Errorf("not found savepoint")
 }
 
 func (t *Transaction) SelectInt(query string, args ...interface{}) (int64, error) {

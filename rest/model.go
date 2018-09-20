@@ -747,6 +747,7 @@ func (rest *REST) Transaction(opts ...interface{}) (*Transaction, error) {
 	}
 	rest.transaction = &Transaction{
 		Transaction: trans,
+		savepoints:  make([]string, 0),
 	}
 	return rest.transaction, nil
 }
