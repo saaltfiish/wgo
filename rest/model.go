@@ -22,7 +22,7 @@ type Model interface {
 	KeeperFactory() Keeper
 
 	// sugar
-	Is(string, interface{}) Model
+	Is(string, ...interface{}) Model
 	Not(string, interface{}) Model
 	Or(string, interface{}) Model
 	Like(string, interface{}) Model
@@ -213,6 +213,19 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 		}
 		vs.WriteString(")")
 		b.Where(fmt.Sprintf("%s.`%s` IN %s", tableAlias, field, vs.String()))
+	case []int:
+		vs := bytes.Buffer{}
+		first := true
+		vs.WriteString("(")
+		for _, vv := range vt {
+			if !first {
+				vs.WriteString(",")
+			}
+			vs.WriteString(fmt.Sprintf("'%d'", vv))
+			first = false
+		}
+		vs.WriteString(")")
+		b.Where(fmt.Sprintf("%s.`%s` IN %s", tableAlias, field, vs.String()))
 	case []interface{}:
 		vs := bytes.Buffer{}
 		first := true
@@ -221,7 +234,7 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 			if !first {
 				vs.WriteString(",")
 			}
-			vs.WriteString(fmt.Sprintf("'%s'", vv))
+			vs.WriteString(fmt.Sprint("'", vv, "'"))
 			first = false
 		}
 		vs.WriteString(")")
@@ -512,8 +525,8 @@ func GetCondition(cs []*Condition, k string) (con *Condition, err error) {
 /* }}} */
 
 // sugar
-func (rest *REST) Is(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_IS, field, value))
+func (rest *REST) Is(field string, value ...interface{}) Model {
+	return rest.SetConditions(NewCondition(CTYPE_IS, field, value...))
 }
 func (rest *REST) Not(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_NOT, field, value))
@@ -578,7 +591,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 			if col.ExtOptions.Contains(TAG_TIMERANGE) {
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Range != nil || condition.Is != nil) {
 					// 直接对字段查询
-					Debug("[SetConditions]timerange: %s, %s, %+v", col.Tag, condition.Is, condition.Range)
+					Debug("[SetConditions]timerange: %+v, %+v, %+v", col.Tag, condition.Is, condition.Range)
 					if condition.Range != nil {
 						rest.conditions = append(rest.conditions, condition)
 					} else if condition.Is != nil {
