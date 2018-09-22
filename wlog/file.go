@@ -155,7 +155,7 @@ func (w *FileLogWriter) rotate() error {
 func (w *FileLogWriter) deleteOldFiles() {
 	dir := filepath.Dir(w.filename)
 	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		fmt.Printf("old file(%s) info: %v\n", path, info)
+		// fmt.Printf("old file(%s) info: %v\n", path, info)
 		if info != nil && !info.IsDir() && strings.HasPrefix(filepath.Base(path), filepath.Base(w.filename)) && info.ModTime().Unix() < (time.Now().Unix()-60*60*24*w.MaxDays) {
 			os.Remove(path)
 		}
