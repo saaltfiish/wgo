@@ -10,17 +10,17 @@ import (
 func init() {
 	// defaults, all http server
 	//wgo.NotFound(hello)
-	//wgo.HTTPServers("wepiao").NotFound(hello)
+	//wgo.HTTPServers("wgo").NotFound(hello)
 	wgo.GET("/auth", auth).Use(middlewares.Auth())
 	wgo.GET("/hello", hello)
 	wgo.Group("/admin").GET("/login", login)
 
 	// single server
-	wgo.HTTPServers("wepiao").GET("/bye1", bye)
-	wgo.HTTPServers("wepiao").GET("/bye", bye)
+	wgo.HTTPServers("wgo").GET("/bye1", bye)
+	wgo.HTTPServers("wgo").GET("/bye", bye)
 
 	// multiple servers&group
-	ss := wgo.HTTPServers("odin", "wepiao")
+	ss := wgo.HTTPServers("odin", "wgo")
 	ssg := ss.Group("/test")
 	ssg.GET("/test1", hello)
 	//ssg.GET("/test1", hello).Abandon(middlewares.Access(wgo.Cfg()))

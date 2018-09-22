@@ -5,7 +5,4 @@ daemonize: false
 servers:
   - name: odin
     addr: :9999
-  - name: wepiao
-    engine: standard
-    addr: :9998
 ...

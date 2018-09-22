@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitlab.intra.wepiao.com/arch/wcache"
+	wcache "wgo/cache"
 )
 
 func TestMemoryCache(t *testing.T) {

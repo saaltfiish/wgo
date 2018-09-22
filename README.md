@@ -62,11 +62,6 @@ import "wgo"
             "name": "odinrpc",
             "mode": "wrpc",
             "addr": ":50051"
-        },
-        {
-            "name": "wepiao",
-            "engine":"standard",
-            "addr": ":9998"
         }
     ],
     "app":{
