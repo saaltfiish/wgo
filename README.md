@@ -1,4 +1,4 @@
-# gladsheim WGO
+# WGO
 ---
 go server framework
 
