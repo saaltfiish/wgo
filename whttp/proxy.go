@@ -333,11 +333,14 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		// If we aren't the first proxy retain prior
 		// X-Forwarded-For information as a comma+space
 		// separated list and fold multiple headers into one.
-		if prior, ok := outreq.Header["X-Forwarded-For"]; ok {
+		if prior, ok := outreq.Header[HeaderXForwardedFor]; ok {
 			clientIP = strings.Join(prior, ", ") + ", " + clientIP
 		}
-		outreq.Header.Set("X-Forwarded-For", clientIP)
+		outreq.Header.Set(HeaderXForwardedFor, clientIP)
 	}
+
+	// add X-Forwarded-Proto
+	outreq.Header.Set(HeaderXForwardedProto, c.ServerMode())
 
 	res, err := rp.Transport.RoundTrip(outreq)
 	if err != nil {
