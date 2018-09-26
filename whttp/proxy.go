@@ -340,6 +340,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	}
 
 	// add X-Forwarded-Proto
+	c.Error("add X-Forwarded-Proto: %s", c.ServerMode())
 	outreq.Header.Set(HeaderXForwardedProto, c.ServerMode())
 
 	res, err := rp.Transport.RoundTrip(outreq)
