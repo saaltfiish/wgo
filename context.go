@@ -138,6 +138,17 @@ func (c *Context) ServerMode() string {
 	return c.mode
 }
 
+// scheme
+func (c *Context) Scheme() string {
+	switch c.ServerMode() {
+	case "http", "https", "whttp":
+		return c.Request().(whttp.Request).Scheme()
+	case "rpc", "wrpc", "grpc":
+	default:
+	}
+	return ""
+}
+
 func (c *Context) Param(name string) (value string) {
 	l := len(c.pnames)
 	for i, n := range c.pnames {

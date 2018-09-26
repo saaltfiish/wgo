@@ -203,6 +203,7 @@ type (
 
 		// useful mehtods
 		ServerMode() string
+		Scheme() string
 		Cfg() *environ.Config
 		Host() string
 		Depth() uint64
