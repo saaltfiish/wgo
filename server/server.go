@@ -195,12 +195,7 @@ func (s *Server) Engine() Engine {
  * IsListening returns true if server is listening/started, otherwise false
  */
 func (s *Server) IsListening() bool {
-	if s == nil {
-		return false
-	}
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.listener != nil && s.listener.Addr().String() != ""
+	return s != nil && s.listener != nil && s.listener.Addr().String() != ""
 }
 
 /* }}} */
@@ -209,6 +204,9 @@ func (s *Server) IsListening() bool {
  *
  */
 func (s *Server) Close() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	if !s.IsListening() {
 		return fmt.Errorf("server is closed")
 	}
@@ -231,6 +229,7 @@ func (s *Server) IsIdle() bool {
  *
  */
 func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
+	s.lock.Lock()
 	if s.IsListening() {
 		Info("%s already listening", s.Addr())
 		return errors.New("already listening")
@@ -300,7 +299,6 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 			s.tlsConfig = config
 		}
 	}
-	s.lock.Lock()
 	s.lock.Unlock()
 
 	if s.Mode() == MODE_HTTPS {
