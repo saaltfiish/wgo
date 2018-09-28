@@ -4,17 +4,6 @@ import (
 	"wgo/whttp"
 )
 
-// wgo
-const (
-	MODE_HTTP  = "http"
-	MODE_HTTPS = "https"
-	MODE_RPC   = "rpc"
-	MODE_GRPC  = "grpc"
-	MODE_WRPC  = "wrpc"
-	MODE_SS    = "ss"
-	MODE_WSS   = "wss"
-)
-
 // http status
 const (
 	StatusContinue           = whttp.StatusContinue

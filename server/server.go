@@ -26,11 +26,6 @@ import (
 	"wgo/listener"
 )
 
-const (
-	MODE_HTTP  = "http"
-	MODE_HTTPS = "https"
-)
-
 type (
 	Server struct {
 		lock       sync.Mutex
@@ -132,10 +127,8 @@ func (s *Server) Name() string {
 * Scheme returns http or https if SSL is enabled
  */
 func (s *Server) EngineName() string {
-	if s.Mode() == MODE_HTTP || s.Mode() == MODE_HTTPS {
-		if s.cfg.Engine != "" {
-			return strings.ToLower(s.cfg.Engine)
-		}
+	if s.cfg.Engine != "" {
+		return strings.ToLower(s.cfg.Engine)
 	}
 	return "default"
 }
@@ -301,7 +294,8 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 	}
 	s.lock.Unlock()
 
-	if s.Mode() == MODE_HTTPS {
+	if s.tlsConfig != nil {
+		// https需要在普通listener上再包一层
 		Info("start https server")
 		return s.Engine().Start(tls.NewListener(s.listener, s.tlsConfig))
 	} else {

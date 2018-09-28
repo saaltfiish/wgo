@@ -212,7 +212,7 @@ func (w *WGO) AddWork(label string, max int, jf HandlerFunc) *WorkerPool {
 // factory
 func Factory(s *server.Server) *server.Server {
 	switch s.Mode() {
-	case MODE_RPC, MODE_GRPC, MODE_WRPC:
+	case server.MODE_RPC, server.MODE_GRPC, server.MODE_WRPC:
 		return wrpc.SetFactory(s, NewContext, mixWrpcMiddlewares).NewEngine()
 	default: // 默认为http
 		return whttp.SetFactory(s, NewContext, mixWhttpMiddlewares).NewEngine()
