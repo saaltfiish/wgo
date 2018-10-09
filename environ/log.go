@@ -15,7 +15,7 @@ const (
 	defaultType    = "file"
 	defaultTag     = "WGO"
 	defaultFormat  = "%T%E[%L] %M"
-	defaultLevel   = "DEBUG|INFO|WARNING|ERROR|FATAL"
+	defaultLevel   = "INFO|WARNING|ERROR|FATAL"
 	defaultMaxsize = 1 << 28 // 256MB
 	defaultDaily   = false
 	defaultMaxDays = 30
@@ -67,6 +67,12 @@ func (l *logger) Init(cfg *Config) {
 		}
 	} else {
 		panic("[PANIC] start logger failed!")
+	}
+	// forbid debug
+	if !environ.DebugMode {
+		l.Remove(wlog.DEBUG)
+	} else {
+		l.Add(wlog.DEBUG)
 	}
 	// for app level
 	if level == LVL_PRODUCTION {

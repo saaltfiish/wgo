@@ -33,16 +33,18 @@ func newEngine() server.Engine {
 
 // engine Vendor
 // 把能生成for wrpc的 server.Engine 放到server.Server
-func SetFactory(s *server.Server, cgen func() interface{}, mconv func(...interface{}) []*Middleware) *server.Server {
+func Factory(s *server.Server, cgen func() interface{}, mconv func(...interface{}) []*Middleware) *server.Server {
 	// engine factory func
-	ef := func() server.Engine {
+	var ef server.EngineFactory
+	ef = func() server.Engine {
 		return newEngine()
 	}
 	// mux factory func
-	mf := func() server.Mux {
-		return NewMux(cgen, mconv)
+	var mf server.MuxFactory
+	mf = func() server.Mux {
+		return NewMux(s.EngineName(), cgen, mconv)
 	}
-	return s.SetFactory(ef, mf)
+	return s.Factory(ef, mf)
 }
 
 /* {{{ func (e *Engine) Mux()
@@ -59,12 +61,11 @@ func (e *Engine) Name() string {
 	return e.name
 }
 
-/* {{{ func (e *Engine) SetMux(m server.Mux) server.Mux
+/* {{{ func (e *Engine) SetMux(m server.Mux)
  *
  */
-func (e *Engine) SetMux(m server.Mux) server.Mux {
+func (e *Engine) SetMux(m server.Mux) {
 	e.mux = m
-	return e.mux
 }
 
 /* }}} */

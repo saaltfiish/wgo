@@ -154,7 +154,7 @@ func Proxy() MiddlewareFunc {
 					}
 					headerString = hs.String()
 				}
-				key = fmt.Sprintf("%s:%s:%s:%s:%s:%s", c.Request().(Request).Method(), c.Request().(Request).URL().Path(), c.Mux().Engine().Name(), c.Encoding(), paramString, headerString) // 缓存决定因素为method,path,engine,encoding,params,headers
+				key = fmt.Sprintf("%s:%s:%s:%s:%s:%s", c.Request().(Request).Method(), c.Request().(Request).URL().Path(), c.Mux().Name(), c.Encoding(), paramString, headerString) // 缓存决定因素为method,path,engine,encoding,params,headers
 				if res, err := cache.Get([]byte(key)); err == nil {
 					c.Info("[proxy] got key: %s", key)
 					res.(Response).CopyTo(c.Response())

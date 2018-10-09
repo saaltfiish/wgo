@@ -157,6 +157,7 @@ func NewMiddleware(tag string, m MiddlewareFunc) *Middleware {
 
 // newEngine
 func newEngine(name string) server.Engine {
+	// Debug("[whttp.newEngine]name: %s", name)
 	switch name {
 	case "standard":
 		return standard.New()
@@ -167,14 +168,17 @@ func newEngine(name string) server.Engine {
 
 // engine vendor
 // 把能生成for whttp的 server.Engine 放到server.Server
-func SetFactory(s *server.Server, cgen func() interface{}, mconv func(...interface{}) []*Middleware) *server.Server {
+func Factory(s *server.Server, cgen func() interface{}, mconv func(...interface{}) []*Middleware) *server.Server {
+	// Debug("[whttp.Factory]engine: %s", s.EngineName())
 	// engine factory func
-	ef := func() server.Engine {
+	var ef server.EngineFactory
+	ef = func() server.Engine {
 		return newEngine(s.EngineName())
 	}
 	// mux factory func
-	mf := func() server.Mux {
-		return NewMux(cgen, mconv)
+	var mf server.MuxFactory
+	mf = func() server.Mux {
+		return NewMux(s.EngineName(), cgen, mconv)
 	}
-	return s.SetFactory(ef, mf)
+	return s.Factory(ef, mf)
 }

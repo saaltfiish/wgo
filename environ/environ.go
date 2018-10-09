@@ -21,7 +21,6 @@ const (
 	defaultDaemonize   = false
 	defaultEnableCache = true
 	defaultDockerize   = false
-	defaultDebugMode   = false
 )
 
 var (
@@ -116,11 +115,6 @@ func (env *Environ) WithDefaults() *Environ {
 	env.Daemonize = defaultDaemonize
 	env.Dockerize = defaultDockerize
 	env.EnableCache = defaultEnableCache
-	env.DebugMode = defaultDebugMode
-	if level == LVL_DEV {
-		// 生产环境默认不debug
-		env.DebugMode = true
-	}
 	env.WorkDir = defaultWorkDir
 	env.AppDir = executeDir
 	env.PidFile = defaultPidFile
@@ -162,8 +156,11 @@ func (env *Environ) WithConfig() *Environ {
 	if ec := cfg.Bool(CFG_KEY_ENABLECACHE); ec == true {
 		env.EnableCache = ec
 	}
-	if dbg := cfg.Bool(CFG_KEY_DEBUG); dbg == true {
+	if dbg := cfg.Bool(CFG_KEY_DEBUG); dbg == true && level != LVL_PRODUCTION {
+		//  production环境永远不输入debug级别的日志
 		env.DebugMode = dbg
+	} else {
+		env.DebugMode = false
 	}
 	if ad := cfg.String(CFG_KEY_APPDIR); ad != "" {
 		env.AppDir = cfg.String(CFG_KEY_APPDIR)

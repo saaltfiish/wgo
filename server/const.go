@@ -13,6 +13,4 @@ const (
 	MODE_RPC   = "rpc"
 	MODE_GRPC  = "grpc"
 	MODE_WRPC  = "wrpc"
-	MODE_SS    = "ss"
-	MODE_WSS   = "wss"
 )

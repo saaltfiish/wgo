@@ -56,9 +56,14 @@ func DefaultServers(cfg *Config) []server.Config {
 		mode = m
 	}
 	// engine
-	engine := "fasthttp"
-	if eng := cfg.String(CFG_KEY_ENGINE); eng != "" {
-		engine = eng
+	engine := ""
+	switch mode {
+	case server.MODE_HTTP, server.MODE_HTTPS: // http/https模式下, 默认engine为fasthttp
+		engine = "fasthttp"
+	default:
+		if eng := cfg.String(CFG_KEY_ENGINE); eng != "" {
+			engine = eng
+		}
 	}
 	// find hsotname:port
 	addr := ""

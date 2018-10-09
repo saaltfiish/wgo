@@ -47,6 +47,8 @@ pipeline:
     tags: [ latest ]
     dockerfile: docker/Dockerfile
     when:
+      branch:
+        include: [ master ]
       event: [ push, tag ]
 
   slack:

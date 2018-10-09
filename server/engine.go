@@ -15,22 +15,24 @@ type (
 	// engine
 	Engine interface {
 		Name() string
-		// multiplexer
-		Mux() Mux
-		SetMux(Mux) Mux
 		// start
 		Start(net.Listener) error
+		// multiplexer
+		SetMux(Mux)
+		Mux() Mux
 	}
 
 	// multiplexer
 	Mux interface {
+		Name() string
 		Prepare()
 		Use(...interface{}) // middlewares
 		SetLogger(interface{})
 		Logger() Logger
-		SetEngine(Engine)
-		Engine() Engine
 		Serve(interface{}, interface{})
+		// engine
+		// SetEngine(Engine)
+		// Engine() Engine
 	}
 
 	// Cookie defines the interface for HTTP cookie.

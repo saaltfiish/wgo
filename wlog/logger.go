@@ -235,11 +235,37 @@ func BuildLevel(lvl string) Level {
 	}
 }
 
+// add levels
+func (log Logger) Add(ls ...int) {
+	for _, filter := range log {
+		for _, l := range ls {
+			for _, lvl := range levelMapping {
+				if lvl == uint(l) {
+					filter.Level.lvl = filter.Level.lvl | (1 << lvl)
+				}
+			}
+		}
+	}
+}
+
+// remove levels
+func (log Logger) Remove(ls ...int) {
+	for _, filter := range log {
+		for _, l := range ls {
+			for _, lvl := range levelMapping {
+				if lvl == uint(l) {
+					filter.Level.lvl = filter.Level.lvl &^ (1 << lvl)
+				}
+			}
+		}
+	}
+}
+
 // level limit, 低于某个level的都不要
-func (log Logger) Limit(ll int) {
+func (log Logger) Limit(l int) {
 	for _, filter := range log {
 		for _, lvl := range levelMapping {
-			if lvl < uint(ll) {
+			if lvl < uint(l) {
 				filter.Level.lvl = filter.Level.lvl &^ (1 << lvl)
 			}
 		}
