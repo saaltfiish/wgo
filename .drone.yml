@@ -44,11 +44,11 @@ pipeline:
     registry: registry.cn-hangzhou.aliyuncs.com
     repo: registry.cn-hangzhou.aliyuncs.com/gladsheim/wgo
     secrets: [ docker_username, docker_password ]
-    tags: [ latest ]
+    tags: [ v1.1 ]
     dockerfile: docker/Dockerfile
     when:
       branch:
-        include: [ master ]
+        include: [ v1.1 ]
       event: [ push, tag ]
 
   slack:
