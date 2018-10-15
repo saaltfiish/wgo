@@ -67,9 +67,8 @@ func New() (eng *Engine) {
 }
 
 // Mux
-func (e *Engine) SetMux(m server.Mux) server.Mux {
+func (e *Engine) SetMux(m server.Mux) {
 	e.mux = m
-	return e.mux
 }
 func (e *Engine) Mux() server.Mux {
 	return e.mux

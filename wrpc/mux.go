@@ -13,6 +13,7 @@ import (
 type (
 	// Mux is the top-level framework instance.
 	Mux struct {
+		name       string
 		cgen       func() interface{} // context generator
 		mconv      func(...interface{}) []*Middleware
 		middleware []*Middleware
@@ -20,12 +21,13 @@ type (
 		router     map[string]HandlerFunc
 		logger     server.Logger
 		pool       sync.Pool // context pool
-		engine     server.Engine
+		// engine     server.Engine
 	}
 )
 
-func NewMux(gen func() interface{}, conv func(...interface{}) []*Middleware) *Mux {
+func NewMux(name string, gen func() interface{}, conv func(...interface{}) []*Middleware) *Mux {
 	m := &Mux{
+		name:   name,
 		cgen:   gen,  // context 创建
 		mconv:  conv, // middleware 转换
 		router: make(map[string]HandlerFunc),
@@ -60,13 +62,18 @@ func (m *Mux) Use(ms ...interface{}) {
 	m.middleware = append(m.middleware, m.Middlewares(ms...)...)
 }
 
+// name
+func (m *Mux) Name() string {
+	return m.name
+}
+
 // engine
-func (m *Mux) SetEngine(e server.Engine) {
-	m.engine = e
-}
-func (m *Mux) Engine() server.Engine {
-	return m.engine
-}
+// func (m *Mux) SetEngine(e server.Engine) {
+// 	m.engine = e
+// }
+// func (m *Mux) Engine() server.Engine {
+// 	return m.engine
+// }
 
 // Logger returns the logger instance.
 func (m *Mux) Logger() server.Logger {

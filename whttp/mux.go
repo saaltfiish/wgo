@@ -12,6 +12,7 @@ import (
 type (
 	// Mux is the top-level framework instance.
 	Mux struct {
+		name            string
 		cgen            func() interface{} // context generator
 		mconv           func(...interface{}) []*Middleware
 		middleware      []*Middleware
@@ -20,7 +21,7 @@ type (
 		router          *Router
 		logger          server.Logger
 		pool            sync.Pool // context pool
-		engine          server.Engine
+		// engine          server.Engine
 	}
 
 	// Validator is the interface that wraps the Validate fundnction.
@@ -54,8 +55,10 @@ var (
 	}
 )
 
-func NewMux(gen func() interface{}, conv func(...interface{}) []*Middleware) *Mux {
+func NewMux(name string, gen func() interface{}, conv func(...interface{}) []*Middleware) *Mux {
+	// Debug("[NewMux]name: %s", name)
 	m := &Mux{
+		name:            name,
 		cgen:            gen,  // context 创建
 		mconv:           conv, // middleware 转换
 		notFoundHandler: NotFoundHandler,
@@ -82,7 +85,7 @@ func (m *Mux) NewContext(req Request, res Response) Context {
 
 // NewResponse return a Response instance.
 func (m *Mux) NewResponse() Response {
-	switch m.Engine().Name() {
+	switch m.Name() {
 	case "standard":
 		return standard.NewResponse()
 	default:
@@ -170,13 +173,18 @@ func (m *Mux) Add(method, path string, handler HandlerFunc, ms ...interface{}) *
 	return r
 }
 
+// name
+func (m *Mux) Name() string {
+	return m.name
+}
+
 // engine
-func (m *Mux) SetEngine(e server.Engine) {
-	m.engine = e
-}
-func (m *Mux) Engine() server.Engine {
-	return m.engine
-}
+// func (m *Mux) SetEngine(e server.Engine) {
+// 	m.engine = e
+// }
+// func (m *Mux) Engine() server.Engine {
+// 	return m.engine
+// }
 
 // Routes returns the registered routes.
 func (m *Mux) routes() Routes {

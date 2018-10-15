@@ -74,7 +74,7 @@ func (c *Context) Cookies() []server.Cookie { // interface{} = []http.Cookie
 }
 
 func (c *Context) Bind(i interface{}) error {
-	return c.mux.(*whttp.Mux).Binder().Bind(i, c.request.(whttp.Request))
+	return c.Mux().(*whttp.Mux).Binder().Bind(i, c.request.(whttp.Request))
 }
 
 func (c *Context) File(file string) error {

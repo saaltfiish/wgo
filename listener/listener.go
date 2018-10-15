@@ -62,6 +62,10 @@ func (l *Listener) Close() error {
 	return l.TCPListener.Close()
 }
 
+func (l *Listener) Addr() net.Addr {
+	return l.TCPListener.Addr()
+}
+
 func (l *Listener) File() *os.File {
 	return l.File()
 }

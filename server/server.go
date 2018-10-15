@@ -26,11 +26,6 @@ import (
 	"wgo/listener"
 )
 
-const (
-	MODE_HTTP  = "http"
-	MODE_HTTPS = "https"
-)
-
 type (
 	Server struct {
 		lock       sync.Mutex
@@ -57,7 +52,7 @@ type (
 // NewServer
 func NewServer(cfg Config) *Server {
 	if cfg.Name == "" {
-		cfg.Name = "noname"
+		cfg.Name = cfg.Mode
 	}
 	s := &Server{cfg: cfg}
 	return s
@@ -65,40 +60,56 @@ func NewServer(cfg Config) *Server {
 
 // prepare
 func (s *Server) Prepare() {
-	s.Mux().Prepare()
+	if s.Mux() != nil {
+		s.Mux().Prepare()
+	}
 }
 
 // factory
-func (s *Server) SetFactory(ef EngineFactory, mf MuxFactory) *Server {
-	s.engine_gen = ef
-	s.mux_gen = mf
+func (s *Server) Factory(fs ...interface{}) *Server {
+	// Info("[server.Factory]factories: %d", len(fs))
+	if len(fs) > 0 {
+		if ef, ok := fs[0].(EngineFactory); ok {
+			s.engine_gen = ef
+		} else {
+			Error("[server.Factory]not found >>EngineFactory<<")
+		}
+	}
+	if len(fs) > 1 {
+		if mf, ok := fs[1].(MuxFactory); ok {
+			s.mux_gen = mf
+		} else {
+			Error("[server.Factory]not found >>MuxFactory<<")
+		}
+	}
 	return s
 }
 
-// NewEngine
-func (s *Server) NewEngine() *Server {
+// BuildEngine
+func (s *Server) BuildEngine() *Server {
 	if s.engine_gen != nil {
-		e := s.engine_gen()
-		s.engine = e
+		eng := s.engine_gen()
+		s.SetEngine(eng)
 	}
-	s.newMux()
+	return s.buildMux()
+}
+
+// set engine
+func (s *Server) SetEngine(eng Engine) *Server {
+	s.engine = eng
 	return s
 }
 
 // new mux
-func (s *Server) newMux() Mux {
+func (s *Server) buildMux() *Server {
 	if s.mux_gen != nil {
 		m := s.mux_gen()
-		m.SetEngine(s.engine)
-		s.engine.SetMux(m).SetLogger(logger)
+		m.SetLogger(logger)
+		// m.SetEngine(s.engine)
+		s.Engine().SetMux(m)
+		Debug("[buildMux]mux_gen")
 	}
-	return s.engine.Mux()
-}
-
-// SetEngine
-func (s *Server) SetEngine(e Engine) Engine {
-	s.engine = e
-	return s.engine
+	return s
 }
 
 /* {{{ func (s *Server) Listener() net.Listener
@@ -114,7 +125,11 @@ func (s *Server) Listener() *listener.Listener {
  * Mux returns the mux of the server
  */
 func (s *Server) Mux() Mux {
-	return s.engine.Mux()
+	// Debug("[server.Mux]")
+	if eng := s.Engine(); eng != nil {
+		return eng.Mux()
+	}
+	return nil
 }
 
 /* }}} */
@@ -123,7 +138,14 @@ func (s *Server) Mux() Mux {
  * Name returns the name of the server
  */
 func (s *Server) Name() string {
-	return s.cfg.Name
+	switch {
+	case s.cfg.Name != "":
+		return s.cfg.Name
+	case s.cfg.Mode != "": // 如果没有定义server name, 采用mode
+		return s.cfg.Mode
+	default:
+		return ""
+	}
 }
 
 /* }}} */
@@ -132,10 +154,8 @@ func (s *Server) Name() string {
 * Scheme returns http or https if SSL is enabled
  */
 func (s *Server) EngineName() string {
-	if s.Mode() == MODE_HTTP || s.Mode() == MODE_HTTPS {
-		if s.cfg.Engine != "" {
-			return strings.ToLower(s.cfg.Engine)
-		}
+	if s.cfg.Engine != "" {
+		return strings.ToLower(s.cfg.Engine)
 	}
 	return "default"
 }
@@ -174,10 +194,12 @@ func (s *Server) Port() int {
 * Scheme returns http or https if SSL is enabled
  */
 func (s *Server) Mode() string {
-	if s.cfg.Mode != "" {
+	switch {
+	case s.cfg.Mode != "":
 		return strings.ToLower(s.cfg.Mode)
+	default:
+		return MODE_HTTP
 	}
-	return MODE_HTTP
 }
 
 /* }}} */
@@ -195,12 +217,7 @@ func (s *Server) Engine() Engine {
  * IsListening returns true if server is listening/started, otherwise false
  */
 func (s *Server) IsListening() bool {
-	if s == nil {
-		return false
-	}
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.listener != nil && s.listener.Addr().String() != ""
+	return s != nil && s.listener != nil && s.listener.Addr().String() != ""
 }
 
 /* }}} */
@@ -209,6 +226,9 @@ func (s *Server) IsListening() bool {
  *
  */
 func (s *Server) Close() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	if !s.IsListening() {
 		return fmt.Errorf("server is closed")
 	}
@@ -231,6 +251,7 @@ func (s *Server) IsIdle() bool {
  *
  */
 func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
+	s.lock.Lock()
 	if s.IsListening() {
 		Info("%s already listening", s.Addr())
 		return errors.New("already listening")
@@ -300,14 +321,14 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 			s.tlsConfig = config
 		}
 	}
-	s.lock.Lock()
 	s.lock.Unlock()
 
-	if s.Mode() == MODE_HTTPS {
-		Info("start https server")
+	if s.tlsConfig != nil {
+		// https需要在普通listener上再包一层
+		Info("start %s(https:%d)", s.Name(), s.Port())
 		return s.Engine().Start(tls.NewListener(s.listener, s.tlsConfig))
 	} else {
-		Info("start http server")
+		Info("start %s(tcp:%d)", s.Name(), s.Port())
 		return s.Engine().Start(s.listener)
 	}
 }

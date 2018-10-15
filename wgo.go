@@ -85,6 +85,20 @@ func (w *WGO) Register() *WGO {
  * wgo initialization
  */
 func Init() {
+	defer func() {
+		if err := recover(); err != nil {
+			Error("[WGO.Init]crashed with error: %s", err)
+			for i := 1; ; i++ {
+				_, file, line, ok := runtime.Caller(i)
+				if !ok {
+					break
+				}
+				Error("[WGO.Init]%s:%d", file, line)
+			}
+			time.Sleep(10 * time.Millisecond)
+			panic(err)
+		}
+	}()
 	// init env(include read configuration, init logger)
 	env := environ.New(AppLevel).WithConfig()
 
@@ -161,22 +175,23 @@ func (w *WGO) Env() *environ.Environ {
 
 /* }}} */
 
-/* {{{ func Run()
- *
+/* {{{ func Run(ces ...server.Engine)
+ * 可传入自定义的engine `ces = custom engines`
  */
-func Run() { wgo.Run() }
-func (w *WGO) Run() {
+func Run(ces ...server.Engine) { wgo.Run(ces...) }
+func (w *WGO) Run(ces ...server.Engine) {
 	defer func() {
 		if err := recover(); err != nil {
-			Error("WGO crashed with error: ", err)
+			Error("[WGO.Run]crashed with error: %s", err)
 			for i := 1; ; i++ {
 				_, file, line, ok := runtime.Caller(i)
 				if !ok {
 					break
 				}
-				Error(file, line)
+				Error("[WGO.Run]%s:%d", file, line)
 			}
 			time.Sleep(10 * time.Millisecond)
+			panic(err)
 		}
 	}()
 
@@ -184,7 +199,7 @@ func (w *WGO) Run() {
 	w.daemonize()
 
 	// serve
-	w.serve()
+	w.serve(ces...)
 
 	// never end
 	//Info("run to end")
@@ -206,33 +221,38 @@ func (w *WGO) AddWork(label string, max int, jf HandlerFunc) *WorkerPool {
 	return wp
 }
 
-/* {{{ func AddServer(sc environ.Server)
- *
- */
 // factory
 func Factory(s *server.Server) *server.Server {
 	switch s.Mode() {
-	case MODE_RPC, MODE_GRPC, MODE_WRPC:
-		return wrpc.SetFactory(s, NewContext, mixWrpcMiddlewares).NewEngine()
-	default: // 默认为http
-		return whttp.SetFactory(s, NewContext, mixWhttpMiddlewares).NewEngine()
+	case server.MODE_RPC, server.MODE_GRPC, server.MODE_WRPC: // all is grpc
+		return wrpc.Factory(s, NewContext, mixWrpcMiddlewares).BuildEngine()
+	case server.MODE_HTTP, server.MODE_HTTPS: // http/https
+		return whttp.Factory(s, NewContext, mixWhttpMiddlewares).BuildEngine()
+	default: // 直接return s, 将使用自定义的server.Engine(在Run的时候使用...)
+		Debug("[wgo.Factory]custom mode: %s", s.Mode())
+		return s
 	}
 }
+
+/* {{{ func AddServer(sc environ.Server)
+ *
+ */
 func AddServer(sc server.Config) { wgo.AddServer(sc) }
 func (w *WGO) AddServer(sc server.Config) {
 	// 新建server
 	s := server.NewServer(sc)
 	// 装入
+	Debug("[AddServer]mode: %s, engine: %s", s.Mode(), s.EngineName())
 	w.push(Factory(s))
-	Info("Added server: %s(%s<%s>), %d", s.Name(), s.Mode(), s.Engine().Name(), len(w.servers))
+	Info("Added server: %s(%s<%s>)", s.Name(), s.Mode(), s.EngineName())
 }
 
 /* }}} */
 
-/* {{{ func (w *WGO) serve()
+/* {{{ func (w *WGO) serve(ces ...server.Engine)
  *
  */
-func (w *WGO) serve() {
+func (w *WGO) serve(ces ...server.Engine) {
 	// works
 	if len(w.works) > 0 {
 		for i, worker := range w.works {
@@ -243,6 +263,18 @@ func (w *WGO) serve() {
 			} else {
 				Info("start work(%d): %s", i, worker.Name())
 				worker.Start()
+			}
+		}
+	}
+
+	// checking custom engines
+	for _, s := range w.servers {
+		if s.Engine() == nil {
+			for _, ce := range ces {
+				if s.Mode() == ce.Name() { // engine名称与mode需要匹配
+					Debug("[wgo.Run]found custom server engine: %s", ce.Name())
+					s.SetEngine(ce)
+				}
 			}
 		}
 	}
