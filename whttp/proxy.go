@@ -467,12 +467,13 @@ func (rp *ReverseProxy) flushInterval(res *http.Response) time.Duration {
 	}
 
 	// TODO: more specific cases? e.g. res.ContentLength == -1?
-	return rp.FlushInterval
+	return rp.ReverseProxy.FlushInterval
 }
 
 func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval time.Duration) error {
 	p := rp.ReverseProxy
 	if flushInterval != 0 {
+		Debug("[copyResponse]flushInterval: %d", flushInterval)
 		if wf, ok := dst.(writeFlusher); ok {
 			mlw := &maxLatencyWriter{
 				dst:     wf,
@@ -495,7 +496,9 @@ func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval
 	return err
 }
 
-func (rp *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
+// copyBuffer returns any write errors or non-EOF read errors, and the amount
+// of bytes written.
+func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
 	if len(buf) == 0 {
 		buf = make([]byte, 32*1024)
 	}
@@ -518,6 +521,9 @@ func (rp *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (in
 			}
 		}
 		if rerr != nil {
+			if rerr == io.EOF {
+				rerr = nil
+			}
 			return written, rerr
 		}
 	}
@@ -575,10 +581,6 @@ func (m *maxLatencyWriter) stop() {
 		m.t.Stop()
 	}
 }
-
-// onExitFlushLoop is a callback set by tests to detect the state of the
-// flushLoop() goroutine.
-var onExitFlushLoop func()
 
 func singleJoiningSlash(a, b string) string {
 	aslash := strings.HasSuffix(a, "/")
