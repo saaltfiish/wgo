@@ -75,6 +75,7 @@ func Proxy() MiddlewareFunc {
 				ReverseProxy: &httputil.ReverseProxy{
 					Transport:      http.RoundTripper(Transport), // 连接参数
 					ModifyResponse: nil,                          // 对返回信息进行修改
+					FlushInterval:  100 * time.Millisecond,
 				},
 			}
 		},
