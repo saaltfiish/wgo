@@ -164,6 +164,7 @@ const (
 	MIMETextPlainCharsetUTF8             = MIMETextPlain + "; " + charsetUTF8
 	MIMEMultipartForm                    = "multipart/form-data"
 	MIMEOctetStream                      = "application/octet-stream"
+	MIMEEventStream                      = "text/event-stream"
 )
 
 const (
@@ -172,6 +173,7 @@ const (
 
 // Headers
 const (
+	HeaderAccept                        = "Accept"
 	HeaderAcceptEncoding                = "Accept-Encoding"
 	HeaderAllow                         = "Allow"
 	HeaderAuthorization                 = "Authorization"

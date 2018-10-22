@@ -75,7 +75,6 @@ func Proxy() MiddlewareFunc {
 				ReverseProxy: &httputil.ReverseProxy{
 					Transport:      http.RoundTripper(Transport), // 连接参数
 					ModifyResponse: nil,                          // 对返回信息进行修改
-					FlushInterval:  100 * time.Millisecond,
 				},
 			}
 		},
@@ -294,6 +293,12 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	// We are modifying the same underlying map from req (shallow
 	// copied above) so we only copy it if necessary.
 	copiedHeaders := false
+
+	// event stream
+	if accept := outreq.Header.Get(HeaderAccept); accept == MIMEEventStream {
+		c.Debug("[stream]url: %s, accept: %s, change FlushInterval to 100ms", outreq.URL.String(), accept)
+		rp.FlushInterval = 100 * time.Millisecond
+	}
 
 	// Remove hop-by-hop headers listed in the "Connection" header.
 	// See RFC 2616, section 14.10.
