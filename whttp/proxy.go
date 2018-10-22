@@ -454,16 +454,16 @@ func (rp *ReverseProxy) reset(target *url.URL) {
 	rp.Director = director
 }
 
-func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
+func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) error {
 	p := rp.ReverseProxy
 	if p.FlushInterval != 0 {
 		if wf, ok := dst.(writeFlusher); ok {
 			mlw := &maxLatencyWriter{
 				dst:     wf,
 				latency: p.FlushInterval,
-				done:    make(chan bool),
+				// done:    make(chan bool),
 			}
-			go mlw.flushLoop()
+			// go mlw.flushLoop()
 			defer mlw.stop()
 			dst = mlw
 		}
@@ -472,10 +472,38 @@ func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) {
 	var buf []byte
 	if p.BufferPool != nil {
 		buf = p.BufferPool.Get()
+		defer p.BufferPool.Put(buf)
 	}
-	io.CopyBuffer(dst, src, buf)
-	if p.BufferPool != nil {
-		p.BufferPool.Put(buf)
+	// io.CopyBuffer(dst, src, buf)
+	_, err := rp.copyBuffer(dst, src, buf)
+	return err
+}
+
+func (rp *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int64, error) {
+	if len(buf) == 0 {
+		buf = make([]byte, 32*1024)
+	}
+	var written int64
+	for {
+		nr, rerr := src.Read(buf)
+		if rerr != nil && rerr != io.EOF && rerr != context.Canceled {
+			Debug("httputil: ReverseProxy read error during body copy: %v", rerr)
+		}
+		if nr > 0 {
+			nw, werr := dst.Write(buf[:nr])
+			if nw > 0 {
+				written += int64(nw)
+			}
+			if werr != nil {
+				return written, werr
+			}
+			if nr != nw {
+				return written, io.ErrShortWrite
+			}
+		}
+		if rerr != nil {
+			return written, rerr
+		}
 	}
 }
 
