@@ -295,10 +295,10 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	copiedHeaders := false
 
 	// event stream
-	if accept := outreq.Header.Get(HeaderAccept); accept == MIMEEventStream {
-		c.Debug("[stream]url: %s, accept: %s, change FlushInterval to 100ms", outreq.URL.String(), accept)
-		rp.FlushInterval = 100 * time.Millisecond
-	}
+	// if accept := outreq.Header.Get(HeaderAccept); accept == MIMEEventStream {
+	// 	c.Debug("[stream]url: %s, accept: %s, change FlushInterval to 100ms", outreq.URL.String(), accept)
+	// 	rp.FlushInterval = 100 * time.Millisecond
+	// }
 
 	// Remove hop-by-hop headers listed in the "Connection" header.
 	// See RFC 2616, section 14.10.
@@ -427,7 +427,7 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 			fl.Flush()
 		}
 	}
-	rp.copyResponse(rw, res.Body)
+	rp.copyResponse(rw, res.Body, rp.flushInterval(res))
 	res.Body.Close() // close now, instead of defer, to populate res.Trailer
 	//copyHeader(rw.Header(), res.Trailer)
 	copyFastHeader(c.Response().(Response).Header(), res.Trailer)
@@ -454,13 +454,28 @@ func (rp *ReverseProxy) reset(target *url.URL) {
 	rp.Director = director
 }
 
-func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader) error {
+// flushInterval returns the p.FlushInterval value, conditionally
+// overriding its value for a specific request/response.
+func (rp *ReverseProxy) flushInterval(res *http.Response) time.Duration {
+	resCT := res.Header.Get("Content-Type")
+
+	// For Server-Sent Events responses, flush immediately.
+	// The MIME type is defined in https://www.w3.org/TR/eventsource/#text-event-stream
+	if resCT == "text/event-stream" {
+		return -1 // negative means immediately
+	}
+
+	// TODO: more specific cases? e.g. res.ContentLength == -1?
+	return rp.FlushInterval
+}
+
+func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval time.Duration) error {
 	p := rp.ReverseProxy
-	if p.FlushInterval != 0 {
+	if flushInterval != 0 {
 		if wf, ok := dst.(writeFlusher); ok {
 			mlw := &maxLatencyWriter{
 				dst:     wf,
-				latency: p.FlushInterval,
+				latency: flushInterval,
 				// done:    make(chan bool),
 			}
 			// go mlw.flushLoop()
@@ -515,35 +530,50 @@ type maxLatencyWriter struct {
 	dst     writeFlusher
 	latency time.Duration
 
-	lk   sync.Mutex // protects Write + Flush
-	done chan bool
+	mu           sync.Mutex // protects Write + Flush
+	t            *time.Timer
+	flushPending bool
 }
 
-func (m *maxLatencyWriter) Write(p []byte) (int, error) {
-	m.lk.Lock()
-	defer m.lk.Unlock()
-	return m.dst.Write(p)
+// func (m *maxLatencyWriter) Write(p []byte) (int, error) {
+// 	m.lk.Lock()
+// 	defer m.lk.Unlock()
+// 	return m.dst.Write(p)
+// }
+func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	n, err = m.dst.Write(p)
+	if m.latency < 0 {
+		m.dst.Flush()
+		return
+	}
+	if m.flushPending {
+		return
+	}
+	if m.t == nil {
+		m.t = time.AfterFunc(m.latency, m.delayedFlush)
+	} else {
+		m.t.Reset(m.latency)
+	}
+	m.flushPending = true
+	return
 }
 
-func (m *maxLatencyWriter) flushLoop() {
-	t := time.NewTicker(m.latency)
-	defer t.Stop()
-	for {
-		select {
-		case <-m.done:
-			if onExitFlushLoop != nil {
-				onExitFlushLoop()
-			}
-			return
-		case <-t.C:
-			m.lk.Lock()
-			m.dst.Flush()
-			m.lk.Unlock()
-		}
+func (m *maxLatencyWriter) delayedFlush() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.dst.Flush()
+	m.flushPending = false
+}
+
+func (m *maxLatencyWriter) stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.t != nil {
+		m.t.Stop()
 	}
 }
-
-func (m *maxLatencyWriter) stop() { m.done <- true }
 
 // onExitFlushLoop is a callback set by tests to detect the state of the
 // flushLoop() goroutine.
