@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+
 	//"io/ioutil"
 	"math/big"
 	"net"
@@ -72,6 +73,7 @@ func Proxy() MiddlewareFunc {
 		New: func() interface{} {
 			return &ReverseProxy{
 				ReverseProxy: &httputil.ReverseProxy{
+					FlushInterval:  1 * time.Second,
 					Transport:      http.RoundTripper(Transport), // 连接参数
 					ModifyResponse: nil,                          // 对返回信息进行修改
 				},
