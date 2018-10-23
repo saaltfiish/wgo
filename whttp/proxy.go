@@ -552,6 +552,7 @@ func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
 	defer m.mu.Unlock()
 	n, err = m.dst.Write(p)
 	if m.latency < 0 {
+		Debug("[Write]m.latency: %s", m.latency.String())
 		m.dst.Flush()
 		return
 	}
