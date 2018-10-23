@@ -68,13 +68,13 @@ func (r *Response) Header() server.Header {
 
 // WriteHeader implements `whttp.Response#WriteHeader` function.
 func (r *Response) WriteHeader(code int) {
-	if r.committed {
-		//r.logger.Warn("response already committed")
-		return
-	}
+	// if r.committed {
+	// 	//r.logger.Warn("response already committed")
+	// 	return
+	// }
 	r.status = code
 	//r.ResponseWriter.WriteHeader(code)   //注释掉, 这里只设置状态
-	r.committed = true
+	// r.committed = true
 }
 
 // Write implements `whttp.Response#Write` function.
@@ -138,7 +138,10 @@ func (r *Response) SetWriter(w io.Writer) {
 // buffered data to the client.
 // See https://golang.org/pkg/net/http/#Flusher
 func (r *Response) Flush() {
-	r.ResponseWriter.WriteHeader(r.status)
+	if !r.committed {
+		r.ResponseWriter.WriteHeader(r.status)
+		r.committed = true
+	}
 	//r.ResponseWriter.Write(r.buffer.Bytes())
 	n, _ := r.buffer.WriteTo(r.ResponseWriter)
 	r.size += n
