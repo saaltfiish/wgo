@@ -223,4 +223,5 @@ func (m *Mux) Serve(req interface{}, res interface{}) {
 		m.Logger().Error("serve error: %s", err)
 		c.ERROR(err)
 	}
+	res.(Response).Flush()
 }

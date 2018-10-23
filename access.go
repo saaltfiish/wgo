@@ -154,7 +154,7 @@ func Access() MiddlewareFunc {
 				c.ERROR(err) // 这里必须处理error, 否则access抓不到
 			}
 
-			c.Flush() // 主要为了standard http
+			// c.Flush() // 主要为了standard http
 
 			// error
 			if err != nil {

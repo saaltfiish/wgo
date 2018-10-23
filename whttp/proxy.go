@@ -286,6 +286,9 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		outreq.Body = nil // Issue 16036: nil Body for http.Transport retries
 	}
 	outreq = outreq.WithContext(ctx)
+	if req.ContentLength == 0 {
+		outreq.Body = nil // Issue 16036: nil Body for http.Transport retries
+	}
 
 	rp.Director(outreq)
 	outreq.Close = true
@@ -293,12 +296,6 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	// We are modifying the same underlying map from req (shallow
 	// copied above) so we only copy it if necessary.
 	copiedHeaders := false
-
-	// event stream
-	// if accept := outreq.Header.Get(HeaderAccept); accept == MIMEEventStream {
-	// 	c.Debug("[stream]url: %s, accept: %s, change FlushInterval to 100ms", outreq.URL.String(), accept)
-	// 	rp.FlushInterval = 100 * time.Millisecond
-	// }
 
 	// Remove hop-by-hop headers listed in the "Connection" header.
 	// See RFC 2616, section 14.10.
@@ -319,14 +316,26 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	// important is "Connection" because we want a persistent
 	// connection, regardless of what the client sent to us.
 	for _, h := range hopHeaders {
-		if outreq.Header.Get(h) != "" {
-			if !copiedHeaders {
-				outreq.Header = make(http.Header)
-				copyHeader(outreq.Header, req.Header)
-				copiedHeaders = true
-			}
-			outreq.Header.Del(h)
+		hv := outreq.Header.Get(h)
+		if hv == "" {
+			continue
 		}
+		if h == "Te" && hv == "trailers" {
+			// Issue 21096: tell backend applications that
+			// care about trailer support that we support
+			// trailers. (We do, but we don't go out of
+			// our way to advertise that unless the
+			// incoming client request thought it was
+			// worth mentioning)
+			continue
+		}
+		if !copiedHeaders {
+			outreq.Header = make(http.Header)
+			copyHeader(outreq.Header, req.Header)
+			copiedHeaders = true
+		}
+		outreq.Header.Del(h)
+		outreq.Header.Del(h)
 	}
 
 	// add request-id and depth
@@ -427,8 +436,9 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 			fl.Flush()
 		}
 	}
-	rp.copyResponse(rw, res.Body, rp.flushInterval(res))
+	rp.copyResponse(c.Response().(Response), res.Body, rp.flushInterval(res))
 	res.Body.Close() // close now, instead of defer, to populate res.Trailer
+	// Debug("[doProxy]size: %d", c.Response().(Response).Size())
 	//copyHeader(rw.Header(), res.Trailer)
 	copyFastHeader(c.Response().(Response).Header(), res.Trailer)
 	return nil
@@ -475,6 +485,7 @@ func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval
 	if flushInterval != 0 {
 		Debug("[copyResponse]flushInterval: %d", flushInterval)
 		if wf, ok := dst.(writeFlusher); ok {
+			Debug("[copyResponse]got copyResponse")
 			mlw := &maxLatencyWriter{
 				dst:     wf,
 				latency: flushInterval,
@@ -510,6 +521,7 @@ func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int
 		}
 		if nr > 0 {
 			nw, werr := dst.Write(buf[:nr])
+			Debug("[copyBuffer]nw: %d, werr: %s", nw, werr)
 			if nw > 0 {
 				written += int64(nw)
 			}
@@ -552,7 +564,7 @@ func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
 	defer m.mu.Unlock()
 	n, err = m.dst.Write(p)
 	if m.latency < 0 {
-		Debug("[Write]m.latency: %s", m.latency.String())
+		Debug("[Write]m.latency: %d", m.latency)
 		m.dst.Flush()
 		return
 	}
