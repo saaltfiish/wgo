@@ -142,7 +142,7 @@ func (r *Response) Flush() {
 	//r.ResponseWriter.Write(r.buffer.Bytes())
 	n, _ := r.buffer.WriteTo(r.ResponseWriter)
 	r.size += n
-	//r.ResponseWriter.(http.Flusher).Flush()	// 这行代码会导致没有Content-Length, 被`Transfer-Encoding: chunked`取代
+	r.ResponseWriter.(http.Flusher).Flush() // 这行代码会导致没有Content-Length, 被`Transfer-Encoding: chunked`取代
 }
 
 // Hijack implements the http.Hijacker interface to allow an HTTP handler to
