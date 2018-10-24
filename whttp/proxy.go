@@ -230,9 +230,8 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	var req *http.Request
 	ctx := c.Context()
 	//if cn, ok := rw.(http.CloseNotifier); ok {
-	if cn, ok := c.Response().(http.CloseNotifier); ok { // 只有standard http实现了http.CloseNotifier
-		// standard下直接拿到http.Requst
-		//std = true
+	if cn, ok := c.Response().(http.CloseNotifier); ok {
+		// 只有standard http实现了http.CloseNotifier, 因此本质上只有standard能做proxy
 		req = c.Request().(*standard.Request).Request
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithCancel(ctx)

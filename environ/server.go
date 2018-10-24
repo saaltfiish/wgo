@@ -58,8 +58,8 @@ func DefaultServers(cfg *Config) []server.Config {
 	// engine
 	engine := ""
 	switch mode {
-	case server.MODE_HTTP, server.MODE_HTTPS: // http/https模式下, 默认engine为fasthttp
-		engine = "fasthttp"
+	case server.MODE_HTTP, server.MODE_HTTPS: // http/https模式下, 默认engine为standard
+		engine = "standard"
 		if eng := cfg.String(CFG_KEY_ENGINE); eng != "" {
 			engine = eng
 		}
