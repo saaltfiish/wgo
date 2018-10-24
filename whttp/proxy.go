@@ -554,11 +554,6 @@ type maxLatencyWriter struct {
 	flushPending bool
 }
 
-// func (m *maxLatencyWriter) Write(p []byte) (int, error) {
-// 	m.lk.Lock()
-// 	defer m.lk.Unlock()
-// 	return m.dst.Write(p)
-// }
 func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

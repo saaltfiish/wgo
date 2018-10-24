@@ -3,7 +3,6 @@
 package fasthttp
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 
@@ -115,10 +114,10 @@ func (r *Response) SetWriter(w io.Writer) {
 	r.writer = w
 }
 
-// flush count size, for gzip
+// Flush implements `whttp.Response#Flush`, fasthttp flush inner
 func (r *Response) Flush() {
 	r.size = int64(len(r.Body()))
-	fmt.Printf("[fasthttp.Flush]size: %d\n", r.size)
+	// fmt.Printf("[fasthttp.Flush]size: %d\n", r.size)
 }
 
 // Body implements `whttp.Response#Body` function.
