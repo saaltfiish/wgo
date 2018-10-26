@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"fmt"
@@ -20,8 +21,6 @@ import (
 	"wgo/whttp"
 	"wgo/whttp/fasthttp"
 	"wgo/whttp/standard"
-
-	"golang.org/x/net/context"
 )
 
 type (

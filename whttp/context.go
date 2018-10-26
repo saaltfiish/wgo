@@ -1,24 +1,23 @@
 package whttp
 
 import (
+	"context"
 	"io"
 	"mime/multipart"
 	"time"
 
 	"wgo/environ"
 	"wgo/server"
-
-	ctx "golang.org/x/net/context"
 )
 
 type (
 	// http context
 	Context interface {
-		// Context returns `net/ctx.Context`.
-		Context() ctx.Context
+		// Context returns `net/context.Context`.
+		Context() context.Context
 
-		// SetContext sets `net/ctx.Context`.
-		SetContext(ctx.Context)
+		// SetContext sets `net/context.Context`.
+		SetContext(context.Context)
 
 		// Deadline returns the time when work done on behalf of this context
 		// should be canceled.  Deadline returns ok==false when no deadline is

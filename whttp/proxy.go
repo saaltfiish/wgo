@@ -2,12 +2,11 @@ package whttp
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/tls"
 	"fmt"
 	"io"
-
-	//"io/ioutil"
 	"math/big"
 	"net"
 	"net/http"
@@ -22,8 +21,6 @@ import (
 	"wgo/server"
 	"wgo/whttp/fasthttp"
 	"wgo/whttp/standard"
-
-	"golang.org/x/net/context"
 )
 
 type (

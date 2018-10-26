@@ -1,6 +1,7 @@
 package wgo
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"io"
@@ -10,8 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	ctx "golang.org/x/net/context"
 
 	"wgo/server"
 	"wgo/whttp"
@@ -152,7 +151,7 @@ func ContentTypeByExtension(name string) (t string) {
 }
 
 func (c *Context) HTTPReset(req whttp.Request, res whttp.Response) {
-	c.context = ctx.Background()
+	c.context = context.Background()
 	c.request = req
 	c.response = res
 	c.mode = "http"

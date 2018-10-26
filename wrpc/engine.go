@@ -1,13 +1,13 @@
 package wrpc
 
 import (
+	"context"
 	"net"
 	"strings"
 	"sync"
 
 	"wgo/server"
 
-	ctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
@@ -99,7 +99,7 @@ func (e *Engine) RegisterService(rf RegisterFunc) {
 
 /* }}} */
 
-func (e *Engine) InterceptorWrapper() func(ctx ctx.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+func (e *Engine) InterceptorWrapper() func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	reqPool := sync.Pool{
 		New: func() interface{} {
 			return &Request{}
@@ -111,7 +111,7 @@ func (e *Engine) InterceptorWrapper() func(ctx ctx.Context, req interface{}, inf
 		},
 	}
 
-	return func(ctx ctx.Context, request interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (respose interface{}, err error) {
+	return func(ctx context.Context, request interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (respose interface{}, err error) {
 		// request
 		req := reqPool.Get().(*Request)
 		defer reqPool.Put(req)

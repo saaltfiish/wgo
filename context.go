@@ -1,12 +1,11 @@
 package wgo
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"strings"
 	"time"
-
-	ctx "golang.org/x/net/context"
 
 	"wgo/environ"
 	"wgo/server"
@@ -16,7 +15,7 @@ import (
 
 type (
 	Context struct {
-		context  ctx.Context
+		context  context.Context
 		mux      server.Mux
 		request  interface{} // 具体的request在各自包内定义
 		response interface{} // 具体的response在各自包内定义
@@ -50,7 +49,7 @@ func NewContext() interface{} {
 // clone
 func (c *Context) Clone() *Context {
 	nc := &Context{}
-	nc.context = ctx.Background()
+	nc.context = context.Background()
 	nc.mode = "job"
 	nc.start = time.Now()
 	nc.access = c.Access().Clone()
@@ -63,11 +62,11 @@ func (c *Context) Access() *AccessLog {
 	return c.access
 }
 
-func (c *Context) Context() ctx.Context {
+func (c *Context) Context() context.Context {
 	return c.context
 }
 
-func (c *Context) SetContext(ctx ctx.Context) {
+func (c *Context) SetContext(ctx context.Context) {
 	c.context = ctx
 }
 
@@ -84,7 +83,7 @@ func (c *Context) Err() error {
 }
 
 func (c *Context) Set(key string, val interface{}) {
-	c.context = ctx.WithValue(c.context, key, val)
+	c.context = context.WithValue(c.context, key, val)
 }
 
 func (c *Context) Get(key string) interface{} {

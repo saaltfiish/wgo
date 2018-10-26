@@ -1,10 +1,10 @@
 package wrpc
 
 import (
+	"context"
 	"reflect"
 	"runtime"
 
-	ctx "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/transport"
 )
@@ -15,7 +15,7 @@ type (
 
 		method  string
 		header  *Header
-		context ctx.Context
+		context context.Context
 	}
 
 	Response struct {
@@ -55,7 +55,7 @@ func NewMiddleware(tag string, m MiddlewareFunc) *Middleware {
 }
 
 // get request context
-func (req *Request) Context() ctx.Context {
+func (req *Request) Context() context.Context {
 	return req.context
 }
 
@@ -94,6 +94,6 @@ func (res *Response) Header() *Header {
 }
 
 // flush
-func (res *Response) Flush(c ctx.Context) {
+func (res *Response) Flush(c context.Context) {
 	grpc.SetHeader(c, res.header.MD)
 }
