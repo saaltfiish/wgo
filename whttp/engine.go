@@ -112,6 +112,7 @@ type (
 
 		// Committed returns true if HTTP response header is written, otherwise false.
 		Committed() bool
+		Commit()
 
 		// Flush
 		Flush()

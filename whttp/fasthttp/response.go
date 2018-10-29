@@ -54,7 +54,7 @@ func (r *Response) WriteHeader(code int) {
 	}
 	r.status = code
 	r.SetStatusCode(code)
-	r.committed = true
+	r.Commit()
 }
 
 // Write implements `whttp.Response#Write` function.
@@ -102,6 +102,11 @@ func (r *Response) Size() int64 {
 // Committed implements `whttp.Response#Committed` function.
 func (r *Response) Committed() bool {
 	return r.committed
+}
+
+// Commit implements `whttp.Response#Commit` function.
+func (r *Response) Commit() {
+	r.committed = true
 }
 
 // Writer implements `whttp.Response#Writer` function.

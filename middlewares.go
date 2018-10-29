@@ -102,9 +102,6 @@ func Prepare() MiddlewareFunc {
 			if prid := c.PreRequestId(); prid != "" && c.Depth() > 0 {
 				requestId = prid
 			} else { // generate request id
-				// buf := make([]byte, 16)
-				// randbo.New().Read(buf) //号称最快的随机字符串
-				// requestId = fmt.Sprintf("%x", buf)
 				requestId = utils.FastRequestId(16)
 			}
 			c.SetRequestID(requestId)
@@ -115,10 +112,10 @@ func Prepare() MiddlewareFunc {
 				c.response.(whttp.Response).Header().
 					Set(whttp.HeaderServer, fmt.Sprintf("%s %s", strings.ToUpper(Env().ProcName), Version()))
 			}
-			if requestId != "" { // 放后面执行, 保证新鲜
-				//c.Warn("set requestid header: %s", requestId)
-				c.SetHeader(whttp.HeaderXRequestId, requestId)
-			}
+			// if requestId != "" { // 放后面执行, 保证新鲜
+			// 	//c.Warn("set requestid header: %s", requestId)
+			// 	c.SetHeader(whttp.HeaderXRequestId, requestId)
+			// }
 			return err
 		}
 	}

@@ -126,6 +126,12 @@ func (c *Context) Ext() interface{} {
 
 func (c *Context) SetRequestID(rid string) {
 	c.reqID = rid
+	switch c.ServerMode() {
+	case "http", "https", "whttp":
+		c.SetHeader(whttp.HeaderXRequestId, rid)
+	case "rpc", "wrpc", "grpc":
+	default:
+	}
 }
 
 func (c *Context) RequestID() string {
