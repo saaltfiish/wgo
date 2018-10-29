@@ -106,6 +106,7 @@ func (r *Response) Committed() bool {
 
 // Commit implements `whttp.Response#Commit` function.
 func (r *Response) Commit() {
+	r.size = int64(len(r.Body()))
 	r.committed = true
 }
 
@@ -123,6 +124,8 @@ func (r *Response) SetWriter(w io.Writer) {
 func (r *Response) Flush() {
 	r.size = int64(len(r.Body()))
 	// fmt.Printf("[fasthttp.Flush]size: %d\n", r.size)
+	// r.RequestCtx.Response.WriteTo(r.writer)
+	// fasthttp can't flush. referer: https://github.com/valyala/fasthttp/issues/40
 }
 
 // Body implements `whttp.Response#Body` function.

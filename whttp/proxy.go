@@ -363,6 +363,12 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	// del content-length
 	res.Header.Del(HeaderContentLength)
 
+	// if _, ok := c.Response().(http.CloseNotifier); !ok {
+	// 	// fasthttp
+	// 	r := c.Response().(*fasthttp.Response)
+	// 	r.RequestCtx.Response.SetBodyStream(bytes.NewReader(r.RequestCtx.Response.Body()), -1)
+	// }
+
 	// cors header(Access-Control-Allow-*)
 	if origin := outreq.Header.Get(HeaderOrigin); origin != "" {
 		res.Header.Set(HeaderAccessControlAllowOrigin, origin)
@@ -481,7 +487,7 @@ func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval
 	if flushInterval != 0 {
 		Debug("[copyResponse]flushInterval: %d", flushInterval)
 		if wf, ok := dst.(writeFlusher); ok {
-			Debug("[copyResponse]got copyResponse")
+			Debug("[copyResponse]got writeFlusher")
 			mlw := &maxLatencyWriter{
 				dst:     wf,
 				latency: flushInterval,
