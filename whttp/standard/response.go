@@ -130,7 +130,7 @@ func (r *Response) Commit() {
 	if r.committed {
 		return
 	}
-	r.ResponseWriter.WriteHeader(r.status) //注释掉, 这里只设置状态
+	r.ResponseWriter.WriteHeader(r.status)
 	n, _ := r.buffer.WriteTo(r.ResponseWriter)
 	r.size += n
 	r.committed = true
@@ -150,7 +150,12 @@ func (r *Response) SetWriter(w io.Writer) {
 // buffered data to the client.
 // See https://golang.org/pkg/net/http/#Flusher
 func (r *Response) Flush() {
-	r.Commit()
+	if !r.committed {
+		r.ResponseWriter.WriteHeader(r.status)
+		r.committed = true
+	}
+	n, _ := r.buffer.WriteTo(r.ResponseWriter)
+	r.size += n
 	r.ResponseWriter.(http.Flusher).Flush() // 这行代码会导致没有Content-Length, 被`Transfer-Encoding: chunked`取代
 }
 

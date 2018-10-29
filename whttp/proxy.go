@@ -517,7 +517,7 @@ func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int
 		}
 		if nr > 0 {
 			nw, werr := dst.Write(buf[:nr])
-			Debug("[copyBuffer]nw: %d, werr: %s", nw, werr)
+			Debug("[copyBuffer]nw: %d", nw)
 			if nw > 0 {
 				written += int64(nw)
 			}
