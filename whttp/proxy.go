@@ -193,8 +193,14 @@ func copyHeader(dst, src http.Header) {
 }
 func copyFastHeader(dst server.Header, src http.Header) {
 	for k, vv := range src {
-		for _, v := range vv {
-			dst.Set(k, v) // 防止header重复
+		if k == HeaderSetCookie || k == "Cache-Control" {
+			for _, v := range vv {
+				dst.Add(k, v)
+			}
+		} else {
+			for _, v := range vv {
+				dst.Set(k, v) // 防止header重复
+			}
 		}
 	}
 }
