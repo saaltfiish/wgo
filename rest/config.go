@@ -21,6 +21,7 @@ var config *environ.Config
 var db map[string]string
 var es map[string]string
 var mio map[string]interface{} // object storage
+var services map[string]string
 
 func RegisterConfig(tags ...interface{}) {
 	if cfg := wgo.SubConfig(tags...); cfg != nil {
@@ -29,6 +30,7 @@ func RegisterConfig(tags ...interface{}) {
 		db = config.StringMapString("db")
 		es = config.StringMapString("es")
 		mio = config.StringMap("storage")
+		services = config.StringMapString("services")
 	} else {
 		panic("not found config")
 	}
@@ -114,4 +116,14 @@ func GetConfig(rawVal interface{}, opts ...interface{}) error {
 		}
 	}
 	return fmt.Errorf("not found config for %s", opts)
+}
+
+// services, 在rest层管理services
+func GetService(key string) string {
+	if key != "" && len(services) > 0 {
+		if addr, ok := services[key]; ok {
+			return addr
+		}
+	}
+	return ""
 }
