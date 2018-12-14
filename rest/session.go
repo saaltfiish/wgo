@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"wgo"
+	"wgo/resty"
 )
 
 // session
@@ -49,8 +50,18 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 	} else if value, err = RedisGet(cacheKey(key)); value != nil {
 		//c.Info("find auth from cookie(%s): %s", scfg.Key, key)
 		rest.SaveSession(value)
+	} else if acAddr := GetService("ac"); acAddr != "" { // TODO, `ac` should not hardcore
+		req := resty.R()
+		uri := acAddr + "/auth/" + key
+		rest.Debug("[Session]query uri: %s", uri)
+		if resp, re := req.SetHeader("Content-Type", "application/json").Get(uri); err == nil && resp.StatusCode() == 400 && len(resp.Body()) > 0 {
+			rest.Debug("[Session]ac response: %s", string(resp.Body()))
+			value = resp.Body()
+			err = re
+			rest.SaveSession(value)
+		}
 	} else {
-		c.Warn("not find auth from cookie(%s): %s", scfg.Key, err.Error())
+		c.Warn("not found auth by cookie(%s): %s", scfg.Key, err.Error())
 	}
 	return
 }
