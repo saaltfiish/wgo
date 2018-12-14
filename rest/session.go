@@ -54,7 +54,7 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 		req := resty.R()
 		uri := acAddr + "/auth/" + key
 		rest.Debug("[Session]query uri: %s", uri)
-		if resp, re := req.SetHeader("Content-Type", "application/json").Get(uri); err == nil && resp.StatusCode() == 400 && len(resp.Body()) > 0 {
+		if resp, re := req.SetHeader("Content-Type", "application/json").Get(uri); err == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
 			rest.Debug("[Session]ac response: %s", string(resp.Body()))
 			value = resp.Body()
 			err = re
