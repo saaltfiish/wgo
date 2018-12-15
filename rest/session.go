@@ -39,7 +39,7 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 		key = opts[0]
 	} else {
 		// 没有获取到key, return
-		//c.Info("can't get any key about cookie")
+		c.Info("can't get any key about cookie")
 		return
 	}
 
