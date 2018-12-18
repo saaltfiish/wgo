@@ -515,6 +515,25 @@ func Instance(ob interface{}) interface{} {
 	return ob
 }
 
+// get fields slice
+func Fields(i interface{}, opts ...string) []string {
+	tag := "json"
+	// must := ""
+	if len(opts) > 0 && opts[0] != "" {
+		tag = opts[0]
+	}
+	// if len(opts) > 1 && opts[1] != "" {
+	// 	must = opts[1]
+	// }
+	fs := make([]string, 0)
+	if fields := ReadStructFields(i, true, tag); fields != nil {
+		for _, field := range fields {
+			fs = append(fs, field.Tags[tag].Name)
+		}
+	}
+	return fs
+}
+
 // StringMap, turn a struct to map[string]string
 func StringMap(i interface{}, opts ...string) map[string]string {
 	tag := "json"
