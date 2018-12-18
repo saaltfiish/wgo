@@ -44,7 +44,7 @@ type StructColumn struct {
  * 从struct type中读取字段名
  */
 func ReadStructFields(i interface{}, def bool, tags ...string) (fields StructFields) {
-	if t := toType(i); t.Kind() != reflect.Struct {
+	if t := ToType(i); t.Kind() != reflect.Struct {
 		return
 	} else {
 		return typeStructFields(t, def, []int{}, "", tags...)
@@ -163,7 +163,7 @@ func ScanStructFields(fs StructFields, tag, prefix, path string) (fields StructF
  * 默认从struct的FieldName读取, 如果tag里有db, 则以db为准
  */
 func ReadStructColumns(i interface{}, underscore bool, tags ...string) (cols []StructColumn) {
-	if t := toType(i); t.Kind() != reflect.Struct {
+	if t := ToType(i); t.Kind() != reflect.Struct {
 		return
 	} else {
 		return typeStructColumns(t, underscore, tags...)
@@ -208,7 +208,7 @@ func FieldByName(i interface{}, field string) reflect.Value {
  */
 func RealType(i interface{}, typ reflect.Type) reflect.Type {
 	//v := reflect.ValueOf(i)
-	t := toType(i)
+	t := ToType(i)
 	if t.Kind() == reflect.Struct {
 		n := t.NumField()
 		for i := 0; i < n; i++ {
@@ -348,10 +348,10 @@ func typeStructColumns(t reflect.Type, underscore bool, tags ...string) (cols []
 
 /* }}} */
 
-/* {{{ func toType(i interface{}) reflect.Type
+/* {{{ func ToType(i interface{}) reflect.Type
  * 如果是指针, 则调用Elem()至Type为止, 如果Type不是struct, 报错
  */
-func toType(i interface{}) reflect.Type {
+func ToType(i interface{}) reflect.Type {
 	var t reflect.Type
 	if tt, ok := i.(reflect.Type); ok {
 		t = tt
