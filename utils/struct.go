@@ -528,7 +528,9 @@ func Fields(i interface{}, opts ...string) []string {
 	fs := make([]string, 0)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
 		for _, field := range fields {
-			fs = append(fs, field.Tags[tag].Name)
+			if field.SubFields == nil && field.Tags[tag].Name != "" {
+				fs = append(fs, field.Tags[tag].Name)
+			}
 		}
 	}
 	return fs
