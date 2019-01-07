@@ -51,10 +51,15 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 		//c.Info("find auth from cookie(%s): %s", scfg.Key, key)
 		rest.SaveSession(value)
 	} else if acAddr := GetService("ac"); acAddr != "" { // TODO, `ac` should not hardcore
+		// check ac addr from env
+		if eac := os.Getenv(AECK_AC_ADDR); eac != "" {
+			// env overwrite config
+			acAddr = eac
+		}
 		req := resty.R()
 		uri := acAddr + "/auth/" + key
 		rest.Debug("[Session]query uri: %s", uri)
-		if resp, re := req.SetHeader("Content-Type", "application/json").Get(uri); err == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
+		if resp, re := req.SetHeader("Content-Type", "application/json").SetHeader("X-Wgo-Appid", "gxfstpp").Get(uri); err == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
 			rest.Debug("[Session]ac response: %s", string(resp.Body()))
 			value = resp.Body()
 			err = re
@@ -114,7 +119,9 @@ func Auth() wgo.MiddlewareFunc {
 	if scfg.Prefix == "" {
 		scfg.Prefix = "auth"
 	}
-	if scfg.Key == "" {
+	if sk := os.Getenv(AECK_SESSION_KEY); sk != "" {
+		scfg.Key = sk
+	} else if scfg.Key == "" {
 		scfg.Key = "asgard"
 	}
 	if scfg.Life == 0 {
@@ -123,7 +130,10 @@ func Auth() wgo.MiddlewareFunc {
 	if scfg.Path == "" {
 		scfg.Path = "/"
 	}
-	if scfg.Domain == "" {
+	if sd := os.Getenv(AECK_SESSION_DOMAIN); sd != "" {
+		// 可通过环境参数传入, for local/develop env
+		scfg.Domain = sd
+	} else if scfg.Domain == "" {
 		scfg.Domain = ".gladsheim.cn"
 	}
 	// get storage

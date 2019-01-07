@@ -28,6 +28,9 @@ const (
 	AECK_ES_ADDR         = "rest.esaddr"
 	AECK_REPORTING_INDEX = "rest.reportingindex"
 	AECK_LOGS_INDEX      = "rest.logsindex"
+	AECK_SESSION_KEY     = "session.key"
+	AECK_SESSION_DOMAIN  = "session.domain"
+	AECK_AC_ADDR         = "services.ac"
 	// rest config key
 	RCK_ES_ADDR         = "addr"
 	RCK_ES_USER         = "user"
