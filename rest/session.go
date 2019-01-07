@@ -64,6 +64,8 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 			value = resp.Body()
 			err = re
 			rest.SaveSession(value)
+		} else {
+			rest.Debug("[Session]ac response(%d): %s", resp.StatusCode(), resp.Body())
 		}
 	} else {
 		c.Warn("not found auth by cookie(%s): %s", scfg.Key, err.Error())
