@@ -59,13 +59,13 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 		req := resty.R()
 		uri := acAddr + "/auth/" + key
 		rest.Debug("[Session]query uri: %s", uri)
-		if resp, re := req.SetHeader("Content-Type", "application/json").SetHeader("X-Wgo-Appid", "gxfstpp").Get(uri); err == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
-			rest.Debug("[Session]ac response: %s", string(resp.Body()))
+		if resp, re := req.SetHeader("Content-Type", "application/json").SetHeader("X-Wgo-Appid", "gxfstpp").Get(uri); re == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
+			rest.Debug("[Session]ac response: %d", resp.StatusCode())
 			value = resp.Body()
 			err = re
 			rest.SaveSession(value)
 		} else {
-			rest.Debug("[Session]ac response(%d): %s", resp.StatusCode(), resp.Body())
+			rest.Debug("[Session]ac response code: %d", resp.StatusCode())
 		}
 	} else {
 		c.Warn("not found auth by cookie(%s): %s", scfg.Key, err.Error())
