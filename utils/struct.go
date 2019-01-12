@@ -518,18 +518,21 @@ func Instance(ob interface{}) interface{} {
 // get fields slice
 func Fields(i interface{}, opts ...string) []string {
 	tag := "json"
-	// must := ""
+	must := ""
 	if len(opts) > 0 && opts[0] != "" {
 		tag = opts[0]
 	}
-	// if len(opts) > 1 && opts[1] != "" {
-	// 	must = opts[1]
-	// }
+	if len(opts) > 1 && opts[1] != "" {
+		must = opts[1]
+	}
 	fs := make([]string, 0)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
 		for _, field := range fields {
 			if field.SubFields == nil && field.Tags[tag].Name != "" {
-				fs = append(fs, field.Tags[tag].Name)
+				options := field.Tags[tag].Options
+				if must == "" || options.Contains(must) {
+					fs = append(fs, field.Tags[tag].Name)
+				}
 			}
 		}
 	}
