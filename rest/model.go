@@ -289,7 +289,7 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 		//Debug("[>=][key: %s]%v", v.Field, v)
 		switch vt := v.Gt.(type) {
 		case string:
-			b.Where(fmt.Sprintf("T.`%s` >= '%s'", v.Field, vt))
+			b.Where(fmt.Sprintf("T.`%s` >= ?", v.Field), vt)
 		case []string:
 			vs := bytes.Buffer{}
 			first := true
@@ -327,7 +327,7 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 		//Debug("[<][key: %s]%v", v.Field, v)
 		switch vt := v.Lt.(type) {
 		case string:
-			b.Where(fmt.Sprintf("T.`%s` < '%s'", v.Field, vt))
+			b.Where(fmt.Sprintf("T.`%s` < ?", v.Field), vt)
 		case []string:
 			vs := bytes.Buffer{}
 			first := true
@@ -364,7 +364,7 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 	if v.Like != nil {
 		switch vt := v.Like.(type) {
 		case string:
-			b.Where(fmt.Sprintf("T.`%s` LIKE '%%%s%%'", v.Field, vt))
+			b.Where(fmt.Sprintf("T.`%s` LIKE ?", v.Field), fmt.Sprintf("%%%s%%", vt))
 		case []string:
 			vs := bytes.Buffer{}
 			first := true
