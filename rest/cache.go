@@ -38,7 +38,9 @@ func RedisGet(key string) (value interface{}, err error) {
 
 func RedisSet(key string, value interface{}, expireSeconds int) error {
 	var vb []byte
-	if vs, ok := value.(string); ok {
+	if _, ok := value.([]byte); ok {
+		vb = value.([]byte)
+	} else if vs, ok := value.(string); ok {
 		vb = []byte(vs)
 	} else {
 		vb, _ = json.Marshal(value)
