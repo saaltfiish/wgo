@@ -62,7 +62,7 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 			value = resp.Body()
 			err = re
 			RedisSet(cacheKey(key), value, 86400)
-			rest.SaveSession(value)
+			// rest.SaveSession(value)
 		} else {
 			rest.Debug("[Session]ac response code: %d", resp.StatusCode())
 		}
