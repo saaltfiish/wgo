@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"wgo"
-	"wgo/resty"
 )
 
 // session
@@ -56,10 +55,9 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 			// env overwrite config
 			acAddr = eac
 		}
-		req := resty.R()
-		uri := acAddr + "/auth/" + key
-		rest.Debug("[Session]query uri: %s", uri)
-		if resp, re := req.SetHeader("Content-Type", "application/json").SetHeader("X-Wgo-Appid", "gxfstpp").Get(uri); re == nil && resp.StatusCode() == 200 && len(resp.Body()) > 0 {
+		path := "/auth/" + key
+		rest.Debug("[Session]ac: %s, query path: %s", acAddr, path)
+		if resp, re := NewInnerClient(acAddr).Get(path); re == nil && resp.Code() == 0 && len(resp.Body()) > 0 {
 			rest.Debug("[Session]ac response: %d", resp.StatusCode())
 			value = resp.Body()
 			err = re
