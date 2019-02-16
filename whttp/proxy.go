@@ -529,7 +529,7 @@ func (p *ReverseProxy) copyBuffer(dst io.Writer, src io.Reader, buf []byte) (int
 		}
 		if nr > 0 {
 			nw, werr := dst.Write(buf[:nr])
-			Debug("[copyBuffer]nw: %d", nw)
+			// Debug("[copyBuffer]nw: %d", nw)
 			if nw > 0 {
 				written += int64(nw)
 			}
@@ -567,7 +567,7 @@ func (m *maxLatencyWriter) Write(p []byte) (n int, err error) {
 	defer m.mu.Unlock()
 	n, err = m.dst.Write(p)
 	if m.latency < 0 {
-		Debug("[Write]m.latency: %d", m.latency)
+		// Debug("[Write]m.latency: %d", m.latency)
 		m.dst.Flush()
 		return
 	}
