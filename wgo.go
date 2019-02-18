@@ -1,6 +1,7 @@
 package wgo
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -210,7 +211,26 @@ func (w *WGO) Run(ces ...server.Engine) {
 /* }}} */
 
 // add work
-func AddWork(label string, max int, jf HandlerFunc) *WorkerPool { return wgo.AddWork(label, max, jf) }
+// func AddWork(label string, max int, jf HandlerFunc) *WorkerPool {
+func AddWork(label string, opts ...interface{}) *WorkerPool {
+	// max workers, default 10
+	max := 10
+	if len(opts) > 0 {
+		if im, ok := opts[0].(int); ok {
+			max = im
+		}
+	}
+	// deefault job handler
+	dh := func(c *Context) error {
+		return fmt.Errorf("Unknown method!")
+	}
+	if len(opts) > 1 {
+		if idh, ok := opts[1].(HandlerFunc); ok {
+			dh = idh
+		}
+	}
+	return wgo.AddWork(label, max, dh)
+}
 func (w *WGO) AddWork(label string, max int, jf HandlerFunc) *WorkerPool {
 	if len(w.works) <= 0 {
 		w.works = make([]*WorkerPool, 0)

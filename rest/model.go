@@ -923,7 +923,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					fv.Set(reflect.Zero(fv.Type())) // 不报错, 忽略之
 				}
 			} else if col.ExtOptions.Contains(TAG_REQUIRED) && rest.Creating() { // 创建时必须传入,但是为空
-				err := fmt.Errorf("field %s required, but empty", col.Tag)
+				err := fmt.Errorf("field `%s` required, but empty", col.Tag)
 				c.Info(err.Error())
 				return nil, err
 			}
