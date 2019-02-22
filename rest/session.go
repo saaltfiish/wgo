@@ -49,15 +49,10 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 	} else if value, err = RedisGet(cacheKey(key)); value != nil {
 		//c.Info("find auth from cookie(%s): %s", scfg.Key, key)
 		rest.SaveSession(value)
-	} else if acAddr := GetService("ac"); acAddr != "" { // TODO, `ac` should not hardcore
-		// check ac addr from env
-		if eac := os.Getenv(AECK_AC_ADDR); eac != "" {
-			// env overwrite config
-			acAddr = eac
-		}
+	} else if client, ce := NewInnerClient("ac"); ce == nil {
 		path := "/auth/" + key
-		rest.Debug("[Session]ac: %s, query path: %s", acAddr, path)
-		if resp, re := NewInnerClient(acAddr).Get(path); re == nil && resp.Code() == 0 && len(resp.Body()) > 0 {
+		rest.Debug("[Session]%s query path: %s", "ac", path)
+		if resp, re := client.Get(path); re == nil && resp.Code() == 0 && len(resp.Body()) > 0 {
 			rest.Debug("[Session]ac response: %d", resp.StatusCode())
 			value = resp.Body()
 			err = re

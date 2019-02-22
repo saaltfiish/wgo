@@ -120,6 +120,12 @@ func GetConfig(rawVal interface{}, opts ...interface{}) error {
 
 // services, 在rest层管理services
 func GetService(key string) string {
+	// 优先从env获取, 格式`services.{key}`
+	if esa := os.Getenv(fmt.Sprintf("services.%s", key)); esa != "" {
+		// env overwrite config
+		return esa
+	}
+	// 如果env没获取, 则从配置文件获取(不建议)
 	if key != "" && len(services) > 0 {
 		if addr, ok := services[key]; ok {
 			return addr

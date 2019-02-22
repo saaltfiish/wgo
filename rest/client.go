@@ -9,6 +9,7 @@ package rest
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"wgo"
 	"wgo/resty"
@@ -34,8 +35,15 @@ type Response struct {
 	*resty.Response
 }
 
-// new client, can pass app id
-func NewClient(host string, opts ...interface{}) *Client {
+// new client, can pass appid
+func NewClient(service string, opts ...interface{}) *Client {
+	host := ""
+	if len(service) > 5 && strings.ToLower(service[0:4]) == "http" {
+		// 兼容旧版本, 旧版直接传入服务地址
+		host = service
+	} else {
+		host = GetService(service)
+	}
 	client := &Client{
 		host: host,
 		req:  resty.New().R(),
@@ -44,13 +52,18 @@ func NewClient(host string, opts ...interface{}) *Client {
 		if app, ok := opts[0].(string); ok {
 			client.app = app
 		}
+		// todo, get app info & sign by appid
 	}
 	return client
 }
 
 // new inner client
-func NewInnerClient(host string) *Client {
-	return NewClient(host, "gxfstpp")
+func NewInnerClient(service string) (*Client, error) {
+	// todo: not hardcore inner appid
+	if host := GetService(service); host != "" {
+		return NewClient(host, "gxfstpp"), nil
+	}
+	return nil, fmt.Errorf("Unknown service: %s", service)
 }
 
 func (client *Client) SetJson(data map[string]interface{}) *Client {
