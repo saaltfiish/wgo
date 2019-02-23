@@ -66,7 +66,7 @@ func NewInnerClient(service string) (*Client, error) {
 	return nil, fmt.Errorf("Unknown service: %s", service)
 }
 
-func (client *Client) SetJson(data map[string]interface{}) *Client {
+func (client *Client) SetJson(data interface{}) *Client {
 	jb, _ := json.Marshal(data)
 	client.req.SetBody(jb)
 	return client
