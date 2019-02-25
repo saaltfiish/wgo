@@ -116,8 +116,11 @@ var (
 	ErrNonEditable   = errors.New("field is non-editable")
 	ErrNonSearchable = errors.New("field is non-searchable")
 	ErrExists        = errors.New("field value exists")
+	ErrNoCondition   = errors.New("no condition")
 	ErrInvalid       = errors.New("invalid query")
+	ErrType          = errors.New("wrong type")
 	ErrNoRecord      = errors.New("no record")
+	ErrNoModel       = errors.New("no model")
 )
 
 type Condition struct {
@@ -573,7 +576,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 		rest.conditions = make([]*Condition, 0)
 	}
 	if m := rest.Model(); m == nil {
-		Warn("[rest.SetConditions]: not found model")
+		Warn("[rest.SetConditions]: %s", ErrNoModel)
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
 			// Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
@@ -697,7 +700,7 @@ func (rest *REST) Keeper() Keeper {
  */
 func (rest *REST) NewList() interface{} {
 	if m := rest.Model(); m == nil {
-		Info("[NewList]: not found model")
+		Warn("[NewList]: %s", ErrNoModel)
 		return nil
 	} else {
 		return reflect.New(reflect.SliceOf(reflect.TypeOf(m))).Interface()
@@ -774,9 +777,9 @@ func (rest *REST) TableName() (n string) { //默认, struct的名字就是表名
  *  通过配置找到pk
  */
 func (rest *REST) PKey() (f string, v string, ai bool) {
-	var m Model
-	if m = rest.Model(); m == nil {
-		Info("[PKey]: not found model")
+	m := rest.Model()
+	if m == nil {
+		Warn("[PKey]: %s", ErrNoModel)
 		return "", "", false
 	}
 	mv := reflect.ValueOf(m)
@@ -850,11 +853,8 @@ func (rest *REST) Filter() (Model, error) {
 			}
 		}
 		return r, nil
-	} else {
-		err := fmt.Errorf("[Filter] not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -867,7 +867,7 @@ func (rest *REST) Fill(j []byte) error {
 		return nil
 	}
 	if m := rest.Model(); m == nil {
-		return fmt.Errorf("[Fill] not found model")
+		return ErrNoModel
 	} else if err := json.Unmarshal(j, m); err != nil {
 		return err
 	} else {
@@ -892,7 +892,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 	c := rest.Context()
 	m := rest.Model()
 	if m == nil {
-		return nil, fmt.Errorf("rest model() failed")
+		return nil, ErrNoModel
 	}
 	// fill model
 	if rb, err := ioutil.ReadAll(c.RequestBody()); err != nil {
@@ -1077,11 +1077,8 @@ func (rest *REST) Protect() (Model, error) {
 			}
 		}
 		return m, nil
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -1090,11 +1087,9 @@ func (rest *REST) Protect() (Model, error) {
  * 根据条件获取一条记录, model为表结构
  */
 func (rest *REST) Row(ext ...interface{}) (Model, error) {
-	var m Model
-	if m = rest.Model(); m == nil {
-		err := fmt.Errorf("not found model")
-		Info("error: %s", err)
-		return nil, err
+	m := rest.Model()
+	if m == nil {
+		return nil, ErrNoModel
 	}
 	//找rowkey
 	if pf, pv, _ := m.PKey(); pv != "" {
@@ -1147,11 +1142,8 @@ func (rest *REST) CreateRow() (Model, error) {
 			rest.SetModel(m)
 			return m, nil
 		}
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -1194,14 +1186,13 @@ func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error) {
 			}
 		} else {
 			//Info("not_found_row")
-			err = fmt.Errorf("not_found_row_to_update")
+			err = ErrNoRecord
 			return
 		}
 		return db.Update(m)
-	} else {
-		err = fmt.Errorf("not_found_model")
-		return
 	}
+	err = ErrNoModel
+	return
 }
 
 /* }}} */
@@ -1216,11 +1207,8 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
 			return
 		}
 		return db.Update(m)
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return 0, err
 	}
+	return 0, ErrNoModel
 }
 
 /* }}} */
@@ -1258,11 +1246,8 @@ func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 		}
 
 		return reflect.ValueOf(ms).Elem().Interface(), nil
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -1299,11 +1284,8 @@ func (rest *REST) List() (l *List, err error) {
 		l.List = ms
 
 		return l, nil
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -1312,7 +1294,6 @@ func (rest *REST) List() (l *List, err error) {
  * 获取list, 通用函数
  */
 func (rest *REST) GetSum(d ...string) (l *List, err error) {
-	//c := m.GetCtx()
 	if m := rest.Model(); m != nil {
 		bi, _ := rest.ReadPrepare(true)
 		builder := bi.(*gorp.Builder)
@@ -1347,11 +1328,8 @@ func (rest *REST) GetSum(d ...string) (l *List, err error) {
 		l.List = ms
 
 		return
-	} else {
-		err := fmt.Errorf("not found model")
-		//Info("error: %s", err)
-		return nil, err
 	}
+	return nil, ErrNoModel
 }
 
 /* }}} */
@@ -1448,8 +1426,7 @@ func (rest *REST) AddTable(tags ...string) Model {
 			}
 		}
 	} else {
-		err := fmt.Errorf("not found model")
-		Info("[AddTable]: %s", err)
+		Warn("[AddTable]: %s", ErrNoModel)
 	}
 
 	return rest
@@ -1471,12 +1448,16 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 			disableOrder = true
 		}
 	}
-	var m Model
-	if m = rest.Model(); m == nil {
-		err := fmt.Errorf("not found model")
-		Info("error: %s", err)
-		return nil, err
+
+	m := rest.Model()
+	if m == nil {
+		return nil, ErrNoModel
 	}
+	cols := utils.ReadStructColumns(m, true)
+	if cols == nil || len(cols) == 0 {
+		return nil, ErrType
+	}
+
 	db := rest.DBConn(READTAG)
 	tb := rest.TableName()
 	b := gorp.NewBuilder(db).Table(tb)
@@ -1564,8 +1545,8 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 					joinField := vt.Field
 					Debug("join %s.%s", joinTable, joinField)
 					if t, ok := gorp.GetTable(joinTable); ok {
-						if cols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); cols != nil {
-							for _, col := range cols {
+						if fcols := utils.ReadStructColumns(reflect.New(t.Gotype).Interface(), true); fcols != nil {
+							for _, col := range fcols {
 								if col.Tag == joinField && col.ExtOptions.Contains(TAG_CONDITION) { //可作为条件
 									Debug("[match]join %s.%s", joinTable, joinField)
 									if v.JoinOn != nil {
@@ -1589,46 +1570,46 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 				b.Where("(" + strings.Join(css, " OR ") + ")")
 			}
 		}
-	} else { //没有条件从自身找， primary key/key
-		//Debug("find condition from struct")
-		if cols := utils.ReadStructColumns(m, true); cols != nil {
-			v := reflect.ValueOf(m)
-			for _, col := range cols {
-				fv := utils.FieldByIndex(v, col.Index)
-				if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) { //有值
-					if fs := utils.GetRealString(fv); fs != "" {
-						//Info("field: %s, value: %s", col.Tag, fs)
-						// 多个字段有值, 用AND
-						b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
-					}
+	} else { // 从自身找， primary key/key
+		hasCon := false
+		v := reflect.ValueOf(m)
+		for _, col := range cols {
+			fv := utils.FieldByIndex(v, col.Index)
+			if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+				//有值
+				if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
+					hasCon = true
+					b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
 				}
 			}
+		}
+		if !hasCon {
+			// 没有找到任何查询条件，查询失败
+			return nil, ErrNoCondition
 		}
 	}
 
 	if !disableOrder {
-		if cols := utils.ReadStructColumns(m, true); cols != nil {
-			pks := ""
-			for _, col := range cols {
-				//处理排序问题,如果之前有排序，这里就是二次排序,如果之前无排序,这里是首要排序
-				if col.TagOptions.Contains(DBTAG_PK) { // 默认为pk降序
-					pks = fmt.Sprintf("T.`%s` DESC", col.Tag)
-					if col.ExtOptions.Contains(TAG_AORDERBY) {
-						pks = fmt.Sprintf("T.`%s` ASC", col.Tag)
-					}
-				} else if col.ExtOptions.Contains(TAG_ORDERBY) { // 默认为降序
-					b.Order(fmt.Sprintf("T.`%s` DESC", col.Tag))
-				} else if col.ExtOptions.Contains(TAG_AORDERBY) { //正排序
-					b.Order(fmt.Sprintf("T.`%s` ASC", col.Tag))
+		pks := ""
+		for _, col := range cols {
+			//处理排序问题,如果之前有排序，这里就是二次排序,如果之前无排序,这里是首要排序
+			if col.TagOptions.Contains(DBTAG_PK) { // 默认为pk降序
+				pks = fmt.Sprintf("T.`%s` DESC", col.Tag)
+				if col.ExtOptions.Contains(TAG_AORDERBY) {
+					pks = fmt.Sprintf("T.`%s` ASC", col.Tag)
 				}
-				// 处理逻辑删除
-				if col.TagOptions.Contains(DBTAG_LOGIC) {
-					b.Where(fmt.Sprintf("T.`%s` != -1", col.Tag))
-				}
+			} else if col.ExtOptions.Contains(TAG_ORDERBY) { // 默认为降序
+				b.Order(fmt.Sprintf("T.`%s` DESC", col.Tag))
+			} else if col.ExtOptions.Contains(TAG_AORDERBY) { //正排序
+				b.Order(fmt.Sprintf("T.`%s` ASC", col.Tag))
 			}
-			if pks != "" { //pk排序放到最后
-				b.Order(pks)
+			// 处理逻辑删除
+			if col.TagOptions.Contains(DBTAG_LOGIC) {
+				b.Where(fmt.Sprintf("T.`%s` != -1", col.Tag))
 			}
+		}
+		if pks != "" { //pk排序放到最后
+			b.Order(pks)
 		}
 	}
 
