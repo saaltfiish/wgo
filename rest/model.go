@@ -1103,29 +1103,23 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 		}
 	} else if len(ext) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
-	} else if len(m.Conditions()) == 0 {
+	} else if bi, err := m.ReadPrepare(); err != nil {
 		//没找到记录
-		return nil, ErrNoRecord
-	}
-	bi, _ := m.ReadPrepare()
-	builder := bi.(*gorp.Builder)
-	ms := m.NewList()
-	var err error
-	err = builder.Select(GetDbFields(m)).Limit("1").Find(ms)
-	if err != nil && err != sql.ErrNoRows {
-		//支持出错
 		return nil, err
-	} else if ms == nil {
-		//没找到记录
-		return nil, ErrNoRecord
+	} else {
+		builder := bi.(*gorp.Builder)
+		ms := m.NewList()
+		err := builder.Select(GetDbFields(m)).Limit("1").Find(ms)
+		if err != nil && err != sql.ErrNoRows {
+			//支持出错
+			return nil, err
+		} else if ms != nil {
+			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
+				return resultsValue.Index(0).Interface().(Model), nil
+			}
+		}
 	}
-
-	resultsValue := reflect.Indirect(reflect.ValueOf(ms))
-	if resultsValue.Len() <= 0 {
-		return nil, ErrNoRecord
-	}
-	//return rest.SetModel(resultsValue.Index(0).Interface().(Model)), nil
-	return resultsValue.Index(0).Interface().(Model), nil
+	return nil, ErrNoRecord
 }
 
 /* }}} */
