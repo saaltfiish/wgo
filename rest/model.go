@@ -1589,13 +1589,13 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 				b.Where("(" + strings.Join(css, " OR ") + ")")
 			}
 		}
-	} else { //没有条件从自身找
+	} else { //没有条件从自身找， primary key/key
 		//Debug("find condition from struct")
 		if cols := utils.ReadStructColumns(m, true); cols != nil {
 			v := reflect.ValueOf(m)
 			for _, col := range cols {
 				fv := utils.FieldByIndex(v, col.Index)
-				if (col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) { //有值
+				if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) { //有值
 					if fs := utils.GetRealString(fv); fs != "" {
 						//Info("field: %s, value: %s", col.Tag, fs)
 						// 多个字段有值, 用AND
