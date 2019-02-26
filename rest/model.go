@@ -1103,7 +1103,7 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 		}
 	} else if len(ext) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
-	} else if bi, err := m.ReadPrepare(); err != nil {
+	} else if bi, err := m.ReadPrepare(false, true); err != nil {
 		//没找到记录
 		return nil, err
 	} else {
@@ -1442,6 +1442,12 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 			disableOrder = true
 		}
 	}
+	mustHasCons := false
+	if len(opts) > 1 {
+		if mh, ok := opts[1].(bool); ok && mh {
+			mustHasCons = true
+		}
+	}
 
 	m := rest.Model()
 	if m == nil {
@@ -1577,7 +1583,7 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 				}
 			}
 		}
-		if !hasCon {
+		if !hasCon && !mustHasCons {
 			// 没有找到任何查询条件，查询失败
 			return nil, ErrNoCondition
 		}
