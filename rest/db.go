@@ -51,12 +51,11 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 	case *[]string, []string, *[]int, []int, map[string]string, *map[string]string, map[string]interface{}, *map[string]interface{}, map[interface{}]interface{}, []interface{}: //转为字符串
 		c, _ := json.Marshal(t)
 		return string(c), nil
-	//case *float64:
-	//	ot := utils.ParseFloat(*t)
-	//	Info("float: %f", ot)
-	//	return ot, nil
-	//case float64:
-	//	return utils.ParseFloat(t), nil
+	case bool: // 转为数字
+		if t == true {
+			return 1, nil
+		}
+		return 0, nil
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
@@ -262,6 +261,17 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 	case **int64:
 		binder := func(holder, target interface{}) error {
 			*t = &holder.(*sql.NullInt64).Int64
+			return nil
+		}
+		return gorp.CustomScanner{Holder: new(sql.NullInt64), Target: target, Binder: binder}, true
+	case *bool:
+		binder := func(holder, target interface{}) error {
+			if holder.(*sql.NullInt64).Valid {
+				*(target.(*bool)) = false
+				if v := holder.(*sql.NullInt64).Int64; v == 1 {
+					*(target.(*bool)) = true
+				}
+			}
 			return nil
 		}
 		return gorp.CustomScanner{Holder: new(sql.NullInt64), Target: target, Binder: binder}, true
