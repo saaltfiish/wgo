@@ -1583,7 +1583,7 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 				}
 			}
 		}
-		if !hasCon && !mustHasCons {
+		if !hasCon && mustHasCons {
 			// 没有找到任何查询条件，查询失败
 			return nil, ErrNoCondition
 		}
