@@ -16,7 +16,6 @@ type REST struct {
 	endpoint    string        `db:"-"`
 	model       Model         `db:"-"`
 	transaction *Transaction  `db:"-"`
-	action      string        `db:"-"`
 	ctx         *wgo.Context  `db:"-"`
 	keeper      Keeper        `db:"-"`
 	conditions  []*Condition  `db:"-"`
@@ -92,30 +91,30 @@ func (rest *REST) SetEnv(k string, v interface{}) {
 }
 
 func (rest *REST) GetEnv(k string) interface{} {
-	// if v, ok := rest.env[k]; ok {
-	// 	return v
-	// }
-	// return nil
 	ek := fmt.Sprintf("%s:%s", RESTKey, k)
 	return rest.ctx.Get(ek)
 }
 
 // action
 func (rest *REST) SetAction(act string) {
-	rest.action = act
+	rest.SetEnv("_action_", act)
 }
 func (rest *REST) Action() string {
-	return rest.action
+	acti := rest.GetEnv("_action_")
+	if act, ok := acti.(string); ok {
+		return act
+	}
+	return ""
 }
 
 // creating
 func (rest *REST) Creating() bool {
-	return rest.action == ACTION_CREATE
+	return rest.Action() == ACTION_CREATE
 }
 
 // updating
 func (rest *REST) Updating() bool {
-	return rest.action == ACTION_UPDATE
+	return rest.Action() == ACTION_UPDATE
 }
 
 // response
