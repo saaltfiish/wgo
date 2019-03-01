@@ -1115,7 +1115,7 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				return resultsValue.Index(0).Interface().(Model), nil
+				return rest.SetModel(resultsValue.Index(0).Interface().(Model)), nil
 			}
 		}
 	}
@@ -1130,14 +1130,30 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 func (rest *REST) CreateRow() (Model, error) {
 	if m := rest.Model(); m != nil {
 		db := rest.DBConn(WRITETAG)
+		if rest.Saved() {
+			// 防止重复入库
+			return m, nil
+		}
 		if err := db.Insert(m); err != nil { //Insert会把m换成新的
 			return nil, err
 		} else {
-			rest.SetModel(m)
-			return m, nil
+			return rest.Save(m), nil
 		}
 	}
 	return nil, ErrNoModel
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) Save()
+ *
+ */
+func (rest *REST) Save(m Model) Model {
+	rest.saved = true
+	return rest.SetModel(m)
+}
+func (rest *REST) Saved() bool {
+	return rest.saved
 }
 
 /* }}} */

@@ -92,7 +92,8 @@ func (rest *REST) WillGet(i interface{}) (interface{}, error) {
 func (rest *REST) OnGet(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	if row, err := m.Row(m); err == nil {
-		return rest.SetModel(row.(Model)), err
+		// return rest.SetModel(row.(Model)), err
+		return row, err
 	} else {
 		return nil, err
 	}
@@ -208,7 +209,7 @@ func (rest *REST) OnCreate(i interface{}) (interface{}, error) {
 	if r, err := m.CreateRow(); err != nil {
 		return nil, err
 	} else {
-		rest.SetModel(r)
+		// rest.SetModel(r)
 		return r, nil
 	}
 }

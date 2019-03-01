@@ -24,6 +24,7 @@ type REST struct {
 	new         interface{}   `db:"-"`
 	older       Model         `db:"-"`
 	filled      bool          `db:"-"` //是否有内容
+	saved       bool          `db:"-"` // 是否已存储
 	defaultms   []interface{} `db:"-"` // 默认的middlewares
 	// env        map[interface{}]interface{} `db:"-"`
 }
