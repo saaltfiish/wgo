@@ -72,6 +72,7 @@ const (
 
 	// db tag
 	DBTAG_PK    = "pk"
+	DBTAG_NA    = "na"
 	DBTAG_KEY   = "k"
 	DBTAG_LOGIC = "logic"
 

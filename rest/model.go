@@ -808,7 +808,7 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 					}
 				}
 				// Info("field: %s, value: %+v, v: %s", f, fv, v)
-				if col.ExtOptions.Contains(TAG_GENERATE) && col.ExtTag != "" { //服务端生成并且有tag
+				if col.TagOptions.Contains(DBTAG_NA) || (col.ExtOptions.Contains(TAG_GENERATE) && col.ExtTag != "") { //服务端生成并且有tag
 					ai = false
 				} else {
 					ai = true
