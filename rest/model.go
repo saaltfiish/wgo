@@ -1117,7 +1117,8 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				return rest.SetModel(resultsValue.Index(0).Interface().(Model)), nil
+				// 以下不能SetModel, 会破坏之前的注入数据
+				return SetModel(resultsValue.Index(0).Interface().(Model)), nil
 			}
 		}
 	}
