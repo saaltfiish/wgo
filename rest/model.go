@@ -1232,7 +1232,10 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
 func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 	if m := rest.Model(); m != nil {
 		//c := rest.Context()
-		bi, _ := rest.ReadPrepare()
+		bi, pe := rest.ReadPrepare(false, true)
+		if pe != nil {
+			return nil, pe
+		}
 		builder := bi.(*gorp.Builder)
 		ms = rest.NewList()
 		// find pagination
