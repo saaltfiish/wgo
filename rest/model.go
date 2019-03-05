@@ -1103,7 +1103,9 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 		}
 	} else if len(ext) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
-	} else if bi, err := m.ReadPrepare(false, true); err != nil {
+	}
+
+	if bi, err := m.ReadPrepare(false, true); err != nil {
 		//没找到记录
 		return nil, err
 	} else {
@@ -1380,6 +1382,7 @@ func (rest *REST) GetOlder(opts ...string) Model {
 			} else if c := rest.Context(); c != nil {
 				rk = c.Param(RowkeyKey)
 			}
+			// rest.Debug("[GetOlder]rowkey: %s", rk)
 			if rk != "" {
 				if older, err := m.Row(rk); err == nil {
 					rest.older = older
