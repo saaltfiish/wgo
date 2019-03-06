@@ -1598,7 +1598,7 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 		v := reflect.ValueOf(m)
 		for _, col := range cols {
 			fv := utils.FieldByIndex(v, col.Index)
-			if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+			if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
 				//有值
 				if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
 					hasCon = true
