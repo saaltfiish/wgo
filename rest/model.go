@@ -1232,7 +1232,7 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
 func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 	if m := rest.Model(); m != nil {
 		//c := rest.Context()
-		bi, pe := rest.ReadPrepare(false, true)
+		bi, pe := rest.ReadPrepare()
 		if pe != nil {
 			return nil, pe
 		}
