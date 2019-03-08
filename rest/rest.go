@@ -191,7 +191,8 @@ func getCode(ifSuc bool, m string) (s int) {
 		case "post":
 			return whttp.StatusCreated
 		case "patch":
-			return whttp.StatusResetContent
+			// return whttp.StatusResetContent
+			return whttp.StatusOK // 大多数浏览器看到205就不显示返回内容了
 		case "head":
 			return whttp.StatusOK
 		default:
