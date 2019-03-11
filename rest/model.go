@@ -18,10 +18,10 @@ import (
 )
 
 type Model interface {
-	Keeper() Keeper // 各种检查, 闭包缓存
-	KeeperFactory() Keeper
+	Keeper() func(string) (interface{}, error) // 各种检查, 闭包缓存
+	KeeperFactory() func(string) (interface{}, error)
 
-	// sugar
+	// sql sugar
 	Is(string, ...interface{}) Model
 	Not(string, interface{}) Model
 	Or(string, interface{}) Model
@@ -46,7 +46,8 @@ type Model interface {
 	DBConn(string) *gorp.DbMap                        // 数据库连接
 	Transaction(...interface{}) (*Transaction, error) // transaction
 	TableName() string                                // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
-	PKey() (string, string, bool)                     // key字段,以及是否auto incr
+	PKey() (string, string, bool)                     // primary key字段,以及是否auto incr
+	Key() (string, string)                            // key字段 name&value
 	ReadPrepare(...interface{}) (interface{}, error)  // 组条件
 	Row(...interface{}) (Model, error)                //获取单条记录
 	Rows(...interface{}) (interface{}, error)         //获取多条记录
@@ -64,8 +65,6 @@ type Model interface {
 	Filter() (Model, error)         //数据过滤(创建,更新后)
 	Protect() (Model, error)        //数据保护(获取数据时过滤字段)
 }
-
-type Keeper func(string) (interface{}, error)
 
 type List struct {
 	Info ListInfo               `json:"info,omitempty"`
@@ -683,10 +682,10 @@ func (rest *REST) Fields() []string {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Keeper() Keeper
+/* {{{ func (rest *REST) Keeper() func(string) (interface{}, error)
  *
  */
-func (rest *REST) Keeper() Keeper {
+func (rest *REST) Keeper() func(string) (interface{}, error) {
 	if rest.keeper == nil && rest.Model() != nil {
 		rest.keeper = rest.Model().KeeperFactory()
 	}
@@ -822,10 +821,54 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) KeeperFactory() Keeper
+/* {{{ func (rest *REST) Key() (string, string, bool)
+ *  通过配置找到第一个有值的pk or key,  返回field & value & 是否pk
+ */
+func (rest *REST) Key() (f string, v string, isPK bool) {
+	m := rest.Model()
+	if m == nil {
+		Warn("[Key]: %s", ErrNoModel)
+		return "", "", false
+	}
+	mv := reflect.ValueOf(m)
+	if cols := utils.ReadStructColumns(m, true); cols != nil {
+		for _, col := range cols {
+			fv := utils.FieldByIndex(mv, col.Index)
+			if fv.IsValid() && !utils.IsEmptyValue(fv) {
+				if col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY) {
+					f = col.Tag
+					// Debug("field: %s, value: %+v", f, fv)
+					if col.TagOptions.Contains(DBTAG_PK) {
+						isPK = true
+					}
+					switch fv.Type().String() {
+					case "*string":
+						v = fv.Elem().String()
+					case "string":
+						v = fv.String()
+					case "*int":
+						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "*int64":
+						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "int64":
+						v = strconv.Itoa(int(fv.Int()))
+					default:
+						// nothing
+					}
+					return
+				}
+			}
+		}
+	}
+	return
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) KeeperFactory() func(string) (interface{}, error)
  *
  */
-func (rest *REST) KeeperFactory() Keeper {
+func (rest *REST) KeeperFactory() func(string) (interface{}, error) {
 	return func(tag string) (interface{}, error) {
 		return nil, nil
 	}
