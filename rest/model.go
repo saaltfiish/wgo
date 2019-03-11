@@ -47,7 +47,7 @@ type Model interface {
 	Transaction(...interface{}) (*Transaction, error) // transaction
 	TableName() string                                // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
 	PKey() (string, string, bool)                     // primary key字段,以及是否auto incr
-	Key() (string, string)                            // key字段 name&value
+	Key() (string, string, bool)                      // key字段 name&value
 	ReadPrepare(...interface{}) (interface{}, error)  // 组条件
 	Row(...interface{}) (Model, error)                //获取单条记录
 	Rows(...interface{}) (interface{}, error)         //获取多条记录
