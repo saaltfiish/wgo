@@ -15,6 +15,9 @@ const (
 	GM_ALL  = GM_GET | GM_LIST | GM_POST | GM_DELETE | GM_PATCH | GM_HEAD | GM_PUT
 	GM_NONE = 0
 
+	// cache
+	CACHE_EXPIRE = 30
+
 	// action
 	ACTION_CREATE = "C"
 	ACTION_READ   = "R"

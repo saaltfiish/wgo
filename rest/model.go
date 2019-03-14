@@ -52,13 +52,15 @@ type Model interface {
 	Row(...interface{}) (Model, error)                //获取单条记录
 	Rows(...interface{}) (interface{}, error)         //获取多条记录
 	List() (*List, error)                             // 获取多条记录并返回list
+	GetRecord(rk ...interface{}) Model                // 获取一条记录, 可缓存
+	UpdateRecord(...interface{}) error                // 更新一条记录(包括缓存)
 	GetOlder(rk ...string) Model                      //获取旧记录
 	GetSum(...string) (*List, error)                  //获取多条记录
 	GetCount() (int64, error)                         //获取多条记录
 	GetCountNSum() (int64, float64)                   //获取count and sum
 	CreateRow() (Model, error)                        //创建单条记录
-	UpdateRow(ext ...interface{}) (int64, error)      //更新记录
-	DeleteRow(rk string) (int64, error)               //更新记录
+	UpdateRow(...interface{}) (int64, error)          //更新记录
+	DeleteRow(rk string) (int64, error)               //删除记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -481,6 +483,9 @@ func (rest *REST) importTo(i interface{}, fields ...string) {
 
 // Model
 func (rest *REST) Model() Model {
+	if rest == nil {
+		return nil
+	}
 	return rest.model
 }
 
@@ -798,6 +803,8 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 						v = fv.String()
 					case "*int":
 						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "int":
+						v = strconv.Itoa(int(fv.Int()))
 					case "*int64":
 						v = strconv.Itoa(int(fv.Elem().Int()))
 					case "int64":
@@ -846,11 +853,9 @@ func (rest *REST) Key() (f string, v string, isPK bool) {
 						v = fv.Elem().String()
 					case "string":
 						v = fv.String()
-					case "*int":
+					case "*int", "*int64":
 						v = strconv.Itoa(int(fv.Elem().Int()))
-					case "*int64":
-						v = strconv.Itoa(int(fv.Elem().Int()))
-					case "int64":
+					case "int", "int64":
 						v = strconv.Itoa(int(fv.Int()))
 					default:
 						// nothing
@@ -1126,10 +1131,10 @@ func (rest *REST) Protect() (Model, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Row(ext ...interface{}) (Model, error)
+/* {{{ func (rest *REST) Row(opts ...interface{}) (Model, error)
  * 根据条件获取一条记录, model为表结构
  */
-func (rest *REST) Row(ext ...interface{}) (Model, error) {
+func (rest *REST) Row(opts ...interface{}) (Model, error) {
 	m := rest.Model()
 	if m == nil {
 		return nil, ErrNoModel
@@ -1138,14 +1143,14 @@ func (rest *REST) Row(ext ...interface{}) (Model, error) {
 	if pf, pv, _ := m.PKey(); pv != "" {
 		//Info("pk: %s", pv)
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if len(ext) == 1 { // 只有一个, 为传入pk
-		if id, ok := ext[0].(string); ok && id != "" {
+	} else if len(opts) == 1 { // 只有一个, 为传入pk
+		if id, ok := opts[0].(string); ok && id != "" {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		} else if id, ok := ext[0].(int); ok && id > 0 {
+		} else if id, ok := opts[0].(int); ok && id > 0 {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
 		}
-	} else if len(ext) == 2 { // 2个为条件
-		m.SetConditions(NewCondition(CTYPE_IS, ext[0].(string), ext[1].(string)))
+	} else if len(opts) == 2 { // 2个为条件
+		m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
 	}
 
 	if bi, err := m.ReadPrepare(false, true); err != nil {
@@ -1204,14 +1209,14 @@ func (rest *REST) Saved() bool {
 
 /* }}} */
 
-/* {{{ func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error)
+/* {{{ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error)
  * 更新record
  */
-func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error) {
+func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 	if m := rest.Model(); m != nil {
 		id := ""
-		if len(ext) > 0 {
-			switch rk := ext[0].(type) {
+		if len(opts) > 0 {
+			switch rk := opts[0].(type) {
 			case string:
 				id = rk
 			case *string:
@@ -1225,26 +1230,21 @@ func (rest *REST) UpdateRow(ext ...interface{}) (affected int64, err error) {
 			case *int64:
 				id = strconv.FormatInt(*rk, 10)
 			}
-			if rk, ok := ext[0].(string); ok && rk != "" {
+			if rk, ok := opts[0].(string); ok && rk != "" {
 				id = rk
+			}
+			if id != "" {
+				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
+					return
+				}
 			}
 		} else if _, pv, _ := m.PKey(); pv != "" {
 			id = pv
 		}
 		if id == "" {
-			// Info("not found id")
 			return 0, ErrNoRecord
 		}
 		db := rest.DBConn(WRITETAG)
-		if id != "" {
-			if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
-				return
-			}
-		} else {
-			//Info("not_found_row")
-			err = ErrNoRecord
-			return
-		}
 		return db.Update(m)
 	}
 	err = ErrNoModel
@@ -1417,15 +1417,132 @@ func (rest *REST) GetCountNSum() (cnt int64, sum float64) {
 
 /* }}} */
 
+/* {{{ func (rest *REST) GetRecord(opts ...interface{}) Model
+ * get record (cacheable), 注意返回不是指针
+ */
+func (rest *REST) GetRecord(opts ...interface{}) Model {
+	m := rest.Model()
+	if m == nil {
+		Warn("[GetRecord]: %s", ErrNoModel)
+		return m
+	}
+	rk := ""
+	ck := ""
+	// get row key from params
+	if len(opts) > 0 {
+		switch vt := opts[0].(type) {
+		case int:
+			rk = strconv.Itoa(vt)
+		case *int:
+			rk = strconv.Itoa(*vt)
+		case int64:
+			rk = strconv.FormatInt(vt, 10)
+		case *int64:
+			rk = strconv.FormatInt(*vt, 10)
+		case string:
+			rk = vt
+		case *string:
+			rk = *vt
+		}
+		if rk != "" {
+			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
+				return nil
+			}
+		}
+		ck = fmt.Sprint(m.TableName(), ":", rk)
+	} else if _, v, _ := m.PKey(); v != "" {
+		// check variable primary key
+		rk = v
+		ck = fmt.Sprintf("%s:%s", m.TableName(), rk)
+	} else if kf, v, _ := m.Key(); v != "" {
+		// check first key with value, cache key add field name
+		ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
+	}
+	Debug("[GetRecord]rowkey: %s, cachekey: %s", rk, ck)
+	if ck != "" {
+		// find var in local cache
+		if cvi, err := LocalGet(ck); err == nil {
+			// found
+			// Debug("hit var in cache: %s, %+v", ck, cvi)
+			if _, ok := cvi.(Model); ok {
+				return cvi.(Model)
+			}
+		}
+		// find in db
+		if rec, err := m.Row(); err == nil {
+			// found it
+			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface().(Model)
+			LocalSet(ck, recv, CACHE_EXPIRE)
+			return recv
+		}
+	}
+	return nil
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) UpdateRecord(opts ...interface{}) error
+ * 更新record
+ */
+func (rest *REST) UpdateRecord(opts ...interface{}) error {
+	m := rest.Model()
+	if m == nil {
+		return ErrNoModel
+	}
+	id := ""
+	if len(opts) > 0 {
+		switch rk := opts[0].(type) {
+		case string:
+			id = rk
+		case *string:
+			id = *rk
+		case *int:
+			id = strconv.Itoa(*rk)
+		case int:
+			id = strconv.Itoa(rk)
+		case int64:
+			id = strconv.FormatInt(rk, 10)
+		case *int64:
+			id = strconv.FormatInt(*rk, 10)
+		}
+		if rk, ok := opts[0].(string); ok && rk != "" {
+			id = rk
+		}
+		if id != "" {
+			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
+				return err
+			}
+		}
+	} else if _, pv, _ := m.PKey(); pv != "" {
+		id = pv
+	}
+	if id == "" {
+		return ErrNoRecord
+	}
+	if _, err := m.UpdateRow(); err != nil {
+		return err
+	}
+	// update local cache
+	ck := fmt.Sprint(m.TableName(), ":", id)
+	LocalSet(ck, reflect.Indirect(reflect.ValueOf(m)).Interface().(Model), CACHE_EXPIRE)
+	return nil
+}
+
+/* }}} */
+
 /* {{{ func (rest *REST) GetOlder(opts ...string) Model
- * 获取旧记录
+ * get older record
  */
 func (rest *REST) GetOlder(opts ...string) Model {
 	if rest.older == nil {
 		if m := rest.Model(); m != nil {
 			rk := ""
 			if len(opts) > 0 && opts[0] != "" {
+				// check params
 				rk = opts[0]
+			} else if _, v, _ := m.PKey(); v != "" {
+				// check variable primary key
+				rk = v
 			} else if c := rest.Context(); c != nil {
 				rk = c.Param(RowkeyKey)
 			}
