@@ -54,6 +54,7 @@ type Model interface {
 	List() (*List, error)                             // 获取多条记录并返回list
 	GetRecord(rk ...interface{}) Model                // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) error                // 更新一条记录(包括缓存)
+	Write(...interface{}) (Model, error)              // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...string) Model                      //获取旧记录
 	GetSum(...string) (*List, error)                  //获取多条记录
 	GetCount() (int64, error)                         //获取多条记录
@@ -1230,9 +1231,6 @@ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 			case *int64:
 				id = strconv.FormatInt(*rk, 10)
 			}
-			if rk, ok := opts[0].(string); ok && rk != "" {
-				id = rk
-			}
 			if id != "" {
 				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
 					return
@@ -1489,43 +1487,87 @@ func (rest *REST) UpdateRecord(opts ...interface{}) error {
 	if m == nil {
 		return ErrNoModel
 	}
-	id := ""
+	rk := ""
 	if len(opts) > 0 {
-		switch rk := opts[0].(type) {
+		switch vt := opts[0].(type) {
 		case string:
-			id = rk
+			rk = vt
 		case *string:
-			id = *rk
+			rk = *vt
 		case *int:
-			id = strconv.Itoa(*rk)
+			rk = strconv.Itoa(*vt)
 		case int:
-			id = strconv.Itoa(rk)
+			rk = strconv.Itoa(vt)
 		case int64:
-			id = strconv.FormatInt(rk, 10)
+			rk = strconv.FormatInt(vt, 10)
 		case *int64:
-			id = strconv.FormatInt(*rk, 10)
+			rk = strconv.FormatInt(*vt, 10)
 		}
-		if rk, ok := opts[0].(string); ok && rk != "" {
-			id = rk
-		}
-		if id != "" {
-			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
+		if rk != "" {
+			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
 				return err
 			}
 		}
 	} else if _, pv, _ := m.PKey(); pv != "" {
-		id = pv
+		rk = pv
 	}
-	if id == "" {
+	if rk == "" {
 		return ErrNoRecord
 	}
 	if _, err := m.UpdateRow(); err != nil {
 		return err
 	}
 	// update local cache
-	ck := fmt.Sprint(m.TableName(), ":", id)
+	ck := fmt.Sprint(m.TableName(), ":", rk)
 	LocalSet(ck, reflect.Indirect(reflect.ValueOf(m)).Interface().(Model), CACHE_EXPIRE)
 	return nil
+}
+
+/* }}} */
+
+/* {{{ func (rest *REST) Write(...interface{}) (Model, error)
+ *
+ */
+func (rest *REST) Write(opts ...interface{}) (Model, error) {
+	m := rest.Model()
+	if m == nil {
+		return nil, ErrNoModel
+	}
+	rk := ""
+	if len(opts) > 0 {
+		switch vt := opts[0].(type) {
+		case string:
+			rk = vt
+		case *string:
+			rk = *vt
+		case *int:
+			rk = strconv.Itoa(*vt)
+		case int:
+			rk = strconv.Itoa(vt)
+		case int64:
+			rk = strconv.FormatInt(vt, 10)
+		case *int64:
+			rk = strconv.FormatInt(*vt, 10)
+		}
+	} else if _, pv, _ := m.PKey(); pv != "" {
+		rk = pv
+	}
+	if rk == "" {
+		return nil, ErrNoRecord
+	}
+	// check if record exists
+	if m.GetRecord(rk) != nil {
+		// update
+		Debug("[model.Write]record exists: %s", rk)
+		if err := m.UpdateRecord(rk); err != nil {
+			return nil, err
+		}
+		return m, nil
+	} else {
+		// create
+		Debug("[model.Write]record not exists: %s", rk)
+		return m.CreateRow()
+	}
 }
 
 /* }}} */
