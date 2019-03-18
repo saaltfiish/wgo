@@ -31,7 +31,6 @@ type Model interface {
 	Range(string, interface{}) Model
 	Join(string, interface{}, ...interface{}) Model
 	Order(string, interface{}) Model
-	Page(string, interface{}) Model
 	Raw(string, interface{}) Model
 
 	SetConditions(...*Condition) Model
@@ -138,7 +137,6 @@ type Condition struct {
 	JoinOn []interface{}
 	Range  interface{} //范围条件, btween ? and ?
 	Order  interface{}
-	Page   interface{}
 	Raw    string //原始字符串
 }
 
@@ -181,8 +179,6 @@ func NewCondition(typ int, field string, cs ...interface{}) *Condition {
 		con.Range = v
 	case CTYPE_ORDER:
 		con.Order = v
-	case CTYPE_PAGE:
-		con.Page = v
 	case CTYPE_RAW:
 		con.Raw = v.(string)
 	default:
@@ -438,9 +434,6 @@ func (con *Condition) Merge(oc *Condition) {
 		con.Join = oc.Join
 		con.JoinOn = oc.JoinOn
 	}
-	if oc.Page != nil {
-		con.Page = oc.Page
-	}
 	if oc.Raw != "" {
 		con.Raw = oc.Raw
 	}
@@ -565,9 +558,6 @@ func (rest *REST) Join(field string, value interface{}, opts ...interface{}) Mod
 }
 func (rest *REST) Order(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_ORDER, field, value))
-}
-func (rest *REST) Page(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_PAGE, field, value))
 }
 func (rest *REST) Raw(field string, value interface{}) Model {
 	return rest.SetConditions(NewCondition(CTYPE_RAW, field, value))

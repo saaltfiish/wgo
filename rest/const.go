@@ -152,7 +152,6 @@ const (
 	CTYPE_JOIN
 	CTYPE_RANGE
 	CTYPE_ORDER
-	CTYPE_PAGE
 	CTYPE_RAW
 
 	// report
