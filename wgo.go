@@ -220,12 +220,12 @@ func AddWork(label string, opts ...interface{}) *WorkerPool {
 			max = im
 		}
 	}
-	// deefault job handler
+	// default job handler
 	dh := func(c *Context) error {
 		return fmt.Errorf("Unknown method!")
 	}
 	if len(opts) > 1 {
-		if idh, ok := opts[1].(HandlerFunc); ok {
+		if idh, ok := opts[1].(func(c *Context) error); ok {
 			dh = idh
 		}
 	}
