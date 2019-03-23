@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"wgo/utils"
 )
 
 type Tag struct {
@@ -541,7 +540,7 @@ func Fields(i interface{}, opts ...interface{}) []string {
 		for _, field := range fields {
 			if field.SubFields == nil && field.Tags[tag].Name != "" {
 				options := field.Tags[tag].Options
-				if (must == "" || options.Contains(must)) && (len(skip) == 0 || !utils.InSliceIgnorecase(field.Tags[tag].Name, skip)) {
+				if (must == "" || options.Contains(must)) && (len(skip) == 0 || !InSliceIgnorecase(field.Tags[tag].Name, skip)) {
 					fs = append(fs, field.Tags[tag].Name)
 				}
 			}
