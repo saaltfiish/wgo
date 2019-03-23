@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"wgo/utils"
 )
 
 type Tag struct {
@@ -516,21 +517,31 @@ func Instance(ob interface{}) interface{} {
 }
 
 // get fields slice
-func Fields(i interface{}, opts ...string) []string {
+func Fields(i interface{}, opts ...interface{}) []string {
 	tag := "json"
 	must := ""
-	if len(opts) > 0 && opts[0] != "" {
-		tag = opts[0]
+	skip := []string{}
+	if len(opts) > 0 {
+		if ot, ok := opts[0].(string); ok && ot != "" {
+			tag = ot
+		}
 	}
-	if len(opts) > 1 && opts[1] != "" {
-		must = opts[1]
+	if len(opts) > 1 {
+		if om, ok := opts[1].(string); ok && om != "" {
+			must = om
+		}
+	}
+	if len(opts) > 2 {
+		if os, ok := opts[2].([]string); ok && len(os) > 0 {
+			skip = os
+		}
 	}
 	fs := make([]string, 0)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
 		for _, field := range fields {
 			if field.SubFields == nil && field.Tags[tag].Name != "" {
 				options := field.Tags[tag].Options
-				if must == "" || options.Contains(must) {
+				if (must == "" || options.Contains(must)) && (len(skip) == 0 || !utils.InSliceIgnorecase(field.Tags[tag].Name, skip)) {
 					fs = append(fs, field.Tags[tag].Name)
 				}
 			}
