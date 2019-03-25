@@ -5,7 +5,8 @@ replace (
 	golang.org/x/crypto => ./vendor/golang.org/x/crypto
 	golang.org/x/net => ./vendor/golang.org/x/net
 	golang.org/x/sys => ./vendor/golang.org/x/sys
-    golang.org/x/text => ./vendor/golang.org/x/text
+	golang.org/x/text => ./vendor/golang.org/x/text
+	google.golang.org/grpc => ./vendor/google.golang.org/grpc
 	gorp => ./vendor/gorp
 )
 
@@ -20,6 +21,7 @@ require (
 	github.com/garyburd/redigo v1.6.0
 	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
+	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/klauspost/compress v1.4.1
 	github.com/kr/pretty v0.1.0 // indirect
@@ -37,7 +39,8 @@ require (
 	github.com/valyala/fasthttp v1.2.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
-	google.golang.org/grpc v1.19.1
+	google.golang.org/genproto v0.0.0-20190321212433-e79c0c59cdb5 // indirect
+	google.golang.org/grpc v1.19.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.42.0 // indirect
