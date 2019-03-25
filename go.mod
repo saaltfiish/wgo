@@ -5,6 +5,7 @@ replace (
 	golang.org/x/crypto => ./vendor/golang.org/x/crypto
 	golang.org/x/net => ./vendor/golang.org/x/net
 	golang.org/x/sys => ./vendor/golang.org/x/sys
+    golang.org/x/text => ./vendor/golang.org/x/text
 	gorp => ./vendor/gorp
 )
 
