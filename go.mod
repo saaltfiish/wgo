@@ -3,7 +3,6 @@ module wgo
 replace (
 	github.com/minio/minio-go => ./vendor/github.com/minio/minio-go
 	golang.org/x/crypto => ./vendor/golang.org/x/crypto
-	golang.org/x/net => ./vendor/golang.org/x/net
 	golang.org/x/sys => ./vendor/golang.org/x/sys
 	golang.org/x/text => ./vendor/golang.org/x/text
 	google.golang.org/grpc => ./vendor/google.golang.org/grpc
@@ -39,12 +38,12 @@ require (
 	github.com/valyala/fasthttp v1.2.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	google.golang.org/genproto v0.0.0-20190321212433-e79c0c59cdb5 // indirect
 	google.golang.org/grpc v1.19.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.42.0 // indirect
-	gopkg.in/resty.v1 v1.10.2
 	gopkg.in/yaml.v2 v2.2.2
 	gorp v0.0.0-00010101000000-000000000000
 )
