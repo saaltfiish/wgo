@@ -1,8 +1,0 @@
----
-proc_name: odin_test
-proc_num: 4
-daemonize: false
-servers:
-  - name: odin
-    addr: :9999
-...

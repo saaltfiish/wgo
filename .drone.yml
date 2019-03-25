@@ -1,5 +1,6 @@
 workspace:
-  base: "/go/src/wgo"
+  #base: "/go/src/wgo"
+  base: "/drone"
   path: "."
 
 clone:
@@ -16,8 +17,9 @@ pipeline:
       - CGO_ENABLED=0
       - GOOS=linux
       - GOARCH=amd64
+      - GO111MODULE=on
     commands:
-      - sh .wgo.sh
+      - go get -v -t ./...
 
   mac_local:
     image: plugins/docker
