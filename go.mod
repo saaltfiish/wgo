@@ -2,6 +2,7 @@ module wgo
 
 replace (
 	github.com/minio/minio-go => ./vendor/github.com/minio/minio-go
+	golang.org/x/crypto => ./vendor/golang.org/x/crypto
 	golang.org/x/net/lex/httplex => ./vendor/golang.org/x/net/lex/httplex
 	gorp => ./vendor/gorp
 )
@@ -33,7 +34,7 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/valyala/fasthttp v1.2.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/crypto v0.0.0-20190320223903-b7391e95e576
+	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	golang.org/x/net v0.0.0-20181011144130-49bb7cea24b1
 	golang.org/x/net/lex/httplex v0.0.0-00010101000000-000000000000 // indirect
 	google.golang.org/grpc v1.19.1
