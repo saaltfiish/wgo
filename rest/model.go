@@ -1135,11 +1135,25 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 		//Info("pk: %s", pv)
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
 	} else if len(opts) == 1 { // 只有一个, 为传入pk
-		if id, ok := opts[0].(string); ok && id != "" {
-			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		} else if id, ok := opts[0].(int); ok && id > 0 {
-			m.SetConditions(NewCondition(CTYPE_IS, pf, id))
+		switch rk := opts[0].(type) {
+		case string:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
+		case *string:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, *rk))
+		case *int:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(*rk)))
+		case int:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(rk)))
+		case int64:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(rk, 10)))
+		case *int64:
+			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(*rk, 10)))
 		}
+		// if id, ok := opts[0].(string); ok && id != "" {
+		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
+		// } else if id, ok := opts[0].(int); ok && id > 0 {
+		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
+		// }
 	} else if len(opts) == 2 { // 2个为条件
 		m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
 	}
