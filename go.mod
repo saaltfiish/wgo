@@ -8,6 +8,7 @@ replace (
 	golang.org/x/text => ./vendor/golang.org/x/text
 	google.golang.org/genproto => ./vendor/google.golang.org/genproto
 	google.golang.org/grpc => ./vendor/google.golang.org/grpc
+    google.golang.org/appengine => ./vendor/google.golang.org/appengine
 	gorp => ./vendor/gorp
 )
 
@@ -42,7 +43,6 @@ require (
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3
-	google.golang.org/appengine v1.5.0 // indirect
 	google.golang.org/genproto v0.0.0-00010101000000-000000000000 // indirect
 	google.golang.org/grpc v0.0.0-00010101000000-000000000000
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
