@@ -21,6 +21,8 @@ pipeline:
     commands:
       #- go get -v -t ./...
       - go build
+      - ls .
+      - ls $GOPATH/pkg/mod/
 
   mac_local:
     image: plugins/docker
