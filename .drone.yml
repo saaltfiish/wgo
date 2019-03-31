@@ -19,8 +19,8 @@ pipeline:
       - GOARCH=amd64
       - GO111MODULE=on
     commands:
-      - go get -v -t ./...
-      - go install
+      #- go get -v -t ./...
+      - go build
 
   mac_local:
     image: plugins/docker

@@ -1,18 +1,18 @@
 module wgo
 
+go 1.12
+
 replace (
 	github.com/minio/minio-go => ./vendor/github.com/minio/minio-go
 	golang.org/x/crypto => ./vendor/golang.org/x/crypto
 	golang.org/x/net => ./vendor/golang.org/x/net
 	golang.org/x/sys => ./vendor/golang.org/x/sys
 	golang.org/x/text => ./vendor/golang.org/x/text
+	google.golang.org/appengine => ./vendor/google.golang.org/appengine
 	google.golang.org/genproto => ./vendor/google.golang.org/genproto
 	google.golang.org/grpc => ./vendor/google.golang.org/grpc
-    google.golang.org/appengine => ./vendor/google.golang.org/appengine
 	gorp => ./vendor/gorp
 )
-
-go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
