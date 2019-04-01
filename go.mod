@@ -3,7 +3,10 @@ module wgo
 go 1.12
 
 replace (
+	github.com/dustin/randbo => ./vendor/github.com/dustin/randbo
 	github.com/minio/minio-go => ./vendor/github.com/minio/minio-go
+	github.com/nu7hatch/gouuid => ./vendor/github.com/nu7hatch/gouuid
+	github.com/valyala/fasthttp => ./vendor/github.com/valyala/fasthttp
 	golang.org/x/crypto => ./vendor/golang.org/x/crypto
 	golang.org/x/net => ./vendor/golang.org/x/net
 	golang.org/x/sys => ./vendor/golang.org/x/sys
@@ -27,6 +30,7 @@ require (
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/klauspost/compress v1.4.1
+	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0 // indirect
 	github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe // indirect
@@ -39,7 +43,8 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/spf13/viper v1.3.2
-	github.com/valyala/fasthttp v1.2.0
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v0.0.0-00010101000000-000000000000
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3

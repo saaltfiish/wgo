@@ -32,7 +32,7 @@ func RegisterConfig(tags ...interface{}) {
 		mio = config.StringMap("storage")
 		services = config.StringMapString("services")
 	} else {
-		panic("not found config")
+		Error("not found config for `%s`", tags)
 	}
 	// open dbs
 	if dns := os.Getenv(AECK_DB); dns != "" { // params dns overwrite config file
