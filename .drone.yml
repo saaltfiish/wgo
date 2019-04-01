@@ -19,8 +19,8 @@ pipeline:
     dockerfile: docker/Dockerfile
     when:
       branch:
-        include: [ feature/support-modules ]
-      event: [ tag ]
+        include: [ "feature/support-modules" ]
+      event: [ push, tag ]
 
   slack:
     image: plugins/slack
