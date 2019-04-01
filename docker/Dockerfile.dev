@@ -1,4 +1,7 @@
-FROM 127.0.0.1:5001/golang:grpc
+FROM 127.0.0.1:5001/golang:latest
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
-ADD . /go/src/wgo
+ENV GO111MODULE=on
+WORKDIR /app
+ADD . .
+RUN go get ./...

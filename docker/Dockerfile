@@ -1,4 +1,5 @@
-FROM ccr.ccs.tencentyun.com/phyzi/golang:grpc
+FROM golang:latest
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
-ADD . /go/src/wgo
+#ADD . /go/src/wgo
+RUN go build

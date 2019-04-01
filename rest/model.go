@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gorp"
 	"wgo"
+	"wgo/gorp"
 	"wgo/utils"
 )
 

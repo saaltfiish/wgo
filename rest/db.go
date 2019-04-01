@@ -9,8 +9,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"gorp"
 	"wgo"
+	"wgo/gorp"
 )
 
 var (
