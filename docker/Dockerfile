@@ -1,5 +1,15 @@
 FROM golang:latest
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
-#ADD . /go/src/wgo
-RUN go build
+ENV GO111MODULE=on
+
+WORKDIR /wgo
+
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+ADD . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build

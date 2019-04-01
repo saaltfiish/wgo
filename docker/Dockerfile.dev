@@ -2,6 +2,9 @@ FROM 127.0.0.1:5001/golang:latest
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
 ENV GO111MODULE=on
+
 WORKDIR /app
+
 ADD . .
-RUN go get ./...
+
+RUN go mod download

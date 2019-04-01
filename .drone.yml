@@ -10,41 +10,17 @@ clone:
     depth: 50
 
 pipeline:
-  build:
-    image: ccr.ccs.tencentyun.com/phyzi/golang:grpc
-    pull: true
-    environment:
-      - CGO_ENABLED=0
-      - GOOS=linux
-      - GOARCH=amd64
-      - GO111MODULE=on
-    commands:
-      #- go get -v -t ./...
-      - go build
-      - ls .
-      - ls $GOPATH/pkg/mod/
-
-  mac_local:
-    image: plugins/docker
-    registry: docker.for.mac.localhost:5001
-    repo: docker.for.mac.localhost:5001/arch/wgo
-    insecure: true
-    tags: [ local ]
-    dockerfile: docker/Dockerfile.dev
-    when:
-      event: [ local ]
-
   publish:
     image: plugins/docker
     registry: ccr.ccs.tencentyun.com
     repo: ccr.ccs.tencentyun.com/phyzi/wgo
     secrets: [ docker_username, docker_password ]
-    tags: [ latest, prod ]
+    tags: [ modules ]
     dockerfile: docker/Dockerfile
     when:
       branch:
-        include: [ master ]
-      event: [ push, tag ]
+        include: [ feature/support-modules ]
+      event: [ tag ]
 
   slack:
     image: plugins/slack
