@@ -18,6 +18,7 @@ pipeline:
     tags: [ modules ]
     dockerfile: docker/Dockerfile
     when:
+      branch: [refs/tags/*]
       event: [ tag ]
 
   slack:
