@@ -1,14 +1,9 @@
-FROM golang:latest
+FROM ccr.ccs.tencentyun.com/phyzi/wgo:basic
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
 ENV GO111MODULE=on
 
 WORKDIR /wgo
-
-COPY go.mod .
-COPY go.sum .
-
-RUN go mod download
 
 ADD . .
 

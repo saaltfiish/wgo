@@ -1,0 +1,13 @@
+FROM golang:latest
+MAINTAINER Odin Lee <odin@godigitalchina.com>
+
+ENV GO111MODULE=on
+
+WORKDIR /basic
+
+#ADD . .
+COPY go.mod .
+COPY go.sum .
+COPY vendor ./vendor
+
+RUN go mod download

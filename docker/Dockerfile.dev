@@ -1,10 +1,10 @@
-FROM 127.0.0.1:5001/golang:latest
+FROM 127.0.0.1:5001/arch/wgo:basic
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
 ENV GO111MODULE=on
 
-WORKDIR /app
+WORKDIR /wgo
 
 ADD . .
 
-RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
