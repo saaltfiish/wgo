@@ -15,7 +15,7 @@ pipeline:
     registry: ccr.ccs.tencentyun.com
     repo: ccr.ccs.tencentyun.com/phyzi/wgo
     secrets: [ docker_username, docker_password ]
-    tags: [ modules ]
+    tags: [ modules, ${DRONE_TAG} ]
     dockerfile: docker/Dockerfile
     when:
       branch: [refs/tags/*]
