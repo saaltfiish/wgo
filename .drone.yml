@@ -15,8 +15,10 @@ pipeline:
     registry: ccr.ccs.tencentyun.com
     repo: ccr.ccs.tencentyun.com/phyzi/wgo
     secrets: [ docker_username, docker_password ]
-    tags: [ modules ]
-    auto_tag: true
+    tags:
+      - modules
+      - $DRONE_TAG
+    #auto_tag: true
     dockerfile: docker/Dockerfile
     when:
       branch: [refs/tags/*]
