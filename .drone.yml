@@ -17,7 +17,7 @@ pipeline:
     secrets: [ docker_username, docker_password ]
     tags:
       - modules
-      - $DRONE_TAG
+      - ${DRONE_TAG}
     #auto_tag: true
     dockerfile: docker/Dockerfile
     when:
