@@ -9,6 +9,7 @@
 package utils
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -101,13 +102,18 @@ func (p *Params) Int64(key string) int64 {
 	return 0
 }
 
-func (p *Params) Destructuring(mp map[string]interface{}) map[string]interface{} {
+func (p *Params) Destructuring(mp map[string]interface{}) error {
+	matched := false
 	if len(mp) > 0 {
 		for k, _ := range mp {
 			if v, ok := p.params[strings.ToLower(k)]; ok {
+				matched = true
 				mp[k] = v
 			}
 		}
+		if matched {
+			return nil
+		}
 	}
-	return mp
+	return errors.New("[Destructuring]failed")
 }
