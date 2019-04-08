@@ -66,6 +66,10 @@ func (p *Params) PrimaryStringKey() string {
 	return p.primaryStringKey
 }
 
+func (p *Params) Bind(ptr interface{}) error {
+	return Bind(ptr, p.params)
+}
+
 func (p *Params) String(key string) string {
 	if vi, ok := p.params[strings.ToLower(key)]; ok {
 		switch v := vi.(type) {

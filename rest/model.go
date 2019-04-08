@@ -1408,11 +1408,17 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 		}
 		ck = fmt.Sprint(m.TableName(), ":", rk)
 	} else if _, rk, _ := m.PKey(); rk != "" {
-		// check variable primary key
+		// check primary key in object
 		ck = fmt.Sprintf("%s:%s", m.TableName(), rk)
-	} else if kf, v, _ := m.Key(); v != "" {
-		// check first key with value, cache key add field name
-		ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
+		// } else if kf, v, _ := m.Key(); v != "" {
+		// 	// check first key with value, cache key add field name
+		// 	ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
+	} else {
+		// bind参数, bind不上也没关系
+		params.Bind(m)
+		if kf, v, _ := m.Key(); v != "" {
+			ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
+		}
 	}
 	Debug("[GetRecord]cachekey: %s", ck)
 	if ck != "" {
