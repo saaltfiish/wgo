@@ -33,15 +33,21 @@ func (p *Params) Parse() *Params {
 		switch pv := primary.(type) {
 		case string:
 			p.primaryStringKey = pv
+			p.primaryInt64Key, _ = strconv.ParseInt(pv, 10, 64)
 		case *string:
 			p.primaryStringKey = *pv
+			p.primaryInt64Key, _ = strconv.ParseInt(*pv, 10, 64)
 		case int64:
+			p.primaryStringKey = strconv.FormatInt(pv, 10)
 			p.primaryInt64Key = pv
 		case int:
+			p.primaryStringKey = strconv.FormatInt(int64(pv), 10)
 			p.primaryInt64Key = int64(pv)
 		case *int64:
+			p.primaryStringKey = strconv.FormatInt(*pv, 10)
 			p.primaryInt64Key = *pv
 		case *int:
+			p.primaryStringKey = strconv.FormatInt(int64(*pv), 10)
 			p.primaryInt64Key = int64(*pv)
 		case map[string]interface{}:
 			for k, v := range pv {
