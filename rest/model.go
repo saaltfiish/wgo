@@ -1131,31 +1131,17 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 		return nil, ErrNoModel
 	}
 	//找rowkey
-	if pf, pv, _ := m.PKey(); pv != "" {
-		//Info("pk: %s", pv)
+	pf, pv, _ := m.PKey()
+	if pv != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if len(opts) == 1 { // 只有一个, 为传入pk
-		switch rk := opts[0].(type) {
-		case string:
+	} else if len(opts) > 0 {
+		params := utils.NewParams(opts)
+		rk := params.PrimaryStringKey()
+		if rk != "" {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
-		case *string:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, *rk))
-		case *int:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(*rk)))
-		case int:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(rk)))
-		case int64:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(rk, 10)))
-		case *int64:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(*rk, 10)))
+		} else if len(opts) == 2 { // 2个为条件
+			m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
 		}
-		// if id, ok := opts[0].(string); ok && id != "" {
-		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		// } else if id, ok := opts[0].(int); ok && id > 0 {
-		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		// }
-	} else if len(opts) == 2 { // 2个为条件
-		m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
 	}
 
 	if bi, err := m.ReadPrepare(false, true); err != nil {
@@ -1219,35 +1205,19 @@ func (rest *REST) Saved() bool {
  */
 func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 	if m := rest.Model(); m != nil {
-		id := ""
 		if len(opts) > 0 {
-			switch rk := opts[0].(type) {
-			case string:
-				id = rk
-			case *string:
-				id = *rk
-			case *int:
-				id = strconv.Itoa(*rk)
-			case int:
-				id = strconv.Itoa(rk)
-			case int64:
-				id = strconv.FormatInt(rk, 10)
-			case *int64:
-				id = strconv.FormatInt(*rk, 10)
-			}
-			if id != "" {
+			params := utils.NewParams(opts)
+			if id := params.PrimaryStringKey(); id != "" {
 				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
 					return
 				}
+			} else {
+				return 0, ErrNoRecord
 			}
-		} else if _, pv, _ := m.PKey(); pv != "" {
-			id = pv
-		}
-		if id == "" {
+		} else if _, pv, _ := m.PKey(); pv == "" {
 			return 0, ErrNoRecord
 		}
-		db := rest.DBConn(WRITETAG)
-		return db.Update(m)
+		return rest.DBConn(WRITETAG).Update(m)
 	}
 	err = ErrNoModel
 	return
@@ -1428,39 +1398,23 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 		Warn("[GetRecord]: %s", ErrNoModel)
 		return m
 	}
-	rk := ""
 	ck := ""
 	// get row key from params
-	if len(opts) > 0 {
-		switch vt := opts[0].(type) {
-		case int:
-			rk = strconv.Itoa(vt)
-		case *int:
-			rk = strconv.Itoa(*vt)
-		case int64:
-			rk = strconv.FormatInt(vt, 10)
-		case *int64:
-			rk = strconv.FormatInt(*vt, 10)
-		case string:
-			rk = vt
-		case *string:
-			rk = *vt
-		}
-		if rk != "" {
-			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
-				return nil
-			}
+	params := utils.NewParams(opts)
+	rk := params.PrimaryStringKey()
+	if rk != "" {
+		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
+			return nil
 		}
 		ck = fmt.Sprint(m.TableName(), ":", rk)
-	} else if _, v, _ := m.PKey(); v != "" {
+	} else if _, rk, _ := m.PKey(); rk != "" {
 		// check variable primary key
-		rk = v
 		ck = fmt.Sprintf("%s:%s", m.TableName(), rk)
 	} else if kf, v, _ := m.Key(); v != "" {
 		// check first key with value, cache key add field name
 		ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
 	}
-	Debug("[GetRecord]rowkey: %s, cachekey: %s", rk, ck)
+	Debug("[GetRecord]cachekey: %s", ck)
 	if ck != "" {
 		// find var in local cache
 		if cvi, err := LocalGet(ck); err == nil {
@@ -1530,31 +1484,17 @@ func (rest *REST) UpdateRecord(opts ...interface{}) error {
 /* }}} */
 
 /* {{{ func (rest *REST) Write(...interface{}) (Model, error)
- *
+ * 判断primary key, 记录存在则更新, 不存在则创建
  */
 func (rest *REST) Write(opts ...interface{}) (Model, error) {
 	m := rest.Model()
 	if m == nil {
 		return nil, ErrNoModel
 	}
-	rk := ""
-	if len(opts) > 0 {
-		switch vt := opts[0].(type) {
-		case string:
-			rk = vt
-		case *string:
-			rk = *vt
-		case *int:
-			rk = strconv.Itoa(*vt)
-		case int:
-			rk = strconv.Itoa(vt)
-		case int64:
-			rk = strconv.FormatInt(vt, 10)
-		case *int64:
-			rk = strconv.FormatInt(*vt, 10)
-		}
-	} else if _, pv, _ := m.PKey(); pv != "" {
-		rk = pv
+	params := utils.NewParams(opts)
+	rk := params.PrimaryStringKey()
+	if rk == "" {
+		_, rk, _ = m.PKey()
 	}
 	if rk == "" {
 		return nil, ErrNoRecord
@@ -1569,7 +1509,7 @@ func (rest *REST) Write(opts ...interface{}) (Model, error) {
 		return m, nil
 	} else {
 		// create
-		Debug("[model.Write]record not exists: %s", rk)
+		Debug("[model.Write]record(%s) not exists and create it", rk)
 		return m.CreateRow()
 	}
 }
