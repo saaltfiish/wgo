@@ -234,29 +234,30 @@ func ImportValue(i interface{}, is map[string]string) (err error) {
 		for _, col := range cols {
 			for tag, iv := range is {
 				if col.TagOptions.Contains(tag) {
-					fv := FieldByIndex(v, col.Index)
-					switch fv.Type().String() {
-					case "*string":
-						fv.Set(reflect.ValueOf(&iv))
-					case "string":
-						fv.Set(reflect.ValueOf(iv))
-					case "*int64":
-						pv, _ := strconv.ParseInt(iv, 10, 64)
-						fv.Set(reflect.ValueOf(&pv))
-					case "int64":
-						pv, _ := strconv.ParseInt(iv, 10, 64)
-						fv.Set(reflect.ValueOf(pv))
-					case "*int":
-						tv, _ := strconv.ParseInt(iv, 10, 0)
-						pv := int(tv)
-						fv.Set(reflect.ValueOf(&pv))
-					case "int":
-						tv, _ := strconv.ParseInt(iv, 10, 0)
-						pv := int(tv)
-						fv.Set(reflect.ValueOf(pv))
-					default:
-						err = fmt.Errorf("field(%s) not support %s", col.Tag, fv.Kind().String())
-					}
+					// fv := FieldByIndex(v, col.Index)
+					// switch fv.Type().String() {
+					// case "*string":
+					// 	fv.Set(reflect.ValueOf(&iv))
+					// case "string":
+					// 	fv.Set(reflect.ValueOf(iv))
+					// case "*int64":
+					// 	pv, _ := strconv.ParseInt(iv, 10, 64)
+					// 	fv.Set(reflect.ValueOf(&pv))
+					// case "int64":
+					// 	pv, _ := strconv.ParseInt(iv, 10, 64)
+					// 	fv.Set(reflect.ValueOf(pv))
+					// case "*int":
+					// 	tv, _ := strconv.ParseInt(iv, 10, 0)
+					// 	pv := int(tv)
+					// 	fv.Set(reflect.ValueOf(&pv))
+					// case "int":
+					// 	tv, _ := strconv.ParseInt(iv, 10, 0)
+					// 	pv := int(tv)
+					// 	fv.Set(reflect.ValueOf(pv))
+					// default:
+					// 	err = fmt.Errorf("field(%s) not support %s", col.Tag, fv.Kind().String())
+					// }
+					err = setWithProperType(iv, FieldByIndex(v, col.Index))
 				}
 			}
 		}
@@ -618,7 +619,12 @@ func Bind(ptr interface{}, data map[string]interface{}) error {
 	for i := 0; i < typ.NumField(); i++ {
 		typeField := typ.Field(i)
 		structField := val.Field(i)
-		if !structField.CanSet() || structField.Kind() == reflect.Struct {
+		if !structField.CanSet() {
+			// fmt.Printf("can not set: %s, %s\n", typeField.Name, structField.Kind().String())
+			// not bind struct field, for now
+			continue
+		}
+		if structField.Kind() == reflect.Struct {
 			// not bind struct field, for now
 			continue
 		}
@@ -652,15 +658,17 @@ func Bind(ptr interface{}, data map[string]interface{}) error {
 		if !exists {
 			continue
 		}
+		// fmt.Printf("will set: %s, %s, %s\n", typeField.Name, structField.Kind().String(), structField.Type().String())
 
-		if err := setWithProperType(typeField.Type.Kind(), inputValue, structField); err != nil {
+		if err := setWithProperType(inputValue, structField); err != nil {
+			fmt.Printf("set failed: %s\n", err)
 			return err
 		}
 	}
 	return nil
 }
 
-func setWithProperType(valueKind reflect.Kind, vi interface{}, structField reflect.Value) error {
+func setWithProperType(vi interface{}, structField reflect.Value) error {
 	val := ""
 	switch pv := vi.(type) {
 	case string:
@@ -678,37 +686,65 @@ func setWithProperType(valueKind reflect.Kind, vi interface{}, structField refle
 	default:
 		return errors.New("unknown support type")
 	}
-	switch valueKind {
-	case reflect.Int:
+	switch structField.Type().String() {
+	case "int":
 		return setIntField(val, 0, structField)
-	case reflect.Int8:
+	case "*int":
+		return setIntPtrField(val, 0, structField)
+	case "int8":
 		return setIntField(val, 8, structField)
-	case reflect.Int16:
+	case "*int8":
+		return setIntPtrField(val, 8, structField)
+	case "int16":
 		return setIntField(val, 16, structField)
-	case reflect.Int32:
+	case "*int16":
+		return setIntPtrField(val, 16, structField)
+	case "int32":
 		return setIntField(val, 32, structField)
-	case reflect.Int64:
+	case "*int32":
+		return setIntPtrField(val, 32, structField)
+	case "int64":
 		return setIntField(val, 64, structField)
-	case reflect.Uint:
+	case "*int64":
+		return setIntPtrField(val, 64, structField)
+	case "uint":
 		return setUintField(val, 0, structField)
-	case reflect.Uint8:
+	case "*uint":
+		return setUintPtrField(val, 0, structField)
+	case "uint8":
 		return setUintField(val, 8, structField)
-	case reflect.Uint16:
+	case "*uint8":
+		return setUintPtrField(val, 8, structField)
+	case "uint16":
 		return setUintField(val, 16, structField)
-	case reflect.Uint32:
+	case "*uint16":
+		return setUintPtrField(val, 16, structField)
+	case "uint32":
 		return setUintField(val, 32, structField)
-	case reflect.Uint64:
+	case "*uint32":
+		return setUintPtrField(val, 32, structField)
+	case "uint64":
 		return setUintField(val, 64, structField)
-	case reflect.Bool:
+	case "*uint64":
+		return setUintPtrField(val, 64, structField)
+	case "bool":
 		return setBoolField(val, structField)
-	case reflect.Float32:
+	case "*bool":
+		return setBoolPtrField(val, structField)
+	case "float32":
 		return setFloatField(val, 32, structField)
-	case reflect.Float64:
+	case "*float32":
+		return setFloatPtrField(val, 32, structField)
+	case "float64":
 		return setFloatField(val, 64, structField)
-	case reflect.String:
+	case "*float64":
+		return setFloatPtrField(val, 64, structField)
+	case "string":
 		structField.SetString(val)
+	case "*string":
+		return setStringPtrField(val, structField)
 	default:
-		return errors.New("unknown type")
+		return fmt.Errorf("unknown type: %s", structField.Type().String())
 	}
 	return nil
 }
@@ -724,6 +760,17 @@ func setIntField(value string, bitSize int, field reflect.Value) error {
 	return err
 }
 
+func setIntPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	intVal, err := strconv.ParseInt(value, 10, bitSize)
+	if err == nil {
+		field.Set(reflect.ValueOf(&intVal))
+	}
+	return err
+}
+
 func setUintField(value string, bitSize int, field reflect.Value) error {
 	if value == "" {
 		value = "0"
@@ -731,6 +778,17 @@ func setUintField(value string, bitSize int, field reflect.Value) error {
 	uintVal, err := strconv.ParseUint(value, 10, bitSize)
 	if err == nil {
 		field.SetUint(uintVal)
+	}
+	return err
+}
+
+func setUintPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	uintVal, err := strconv.ParseUint(value, 10, bitSize)
+	if err == nil {
+		field.Set(reflect.ValueOf(&uintVal))
 	}
 	return err
 }
@@ -746,6 +804,17 @@ func setBoolField(value string, field reflect.Value) error {
 	return err
 }
 
+func setBoolPtrField(value string, field reflect.Value) error {
+	if value == "" {
+		value = "false"
+	}
+	boolVal, err := strconv.ParseBool(value)
+	if err == nil {
+		field.Set(reflect.ValueOf(&boolVal))
+	}
+	return err
+}
+
 func setFloatField(value string, bitSize int, field reflect.Value) error {
 	if value == "" {
 		value = "0.0"
@@ -755,4 +824,23 @@ func setFloatField(value string, bitSize int, field reflect.Value) error {
 		field.SetFloat(floatVal)
 	}
 	return err
+}
+
+func setFloatPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0.0"
+	}
+	floatVal, err := strconv.ParseFloat(value, bitSize)
+	if err == nil {
+		field.Set(reflect.ValueOf(&floatVal))
+	}
+	return err
+}
+
+func setStringPtrField(value string, field reflect.Value) error {
+	if value == "" {
+		return nil
+	}
+	field.Set(reflect.ValueOf(&value))
+	return nil
 }
