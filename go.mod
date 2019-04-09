@@ -33,4 +33,5 @@ require (
 	google.golang.org/grpc v1.19.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.2.2
+    github.com/stripe/stripe-go v53.1.0+incompatible
 )
