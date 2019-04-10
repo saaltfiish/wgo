@@ -1135,8 +1135,7 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 	if pv != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
 	} else if len(opts) > 0 {
-		params := utils.NewParams(opts)
-		rk := params.PrimaryStringKey()
+		rk := utils.PrimaryStringKey(opts)
 		if rk != "" {
 			m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
 		} else if len(opts) == 2 { // 2个为条件
@@ -1206,8 +1205,7 @@ func (rest *REST) Saved() bool {
 func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 	if m := rest.Model(); m != nil {
 		if len(opts) > 0 {
-			params := utils.NewParams(opts)
-			if id := params.PrimaryStringKey(); id != "" {
+			if id := utils.PrimaryStringKey(opts); id != "" {
 				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
 					return
 				}
@@ -1497,8 +1495,7 @@ func (rest *REST) Write(opts ...interface{}) (Model, error) {
 	if m == nil {
 		return nil, ErrNoModel
 	}
-	params := utils.NewParams(opts)
-	rk := params.PrimaryStringKey()
+	rk := utils.PrimaryStringKey(opts)
 	if rk == "" {
 		_, rk, _ = m.PKey()
 	}

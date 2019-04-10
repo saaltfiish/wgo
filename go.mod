@@ -25,6 +25,7 @@ require (
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/spf13/viper v1.3.2
+	github.com/stripe/stripe-go v53.1.0+incompatible
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
@@ -33,5 +34,4 @@ require (
 	google.golang.org/grpc v1.19.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v2 v2.2.2
-    github.com/stripe/stripe-go v53.1.0+incompatible
 )
