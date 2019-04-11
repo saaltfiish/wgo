@@ -58,16 +58,16 @@ func (p *Params) Parse() *Params {
 	return p
 }
 
-func PrimaryInt64Key(p ...interface{}) int64 {
-	return NewParams(p).PrimaryInt64Key()
+func PrimaryInt64Key(ps []interface{}) int64 {
+	return NewParams(ps).PrimaryInt64Key()
 }
 
 func (p *Params) PrimaryInt64Key() int64 {
 	return p.primaryInt64Key
 }
 
-func PrimaryStringKey(p ...interface{}) string {
-	return NewParams(p).PrimaryStringKey()
+func PrimaryStringKey(ps []interface{}) string {
+	return NewParams(ps).PrimaryStringKey()
 }
 
 func (p *Params) PrimaryStringKey() string {

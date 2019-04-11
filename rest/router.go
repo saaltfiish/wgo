@@ -279,16 +279,16 @@ func (r *REST) RESTPatch() wgo.HandlerFunc {
 		defer action.Defer(m)
 
 		if _, err := action.PreUpdate(m); err != nil {
-			c.Warn("PreUpdate error: %s", err)
+			c.Warn("[RESTPatch]PreUpdate error: %s", err)
 			return rest.BadRequest(err)
 		} else if _, err := action.WillUpdate(m); err != nil {
-			c.Error("WillUpdate error: %s", err)
+			c.Error("[RESTPatch]WillUpdate error: %s", err)
 			return rest.BadRequest(err)
 		} else if r, err := action.OnUpdate(m); err != nil {
-			c.Warn("OnUpdate error: %s", err)
+			c.Warn("[RESTPatch]OnUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else if r, err := action.DidUpdate(r); err != nil {
-			c.Error("DidUpdate error: %s", err)
+			c.Error("[RESTPatch]DidUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			// 触发器
@@ -318,7 +318,7 @@ func (r *REST) RESTPut() wgo.HandlerFunc {
 			c.Warn("PreUpdate error: %s", err)
 			return rest.BadRequest(err)
 		} else if r, err := action.OnUpdate(m); err != nil {
-			c.Warn("OnUpdate error: %s", err)
+			c.Warn("[RESTPut]OnUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			// 触发器
@@ -345,10 +345,10 @@ func (r *REST) RESTDelete() wgo.HandlerFunc {
 		defer action.Defer(m)
 
 		if _, err := action.PreDelete(m); err != nil { // presearch准备条件等
-			c.Warn("PreUpdat error: %s", err)
+			c.Warn("[RESTDelete]PreDelete error: %s", err)
 			return rest.BadRequest(err)
 		} else if r, err := action.OnDelete(m); err != nil {
-			c.Warn("OnUpdate error: %s", err)
+			c.Warn("[RESTDelete]OnDelete error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			r, err = action.PostDelete(m)

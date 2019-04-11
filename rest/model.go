@@ -1210,6 +1210,7 @@ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 					return
 				}
 			} else {
+				Warn("[UpdateRow]not found id: %s, %+v", id, opts)
 				return 0, ErrNoRecord
 			}
 		} else if _, pv, _ := m.PKey(); pv == "" {

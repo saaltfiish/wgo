@@ -16,7 +16,6 @@ require (
 	github.com/go-ini/ini v1.42.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/klauspost/compress v1.4.1
-	github.com/klauspost/cpuid v1.2.0 // indirect
 	github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe // indirect
 	github.com/minio/minio-go v0.0.0-00010101000000-000000000000
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -26,7 +25,6 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/spf13/viper v1.3.2
 	github.com/stripe/stripe-go v53.1.0+incompatible
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
 	golang.org/x/net v0.0.0-20190328230028-74de082e2cca
