@@ -161,6 +161,9 @@ func (resp *Response) Message() string {
 	}
 	return resp.message
 }
+func (resp *Response) Data() *utils.Json {
+	return resp.data
+}
 
 // base methods
 func (client *Client) Post(path string) (*Response, error) {
