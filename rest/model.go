@@ -946,6 +946,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 	keeper := m.Keeper()
 	v := reflect.ValueOf(m)
 	if cols := utils.ReadStructColumns(m, true); cols != nil {
+		cnt := 0
 		for _, col := range cols {
 			if len(fields) > 0 && !utils.InSlice(col.Tag, fields) { // 如果传了fields, 只验证fields包含的字段
 				continue
@@ -956,10 +957,13 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 				if col.ExtOptions.Contains(TAG_GENERATE) && !col.TagOptions.Contains(DBTAG_PK) { //服务器生成, 忽略传入
 					fv.Set(reflect.Zero(fv.Type()))
 				} else if rest.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
-					// 注意不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
+					// 不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
 					c.Warn("%s is uneditable: %v", col.Tag, fv)
 					//return nil, fmt.Errorf("%s is uneditable", col.Tag) //尝试编辑不可编辑的字段,直接报错
 					fv.Set(reflect.Zero(fv.Type())) // 不报错, 忽略之
+				} else {
+					// 可编辑字段
+					cnt++
 				}
 			} else if col.ExtOptions.Contains(TAG_REQUIRED) && rest.Creating() { // 创建时必须传入,但是为空
 				err := fmt.Errorf("field `%s` required, but empty", col.Tag)
@@ -1094,6 +1098,10 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 				//		}
 				//	}
 			}
+		}
+		if rest.Updating() && cnt == 0 {
+			// 没什么可以编辑的
+			return nil, errors.New("nothing to update")
 		}
 	}
 	return m, nil
