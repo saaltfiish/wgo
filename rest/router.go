@@ -111,48 +111,48 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 }
 
 // 内置方法
-func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
-	endpoint := rest.endpoint
+func (r *REST) Builtin(flag int, ms ...interface{}) Routes {
+	endpoint := r.endpoint
 
-	if rest.defaultms != nil && len(rest.defaultms) > 0 {
-		ms = append(rest.defaultms, ms...)
+	if r.defaultms != nil && len(r.defaultms) > 0 {
+		ms = append(r.defaultms, ms...)
 	}
 
 	routes := make([]*whttp.Route, 0)
 	if flag&GM_HEAD > 0 {
 		// HEAD /{endpoint}
-		routes = append(routes, wgo.HEAD("/"+endpoint, rest.RESTHead(), ms...)...)
+		routes = append(routes, wgo.HEAD("/"+endpoint, r.HandlerByMethod("HEAD"), ms...)...)
 	}
 	if flag&GM_GET > 0 {
 		// GET /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
 		// Debug("[Builtin]GET %s", path)
-		routes = append(routes, wgo.GET(path, rest.RESTGet(), ms...)...)
+		routes = append(routes, wgo.GET(path, r.HandlerByMethod("GET"), ms...)...)
 	}
 	if flag&GM_LIST > 0 {
 		// GET /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
-		routes = append(routes, wgo.GET(path, rest.RESTSearch(), ms...)...)
+		routes = append(routes, wgo.GET(path, r.RESTSearch(), ms...)...)
 	}
 	if flag&GM_POST > 0 {
 		// POST /{endpoint}
 		path := fmt.Sprintf("/%s", endpoint)
-		routes = append(routes, wgo.POST(path, rest.RESTPost(), ms...).SetOptions(optionKey(DescKey), "Create")...)
+		routes = append(routes, wgo.POST(path, r.HandlerByMethod("POST"), ms...).SetOptions(optionKey(DescKey), "Create")...)
 	}
 	if flag&GM_DELETE > 0 {
 		// DELETE /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.DELETE(path, rest.RESTDelete(), ms...).SetOptions(optionKey(DescKey), "Delete")...)
+		routes = append(routes, wgo.DELETE(path, r.HandlerByMethod("DELETE"), ms...).SetOptions(optionKey(DescKey), "Delete")...)
 	}
 	if flag&GM_PATCH > 0 {
 		// PATCH /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PATCH(path, rest.RESTPatch(), ms...).SetOptions(optionKey(DescKey), "Update")...)
+		routes = append(routes, wgo.PATCH(path, r.HandlerByMethod("PATCH"), ms...).SetOptions(optionKey(DescKey), "Update")...)
 	}
 	if flag&GM_PUT > 0 {
 		// PUT /{endpoint}/{id}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PUT(path, rest.RESTPut(), ms...).SetOptions(optionKey(DescKey), "Reset")...)
+		routes = append(routes, wgo.PUT(path, r.HandlerByMethod("PUT"), ms...).SetOptions(optionKey(DescKey), "Reset")...)
 	}
 
 	// reporting
@@ -160,9 +160,29 @@ func (rest *REST) Builtin(flag int, ms ...interface{}) Routes {
 		// POST /{endpoint}/{rpt_tag}
 		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
 		// Debug("[rest.Builtin] path: %s", path)
-		routes = append(routes, wgo.GET(path, rest.RESTSearch(), ms...)...)
+		routes = append(routes, wgo.GET(path, r.RESTSearch(), ms...)...)
 	}
 	return Routes{routes}
+}
+
+// return handler by method
+func (r *REST) HandlerByMethod(method string) wgo.HandlerFunc {
+	switch strings.ToUpper(method) {
+	case "GET":
+		return r.RESTGet()
+	case "POST":
+		return r.RESTPost()
+	case "DELETE":
+		return r.RESTDelete()
+	case "PATCH":
+		return r.RESTPatch()
+	case "PUT":
+		return r.RESTPut()
+	case "HEAD":
+		return r.RESTHead()
+	default:
+		return RESTDeny
+	}
 }
 
 // Func
@@ -201,6 +221,7 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 
 	}
 }
+
 func (r *REST) RESTSearch() wgo.HandlerFunc {
 	model := r.New()
 	return func(c *wgo.Context) error {
@@ -397,7 +418,17 @@ func (r *REST) RESTHead() wgo.HandlerFunc {
 }
 
 // 其他路由
-func (rest *REST) Add(method, path string, h wgo.HandlerFunc, ms ...interface{}) Routes {
+// func (rest *REST) Add(method, path string, h wgo.HandlerFunc, ms ...interface{}) Routes {
+func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
+	h := rest.HandlerByMethod(method)
+	ms := rest.defaultms
+	if len(opts) > 0 {
+		if tmp, ok := opts[0].((func(*wgo.Context) error)); ok {
+			h = wgo.HandlerFunc(tmp)
+		} else if tmp, ok := opts[0].(wgo.HandlerFunc); ok {
+			h = tmp
+		}
+	}
 	if rest.endpoint != "" {
 		path = fmt.Sprint("/", rest.endpoint, path)
 	}
