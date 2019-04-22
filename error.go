@@ -9,9 +9,9 @@ package wgo
 
 import "wgo/server"
 
-func NewError(code int, msg string) *server.ServerError {
+func Error(code int, msg string) *server.ServerError {
 	return server.NewError(code, msg)
 }
-func NewErrorf(code int, format string, a ...interface{}) *server.ServerError {
+func Errorf(code int, format string, a ...interface{}) *server.ServerError {
 	return server.NewErrorf(code, format, a...)
 }
