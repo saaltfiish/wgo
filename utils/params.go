@@ -78,46 +78,41 @@ func (p *Params) Bind(ptr interface{}) error {
 	return Bind(ptr, p.params)
 }
 
-func (p *Params) String(key string) string {
+// 通过key获取, 适用于传入一个map[string]interface{}的情况
+// 返回直接返回interface
+func (p *Params) Interface(key string) interface{} {
 	if vi, ok := p.params[strings.ToLower(key)]; ok {
-		switch v := vi.(type) {
-		case string:
-			return v
-		case *string:
-			return *v
-		case *int:
-			return strconv.Itoa(*v)
-		case int:
-			return strconv.Itoa(v)
-		case *int64:
-			return strconv.FormatInt(*v, 10)
-		case int64:
-			return strconv.FormatInt(v, 10)
-		}
+		return vi
 	}
-	return ""
+	return nil
 }
 
+// 通过key获取, 适用于传入一个map[string]interface{}的情况
+// 努力尝试返回string
+func (p *Params) String(key string) string {
+	return MustString(p.Interface(key))
+}
+
+// 通过key获取, 适用于传入一个map[string]interface{}的情况
+// 努力尝试返回int64
 func (p *Params) Int64(key string) int64 {
-	if vi, ok := p.params[strings.ToLower(key)]; ok {
-		switch v := vi.(type) {
-		case string:
-			v64, _ := strconv.ParseInt(v, 10, 64)
-			return v64
-		case *string:
-			v64, _ := strconv.ParseInt(*v, 10, 64)
-			return v64
-		case *int:
-			return int64(*v)
-		case int:
-			return int64(v)
-		case *int64:
-			return *v
-		case int64:
-			return v
-		}
+	return MustInt64(p.Interface(key))
+}
+
+func (p *Params) InterfaceByIndex(offset int) interface{} {
+	if len(p.origin) > offset {
+		return p.origin[offset]
 	}
-	return 0
+	return nil
+}
+
+// 通过下标获取(适用于传入多个参数的情况), 0-based
+func (p *Params) StringByIndex(offset int) string {
+	return MustString(p.InterfaceByIndex(offset))
+}
+
+func (p *Params) Int64ByIndex(offset int) int64 {
+	return MustInt64(p.InterfaceByIndex(offset))
 }
 
 func (p *Params) Destructuring(mp map[string]interface{}) error {
