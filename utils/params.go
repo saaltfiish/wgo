@@ -10,7 +10,6 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -54,7 +53,7 @@ func (p *Params) Parse() *Params {
 		case map[string]interface{}:
 			for k, v := range pv {
 				if !reflect.ValueOf(v).IsNil() {
-					fmt.Printf("key: %s, value: %+v\n", k, v)
+					// fmt.Printf("key: %s, value: %+v\n", k, v)
 					p.params[strings.ToLower(k)] = v
 				}
 			}

@@ -106,7 +106,7 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	// wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 	// wgo.PUT("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 
-	rest.Builtin(flag).SetOptions(EndpointKey, endpoint)
+	rest.Builtin(flag).SetOptions(BaseModelKey, m).SetOptions(EndpointKey, endpoint)
 	return rest
 }
 
@@ -222,11 +222,11 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 	}
 }
 
-func (r *REST) RESTSearch() wgo.HandlerFunc {
-	model := r.New()
+func (_ *REST) RESTSearch() wgo.HandlerFunc {
+	// model := r.New()
 	return func(c *wgo.Context) error {
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -438,19 +438,19 @@ func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
 	//Debug("method: %s, path: %s, model: %v", method, path, rest.Model())
 	switch strings.ToUpper(method) {
 	case "GET":
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	case "POST":
-		return Routes{wgo.POST(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.POST(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	case "DELETE":
-		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	case "PATCH":
-		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	case "PUT":
-		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	case "HEAD":
-		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	default:
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
 	}
 }
 

@@ -20,6 +20,10 @@ func Init() wgo.MiddlewareFunc {
 			rest := GetREST(c)
 			defer rest.Release()
 
+			// Debug("[Init]endpoint: %s, basemodel: %+v", rest.Options(EndpointKey), rest.Options(BaseModelKey))
+			// 生成路由时把basemodel注入, 这里取出, 效率存在问题，将来可考虑pool
+			rest.NewModel(rest.Options(BaseModelKey))
+
 			// action
 			switch m := c.Request().(whttp.Request).Method(); m {
 			case "POST", "PUT":

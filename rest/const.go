@@ -52,6 +52,7 @@ const (
 	ConditionsKey     = "_conditions_"
 	LogPrefixKey      = "_prefix_"
 	EndpointKey       = "_endpoint_"
+	BaseModelKey      = "_basemodel_"
 	RowkeyKey         = "_rk_"
 	RptKey            = "_rpt_"
 	SelectorKey       = "_selector_"

@@ -44,8 +44,6 @@ func NewREST(c *wgo.Context) (rest *REST) {
 	rest = new(REST)
 	c.Set("__!rest!__", rest)
 	rest.SetContext(c)
-	// rest.env = make(map[interface{}]interface{})
-	// c.SetExt(rest)
 	return
 }
 
