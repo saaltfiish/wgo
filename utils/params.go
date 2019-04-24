@@ -10,6 +10,8 @@ package utils
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -51,7 +53,17 @@ func (p *Params) Parse() *Params {
 			p.primaryInt64Key = int64(*pv)
 		case map[string]interface{}:
 			for k, v := range pv {
-				p.params[strings.ToLower(k)] = v
+				if !reflect.ValueOf(v).IsNil() {
+					fmt.Printf("key: %s, value: %+v\n", k, v)
+					p.params[strings.ToLower(k)] = v
+				}
+			}
+		}
+	} else if p.origin != nil && len(p.origin) > 0 && len(p.origin)%2 == 0 {
+		// even number params, odd is name, even is value
+		for i := 0; i <= len(p.origin); i += 2 {
+			if name, ok := p.origin[i].(string); ok && name != "" && !reflect.ValueOf(p.origin[i+1]).IsNil() {
+				p.params[strings.ToLower(name)] = p.origin[i+1]
 			}
 		}
 	}
