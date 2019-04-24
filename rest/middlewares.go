@@ -22,7 +22,9 @@ func Init() wgo.MiddlewareFunc {
 
 			// Debug("[Init]endpoint: %s, basemodel: %+v", rest.Options(EndpointKey), rest.Options(BaseModelKey))
 			// 生成路由时把basemodel注入, 这里取出, 效率存在问题，将来可考虑pool
-			rest.NewModel(rest.Options(BaseModelKey))
+			if base := rest.Options(BaseModelKey); base != nil {
+				rest.NewModel(base)
+			}
 
 			// action
 			switch m := c.Request().(whttp.Request).Method(); m {
