@@ -257,7 +257,7 @@ func ImportValue(i interface{}, is map[string]string) (err error) {
 					// default:
 					// 	err = fmt.Errorf("field(%s) not support %s", col.Tag, fv.Kind().String())
 					// }
-					err = setWithProperType(iv, FieldByIndex(v, col.Index))
+					err = SetWithProperType(iv, FieldByIndex(v, col.Index))
 				}
 			}
 		}
@@ -660,7 +660,7 @@ func Bind(ptr interface{}, data map[string]interface{}) error {
 		}
 		// fmt.Printf("will set: %s, %s, %s\n", typeField.Name, structField.Kind().String(), structField.Type().String())
 
-		if err := setWithProperType(inputValue, structField); err != nil {
+		if err := SetWithProperType(inputValue, structField); err != nil {
 			fmt.Printf("set failed: %s\n", err)
 			return err
 		}
@@ -668,7 +668,7 @@ func Bind(ptr interface{}, data map[string]interface{}) error {
 	return nil
 }
 
-func setWithProperType(vi interface{}, structField reflect.Value) error {
+func SetWithProperType(vi interface{}, structField reflect.Value) error {
 	val := ""
 	switch pv := vi.(type) {
 	case string:

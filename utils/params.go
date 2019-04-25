@@ -52,8 +52,13 @@ func (p *Params) Parse() *Params {
 			p.primaryInt64Key = int64(*pv)
 		case map[string]interface{}:
 			for k, v := range pv {
-				if !reflect.ValueOf(v).IsNil() {
-					// fmt.Printf("key: %s, value: %+v\n", k, v)
+				switch rv := reflect.ValueOf(v); rv.Kind() {
+				case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Interface, reflect.Func, reflect.Map:
+					// 如果不是以上类型, IsNil会panic
+					if !rv.IsNil() {
+						p.params[strings.ToLower(k)] = v
+					}
+				default:
 					p.params[strings.ToLower(k)] = v
 				}
 			}
