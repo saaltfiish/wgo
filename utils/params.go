@@ -65,9 +65,16 @@ func (p *Params) Parse() *Params {
 		}
 	} else if p.origin != nil && len(p.origin) > 0 && len(p.origin)%2 == 0 {
 		// even number params, odd is name, even is value
-		for i := 0; i <= len(p.origin); i += 2 {
-			if name, ok := p.origin[i].(string); ok && name != "" && !reflect.ValueOf(p.origin[i+1]).IsNil() {
-				p.params[strings.ToLower(name)] = p.origin[i+1]
+		for i := 0; i < len(p.origin); i += 2 {
+			if name, ok := p.origin[i].(string); ok && name != "" {
+				switch rv := reflect.ValueOf(p.origin[i+1]); rv.Kind() {
+				case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Interface, reflect.Func, reflect.Map:
+					if !rv.IsNil() {
+						p.params[strings.ToLower(name)] = p.origin[i+1]
+					}
+				default:
+					p.params[strings.ToLower(name)] = p.origin[i+1]
+				}
 			}
 		}
 	}
@@ -97,6 +104,9 @@ func (p *Params) Bind(ptr interface{}) error {
 // 通过key获取, 适用于传入一个map[string]interface{}的情况
 // 返回直接返回interface
 func (p *Params) Interface(key string) interface{} {
+	return p.Itf(key)
+}
+func (p *Params) Itf(key string) interface{} {
 	if vi, ok := p.params[strings.ToLower(key)]; ok {
 		return vi
 	}
@@ -106,29 +116,92 @@ func (p *Params) Interface(key string) interface{} {
 // 通过key获取, 适用于传入一个map[string]interface{}的情况
 // 努力尝试返回string
 func (p *Params) String(key string) string {
-	return MustString(p.Interface(key))
+	return MustString(p.Itf(key))
 }
 
 // 通过key获取, 适用于传入一个map[string]interface{}的情况
 // 努力尝试返回int64
 func (p *Params) Int64(key string) int64 {
-	return MustInt64(p.Interface(key))
+	return MustInt64(p.Itf(key))
 }
 
+// 通过key获取, 适用于传入一个map[string]interface{}的情况
+// 努力尝试返回[]interface{}
+func (p *Params) Array(key string) []interface{} {
+	if ai := p.Itf(key); ai != nil {
+		if arr, ok := ai.([]interface{}); ok {
+			return arr
+		}
+		rt := make([]interface{}, 0)
+		if sa, ok := ai.([]string); ok {
+			for _, s := range sa {
+				rt = append(rt, s)
+			}
+			return rt
+		}
+		if ia, ok := ai.([]int); ok {
+			for _, i := range ia {
+				rt = append(rt, i)
+			}
+			return rt
+		}
+		if i64a, ok := ai.([]int64); ok {
+			for _, i64 := range i64a {
+				rt = append(rt, i64)
+			}
+			return rt
+		}
+	}
+	return nil
+}
+
+// 通过下标获取interface{}
 func (p *Params) InterfaceByIndex(offset int) interface{} {
+	return p.ItfByIndex(offset)
+}
+func (p *Params) ItfByIndex(offset int) interface{} {
 	if len(p.origin) > offset {
 		return p.origin[offset]
 	}
 	return nil
 }
 
-// 通过下标获取(适用于传入多个参数的情况), 0-based
+// 通过下标获取string(适用于传入多个参数的情况), 0-based
 func (p *Params) StringByIndex(offset int) string {
-	return MustString(p.InterfaceByIndex(offset))
+	return MustString(p.ItfByIndex(offset))
 }
 
+// 通过下标获取int64(适用于传入多个参数的情况), 0-based
 func (p *Params) Int64ByIndex(offset int) int64 {
-	return MustInt64(p.InterfaceByIndex(offset))
+	return MustInt64(p.ItfByIndex(offset))
+}
+
+func (p *Params) ArrayByIndex(offset int) []interface{} {
+	if ai := p.ItfByIndex(offset); ai != nil {
+		if arr, ok := ai.([]interface{}); ok {
+			return arr
+		}
+		rt := make([]interface{}, 0)
+		if sa, ok := ai.([]string); ok {
+			for _, s := range sa {
+				rt = append(rt, s)
+			}
+			return rt
+		}
+		if ia, ok := ai.([]int); ok {
+			for _, i := range ia {
+				rt = append(rt, i)
+			}
+			return rt
+		}
+		if i64a, ok := ai.([]int64); ok {
+			for _, i64 := range i64a {
+				rt = append(rt, i64)
+			}
+			return rt
+		}
+	}
+	return nil
 }
 
 func (p *Params) Destructuring(mp map[string]interface{}) error {

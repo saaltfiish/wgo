@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -521,28 +522,29 @@ func Instance(ob interface{}) interface{} {
 func Fields(i interface{}, opts ...interface{}) []string {
 	tag := "json"
 	must := ""
-	skip := []string{}
-	if len(opts) > 0 {
-		if ot, ok := opts[0].(string); ok && ot != "" {
-			tag = ot
-		}
+	skip := []interface{}{}
+	skipTag := "sf" // 默认`sf`(=skip filed)就是忽略关键词
+	params := NewParams(opts)
+	if ot := params.StringByIndex(0); ot != "" {
+		tag = ot
 	}
-	if len(opts) > 1 {
-		if om, ok := opts[1].(string); ok && om != "" {
-			must = om
-		}
+	if om := params.StringByIndex(1); om != "" {
+		must = om
 	}
-	if len(opts) > 2 {
-		if os, ok := opts[2].([]string); ok && len(os) > 0 {
-			skip = os
-		}
+	if oskip := params.ArrayByIndex(2); len(oskip) > 0 {
+		skip = oskip
+	} else if ost := params.StringByIndex(2); ost != "" {
+		skipTag = ost
 	}
 	fs := make([]string, 0)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
 		for _, field := range fields {
-			if field.SubFields == nil && field.Tags[tag].Name != "" {
+			// if field.SubFields == nil && field.Tags[tag].Name != "" {
+			if field.Tags[tag].Name != "" {
 				options := field.Tags[tag].Options
-				if (must == "" || options.Contains(must)) && (len(skip) == 0 || !InSliceIgnorecase(field.Tags[tag].Name, skip)) {
+				if (must == "" || options.Contains(must)) &&
+					(len(skip) == 0 || !InSliceIface(field.Tags[tag].Name, skip)) &&
+					(skipTag == "" || !options.Contains(skipTag)) {
 					fs = append(fs, field.Tags[tag].Name)
 				}
 			}
@@ -601,7 +603,12 @@ func Convert(i interface{}, o interface{}) (interface{}, error) {
 		return nil, err
 	}
 	// fmt.Printf("converting: %s\n", string(b))
-	err = json.Unmarshal(b, o)
+	// https://stackoverflow.com/questions/22343083/json-marshaling-with-long-numbers-in-golang-gives-floating-point-number
+	// Unmarshal会存在数字问题
+	// err = json.Unmarshal(b, o)
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.UseNumber()
+	err = d.Decode(o)
 	if err != nil {
 		return nil, err
 	}

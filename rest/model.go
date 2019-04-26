@@ -1448,6 +1448,8 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface().(Model)
 			LocalSet(ck, recv, CACHE_EXPIRE)
 			return recv
+		} else {
+			Warn("[GetRecord]find in db failed: %s", err)
 		}
 	}
 	return nil
