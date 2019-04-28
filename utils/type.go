@@ -50,3 +50,10 @@ func MustInt64(vi interface{}) int64 {
 	}
 	return 0
 }
+
+// int64 pointer
+func Int64Pointer(i int64) *int64 {
+	rt := new(int64)
+	*rt = i
+	return rt
+}

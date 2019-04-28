@@ -208,6 +208,7 @@ func (t *TableMap) SetKeys(isAutoIncr bool, fieldNames ...string) *TableMap {
 	}
 	t.keys = make([]*ColumnMap, 0)
 	for _, name := range fieldNames {
+		// fmt.Printf("[SetKeys]name: %s, fieldNames: %s\n", name, fieldNames)
 		colmap := t.ColMap(name)
 		colmap.isPK = true
 		colmap.isAutoIncr = isAutoIncr
