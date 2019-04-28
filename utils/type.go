@@ -52,8 +52,22 @@ func MustInt64(vi interface{}) int64 {
 }
 
 // int64 pointer
-func Int64Pointer(i int64) *int64 {
+func Int64Pointer(i interface{}) *int64 {
 	rt := new(int64)
-	*rt = i
+	*rt = MustInt64(i)
+	return rt
+}
+
+// int pointer
+func IntPointer(i interface{}) *int {
+	rt := new(int)
+	*rt = int(MustInt64(i))
+	return rt
+}
+
+// int64 pointer
+func StringPointer(i interface{}) *string {
+	rt := new(string)
+	*rt = MustString(i)
 	return rt
 }
