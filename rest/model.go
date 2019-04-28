@@ -1275,9 +1275,13 @@ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 				Warn("[UpdateRow]not found id: %s, %+v", id, opts)
 				return 0, ErrNoRecord
 			}
-		} else if pf, pv, _ := m.PKey(); pf != "" && pv == "" {
-			return 0, ErrNoRecord
+		} else if pf, pv, _ := m.PKey(); pf != "" {
+			if pv == "" {
+				Warn("[UpdateRow]pk empty: %s, %s", pf, pv)
+				return 0, ErrNoRecord
+			}
 		} else if uks := m.UnionKeys(); len(uks) <= 0 {
+			Warn("[UpdateRow]union keys empty")
 			return 0, ErrNoRecord
 		}
 		return rest.DBConn(WRITETAG).Update(m)
