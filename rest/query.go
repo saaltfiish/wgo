@@ -214,12 +214,19 @@ func (r *REST) SetUserID(opts ...interface{}) {
 func (r *REST) GetUserID() string {
 	ui := r.GetEnv(USERID_KEY)
 	if ui == nil {
-		return r.Context().UserID()
+		if id := r.Context().UserID(); id != "" {
+			return id
+		}
 	}
 	if _, ok := ui.(string); !ok {
-		return r.Context().UserID()
+		if id := r.Context().UserID(); id != "" {
+			return id
+		}
 	}
-	return ui.(string)
+	if id, ok := ui.(string); ok && id != "" {
+		return id
+	}
+	return "0"
 }
 
 /* {{{ func (r *REST) setTimeRangeFromStartEnd() {

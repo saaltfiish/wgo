@@ -115,7 +115,7 @@ func (client *Client) sendAndRecv(cat string, opts ...interface{}) (resp *Respon
 		Response: restyResp,
 	}
 	resp.Parse()
-	wgo.Info("[sendAndRecv]code: %d, message: %s", resp.Code(), resp.Message())
+	// wgo.Info("[sendAndRecv]code: %d, message: %s", resp.Code(), resp.Message())
 
 	// renew req
 	client.req = resty.New().R()
