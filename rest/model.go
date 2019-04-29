@@ -1631,7 +1631,7 @@ func (rest *REST) AddTable(tags ...string) Model {
 			gtm.SetKeys(ai, pf)
 		} else if uks := m.UnionKeys(); len(uks) > 0 {
 			// union keys
-			Debug("[AddTable]union keys for %s: %s", tb, uks)
+			// Debug("[AddTable]union keys for %s: %s", tb, uks)
 			gtm.SetKeys(false, utils.MapKeys(uks)...)
 		}
 
