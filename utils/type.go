@@ -7,7 +7,10 @@
 
 package utils
 
-import "strconv"
+import (
+	"encoding/json"
+	"strconv"
+)
 
 func MustString(vi interface{}) string {
 	if vi != nil {
@@ -24,6 +27,9 @@ func MustString(vi interface{}) string {
 			return strconv.FormatInt(*v, 10)
 		case int64:
 			return strconv.FormatInt(v, 10)
+		default:
+			vb, _ := json.Marshal(vi)
+			return string(vb)
 		}
 	}
 	return ""
