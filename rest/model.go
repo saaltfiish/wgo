@@ -42,26 +42,26 @@ type Model interface {
 	NewList() interface{} // 返回一个空结构列表
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
-	DBConn(string) *gorp.DbMap                        // 数据库连接
-	Transaction(...interface{}) (*Transaction, error) // transaction
-	TableName() string                                // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
-	PKey() (string, string, bool)                     // primary key字段,以及是否auto incr
-	Key() (string, string, bool)                      // key字段 name&value
-	UnionKeys() map[string]string                     // union keys, name&value
-	ReadPrepare(...interface{}) (interface{}, error)  // 组条件
-	Row(...interface{}) (Model, error)                //获取单条记录
-	Rows(...interface{}) (interface{}, error)         //获取多条记录
-	List() (*List, error)                             // 获取多条记录并返回list
-	GetRecord(rk ...interface{}) Model                // 获取一条记录, 可缓存
-	UpdateRecord(...interface{}) error                // 更新一条记录(包括缓存)
-	Write(...interface{}) (Model, error)              // 写记录, 若果不存在创建, 存在则更新
-	GetOlder(rk ...string) Model                      //获取旧记录
-	GetSum(...string) (*List, error)                  //获取多条记录
-	GetCount() (int64, error)                         //获取多条记录
-	GetCountNSum() (int64, float64)                   //获取count and sum
-	CreateRow() (Model, error)                        //创建单条记录
-	UpdateRow(...interface{}) (int64, error)          //更新记录
-	DeleteRow(rk string) (int64, error)               //删除记录
+	DBConn(string) *gorp.DbMap                         // 数据库连接
+	Transaction(...interface{}) (*Transaction, error)  // transaction
+	TableName() string                                 // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
+	PKey() (string, string, bool)                      // primary key字段,以及是否auto incr
+	Key() (string, string, bool)                       // key字段 name&value
+	UnionKeys() map[string]string                      // union keys, name&value
+	ReadPrepare(...interface{}) (*gorp.Builder, error) // 组条件
+	Row(...interface{}) (Model, error)                 //获取单条记录
+	Rows(...interface{}) (interface{}, error)          //获取多条记录
+	List() (*List, error)                              // 获取多条记录并返回list
+	GetRecord(rk ...interface{}) Model                 // 获取一条记录, 可缓存
+	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
+	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
+	GetOlder(rk ...string) Model                       //获取旧记录
+	GetSum(...string) (*List, error)                   //获取多条记录
+	GetCount() (int64, error)                          //获取多条记录
+	GetCountNSum() (int64, float64)                    //获取count and sum
+	CreateRow() (Model, error)                         //创建单条记录
+	UpdateRow(...interface{}) (int64, error)           //更新记录
+	DeleteRow(rk string) (int64, error)                //删除记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -1205,11 +1205,11 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 		}
 	}
 
-	if bi, err := m.ReadPrepare(false, true); err != nil {
+	if builder, err := m.ReadPrepare(false, true); err != nil {
 		//没找到记录
 		return nil, err
 	} else {
-		builder := bi.(*gorp.Builder)
+		// builder := bi.(*gorp.Builder)
 		ms := m.NewList()
 		err := builder.Select(GetDbFields(m)).Limit("1").Find(ms)
 		if err != nil && err != sql.ErrNoRows {
@@ -1313,26 +1313,25 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
  */
 func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 	if m := rest.Model(); m != nil {
-		//c := rest.Context()
-		bi, pe := rest.ReadPrepare()
+		params := utils.NewParams(opts)
+		// find pagination
+		var p *Pagination
+		if pp, ok := params.ItfByIndex(0).(*Pagination); ok {
+			p = pp
+		}
+		// read tag
+		readTag := true
+		if force := params.BoolByIndex(1); force {
+			readTag = false
+		}
+
+		builder, pe := rest.ReadPrepare()
 		if pe != nil {
 			return nil, pe
 		}
-		builder := bi.(*gorp.Builder)
+		// builder := bi.(*gorp.Builder)
+
 		ms = rest.NewList()
-		// find pagination
-		var p *Pagination
-		if len(opts) > 0 {
-			if pp, ok := opts[0].(*Pagination); ok {
-				p = pp
-			}
-		}
-		readTag := true
-		if len(opts) > 1 {
-			if force, ok := opts[1].(bool); ok && force {
-				readTag = false // 强制读取
-			}
-		}
 		if p != nil {
 			err = builder.Select(GetDbFields(m, readTag)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 		} else {
@@ -1357,8 +1356,8 @@ func (rest *REST) List() (l *List, err error) {
 	if m := rest.Model(); m != nil {
 		//c := rest.Context()
 		l = new(List)
-		bi, _ := rest.ReadPrepare()
-		builder := bi.(*gorp.Builder)
+		builder, _ := rest.ReadPrepare()
+		// builder := bi.(*gorp.Builder)
 		count, _ := builder.Count() //结果数
 		ms := rest.NewList()
 		if p := rest.Pagination(); p != nil {
@@ -1393,8 +1392,8 @@ func (rest *REST) List() (l *List, err error) {
  */
 func (rest *REST) GetSum(d ...string) (l *List, err error) {
 	if m := rest.Model(); m != nil {
-		bi, _ := rest.ReadPrepare(true)
-		builder := bi.(*gorp.Builder)
+		builder, _ := rest.ReadPrepare(true)
+		// builder := bi.(*gorp.Builder)
 
 		l = new(List)
 
@@ -1439,8 +1438,8 @@ func (rest *REST) GetCount() (cnt int64, err error) {
 	if rest.Count > 0 {
 		return rest.Count, nil
 	} else {
-		bi, _ := rest.ReadPrepare()
-		builder := bi.(*gorp.Builder)
+		builder, _ := rest.ReadPrepare()
+		// builder := bi.(*gorp.Builder)
 		return builder.Count()
 	}
 }
@@ -1673,10 +1672,10 @@ func (rest *REST) AddTable(tags ...string) Model {
 func (rest *REST) ImportDic(field string, dic ChecklistDic) {
 }
 
-/* {{{ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error)
+/* {{{ func (rest *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error)
  * 查询准备
  */
-func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
+func (rest *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error) {
 	disableOrder := false
 	if len(opts) > 0 {
 		if do, ok := opts[0].(bool); ok && do {
