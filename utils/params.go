@@ -129,28 +129,25 @@ func (p *Params) Int64(key string) int64 {
 // 努力尝试返回[]interface{}
 func (p *Params) Array(key string) []interface{} {
 	if ai := p.Itf(key); ai != nil {
-		if arr, ok := ai.([]interface{}); ok {
-			return arr
-		}
-		rt := make([]interface{}, 0)
-		if sa, ok := ai.([]string); ok {
-			for _, s := range sa {
-				rt = append(rt, s)
-			}
-			return rt
-		}
-		if ia, ok := ai.([]int); ok {
-			for _, i := range ia {
-				rt = append(rt, i)
-			}
-			return rt
-		}
-		if i64a, ok := ai.([]int64); ok {
-			for _, i64 := range i64a {
-				rt = append(rt, i64)
-			}
-			return rt
-		}
+		return MustArray(ai)
+	}
+	return nil
+}
+
+// 通过key获取
+// 尝试返回map[string]interface{}
+func (p *Params) StringMap(key string) map[string]interface{} {
+	if ai := p.Itf(key); ai != nil {
+		return MustStringMap(ai)
+	}
+	return nil
+}
+
+// 通过key获取
+// 尝试返回map[string]string
+func (p *Params) StringMapString(key string) map[string]string {
+	if ai := p.Itf(key); ai != nil {
+		return MustStringMapString(ai)
 	}
 	return nil
 }
@@ -178,28 +175,21 @@ func (p *Params) Int64ByIndex(offset int) int64 {
 
 func (p *Params) ArrayByIndex(offset int) []interface{} {
 	if ai := p.ItfByIndex(offset); ai != nil {
-		if arr, ok := ai.([]interface{}); ok {
-			return arr
-		}
-		rt := make([]interface{}, 0)
-		if sa, ok := ai.([]string); ok {
-			for _, s := range sa {
-				rt = append(rt, s)
-			}
-			return rt
-		}
-		if ia, ok := ai.([]int); ok {
-			for _, i := range ia {
-				rt = append(rt, i)
-			}
-			return rt
-		}
-		if i64a, ok := ai.([]int64); ok {
-			for _, i64 := range i64a {
-				rt = append(rt, i64)
-			}
-			return rt
-		}
+		return MustArray(ai)
+	}
+	return nil
+}
+
+func (p *Params) StringMapByIndex(offset int) map[string]interface{} {
+	if ai := p.ItfByIndex(offset); ai != nil {
+		return MustStringMap(ai)
+	}
+	return nil
+}
+
+func (p *Params) StringMapStringByIndex(offset int) map[string]string {
+	if ai := p.ItfByIndex(offset); ai != nil {
+		return MustStringMapString(ai)
 	}
 	return nil
 }

@@ -51,6 +51,50 @@ func MustInt64(vi interface{}) int64 {
 	return 0
 }
 
+func MustArray(vi interface{}) []interface{} {
+	if arr, ok := vi.([]interface{}); ok {
+		return arr
+	}
+	rt := make([]interface{}, 0)
+	if sa, ok := vi.([]string); ok {
+		for _, s := range sa {
+			rt = append(rt, s)
+		}
+		return rt
+	}
+	if ia, ok := vi.([]int); ok {
+		for _, i := range ia {
+			rt = append(rt, i)
+		}
+		return rt
+	}
+	if i64a, ok := vi.([]int64); ok {
+		for _, i64 := range i64a {
+			rt = append(rt, i64)
+		}
+		return rt
+	}
+	return nil
+}
+
+func MustStringMapString(vi interface{}) map[string]string {
+	if vi != nil {
+		if rt, ok := vi.(map[string]string); ok {
+			return rt
+		}
+	}
+	return nil
+}
+
+func MustStringMap(vi interface{}) map[string]interface{} {
+	if vi != nil {
+		if rt, ok := vi.(map[string]interface{}); ok {
+			return rt
+		}
+	}
+	return nil
+}
+
 // int64 pointer
 func Int64Pointer(i interface{}) *int64 {
 	rt := new(int64)
