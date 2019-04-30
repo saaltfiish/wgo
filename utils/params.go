@@ -126,6 +126,24 @@ func (p *Params) Int64(key string) int64 {
 }
 
 // 通过key获取, 适用于传入一个map[string]interface{}的情况
+// 努力尝试返回bool
+func (p *Params) Bool(key string, opts ...bool) bool {
+	def := false
+	switch len(opts) {
+	case 1:
+		def = opts[0]
+	}
+	iv := p.Itf(key)
+	if rt := MustBool(iv, def); !rt && !def {
+		// 传入的不是bool的时候, 尝试"yes", "true"
+		sb := strings.ToLower(MustString(iv))
+		return sb == "yes" || sb == "true"
+	} else {
+		return rt
+	}
+}
+
+// 通过key获取, 适用于传入一个map[string]interface{}的情况
 // 努力尝试返回[]interface{}
 func (p *Params) Array(key string) []interface{} {
 	if ai := p.Itf(key); ai != nil {
@@ -171,6 +189,22 @@ func (p *Params) StringByIndex(offset int) string {
 // 通过下标获取int64(适用于传入多个参数的情况), 0-based
 func (p *Params) Int64ByIndex(offset int) int64 {
 	return MustInt64(p.ItfByIndex(offset))
+}
+
+func (p *Params) BoolByIndex(offset int, opts ...bool) bool {
+	def := false
+	switch len(opts) {
+	case 1:
+		def = opts[0]
+	}
+	iv := p.ItfByIndex(offset)
+	if rt := MustBool(iv, def); !rt && !def {
+		// 传入的不是bool的时候, 尝试"yes", "true"
+		sb := strings.ToLower(MustString(iv))
+		return sb == "yes" || sb == "true"
+	} else {
+		return rt
+	}
 }
 
 func (p *Params) ArrayByIndex(offset int) []interface{} {

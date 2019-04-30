@@ -57,6 +57,20 @@ func MustInt64(vi interface{}) int64 {
 	return 0
 }
 
+// second arg is default
+func MustBool(opts ...interface{}) bool {
+	params := NewParams(opts)
+	vi := params.ItfByIndex(0)
+	def := params.ItfByIndex(1)
+	if bv, ok := vi.(bool); ok {
+		return bv
+	}
+	if db, ok := def.(bool); ok {
+		return db
+	}
+	return false
+}
+
 func MustArray(vi interface{}) []interface{} {
 	if arr, ok := vi.([]interface{}); ok {
 		return arr
