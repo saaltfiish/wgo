@@ -1557,12 +1557,12 @@ func (rest *REST) Write(opts ...interface{}) (Model, error) {
 	if m == nil {
 		return nil, ErrNoModel
 	}
-	pf, pk, _ := m.PKey()
+	pf, pk, ai := m.PKey()
 	if pf != "" { // 具有primary key
 		if pk == "" {
 			pk = utils.PrimaryStringKey(opts)
 		}
-		if pk == "" { // 具有primary key, 但是没找到primary key, 则返回没找到
+		if pk == "" && !ai { // 具有primary key, 同时不是auto increasement, 并且没找到primary key value, 则返回没找到
 			return nil, ErrNoRecord
 		}
 	} else if uks := m.UnionKeys(); len(uks) > 0 { // 没有primary key, 超找union keys(有多个)
