@@ -616,7 +616,7 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 					//Trace("get condition failed: %s", e)
 				}
 			}
-			if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or conditional
+			if col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or union key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
 					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
 					rest.conditions = append(rest.conditions, ParseCondition(col.Type.String(), condition))
@@ -1503,7 +1503,7 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 			LocalSet(ck, recv, CACHE_EXPIRE)
 			return recv
 		} else {
-			Warn("[GetRecord]find in db failed: %s", err)
+			Debug("[GetRecord]find %s in db failed: %s", ck, err)
 		}
 	}
 	return nil
