@@ -71,6 +71,7 @@ func NewInnerClient(service string) (*Client, error) {
 func (client *Client) SetJson(data interface{}) *Client {
 	jb, _ := json.Marshal(data)
 	client.req.SetBody(jb)
+	Debug("[rest.SetJson]body: %s", string(jb))
 	return client
 }
 
@@ -178,13 +179,16 @@ func (client *Client) Patch(path string) (*Response, error) {
 	return client.sendAndRecv("patch", path)
 }
 
-func RESTQuery(service, path, method string, obj interface{}) (*utils.Json, error) {
+func RESTQuery(service, path, method string, opts ...interface{}) (*utils.Json, error) {
 	request, err := NewInnerClient(service)
 	if err != nil {
 		return nil, err
 	}
 	var resp *Response
 	var re error
+	if obj := utils.NewParams(opts).ItfByIndex(0); obj != nil {
+		request.SetJson(obj)
+	}
 	switch strings.ToLower(method) {
 	case "get":
 		resp, re = request.Get(path)
