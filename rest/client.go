@@ -178,7 +178,7 @@ func (client *Client) Patch(path string) (*Response, error) {
 	return client.sendAndRecv("patch", path)
 }
 
-func (client *Client) Query(service, path, method string, obj interface{}) (*utils.Json, error) {
+func RESTQuery(service, path, method string, obj interface{}) (*utils.Json, error) {
 	request, err := NewInnerClient(service)
 	if err != nil {
 		return nil, err
