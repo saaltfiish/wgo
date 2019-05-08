@@ -11,8 +11,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
 	"wgo"
 	"wgo/resty"
+	"wgo/server"
 	"wgo/utils"
 	"wgo/whttp"
 )
@@ -174,4 +176,28 @@ func (client *Client) Get(path string) (*Response, error) {
 }
 func (client *Client) Patch(path string) (*Response, error) {
 	return client.sendAndRecv("patch", path)
+}
+
+func (client *Client) Query(service, path, method string, obj interface{}) (*utils.Json, error) {
+	request, err := NewInnerClient(service)
+	if err != nil {
+		return nil, err
+	}
+	var resp *Response
+	var re error
+	switch strings.ToLower(method) {
+	case "get":
+		resp, re = request.Get(path)
+	case "patch":
+		resp, re = request.Patch(path)
+	default:
+		resp, re = request.Post(path)
+	}
+	if re != nil {
+		return nil, re
+	}
+	if resp.Code() != 0 {
+		return nil, server.NewError(resp.Code(), resp.Message())
+	}
+	return resp.Data(), nil
 }
