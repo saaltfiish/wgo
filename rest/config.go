@@ -99,6 +99,14 @@ func ConfigStringMapString(key string) map[string]string {
 	return nil
 }
 
+// StringMapStringSlice
+func ConfigStringMapStringSlice(key string) map[string][]string {
+	if config != nil {
+		return config.StringMapStringSlice(key)
+	}
+	return nil
+}
+
 // 获取深层config
 func GetConfig(rawVal interface{}, opts ...interface{}) error {
 	// default key app
