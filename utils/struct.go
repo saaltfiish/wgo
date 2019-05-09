@@ -12,6 +12,15 @@ import (
 	"strings"
 )
 
+var (
+	ErrNilArguments                 = errors.New("src and dst must not be nil")
+	ErrDifferentArgumentsTypes      = errors.New("src and dst must be of same type")
+	ErrNotSupported                 = errors.New("only structs and maps are supported")
+	ErrExpectedMapAsDestination     = errors.New("dst was expected to be a map")
+	ErrExpectedPointerAsDestination = errors.New("dst was expected to be a pointer")
+	ErrExpectedStructAsDestination  = errors.New("dst was expected to be a struct")
+)
+
 type Tag struct {
 	Name    string
 	Options TagOptions
@@ -158,6 +167,147 @@ func ScanStructFields(fs StructFields, tag, prefix, path string) (fields StructF
 	}
 
 	return
+}
+
+func hasExportedField(dst reflect.Value) (exported bool) {
+	for i, n := 0, dst.NumField(); i < n; i++ {
+		field := dst.Type().Field(i)
+		if field.Anonymous && dst.Field(i).Kind() == reflect.Struct {
+			exported = exported || hasExportedField(dst.Field(i))
+		} else {
+			exported = exported || len(field.PkgPath) == 0
+		}
+	}
+	return
+}
+
+// During deepMerge, must keep track of checks that are
+// in progress.  The comparison algorithm assumes that all
+// checks in progress are true when it reencounters them.
+// Visited are stored in a map indexed by 17 * a1 + a2;
+type visit struct {
+	ptr  uintptr
+	typ  reflect.Type
+	next *visit
+}
+
+// Traverses recursively both values, assigning src's fields values to dst.
+// The map argument tracks comparisons that have already been seen, which allows
+// short circuiting on recursive types.
+func deepMerge(dst, src reflect.Value, visited map[uintptr]*visit, depth int) (err error) {
+	overwrite := false
+	overwriteWithEmptySrc := false
+
+	if !src.IsValid() {
+		return
+	}
+	if dst.CanAddr() {
+		addr := dst.UnsafeAddr()
+		h := 17 * addr
+		seen := visited[h]
+		typ := dst.Type()
+		for p := seen; p != nil; p = p.next {
+			if p.ptr == addr && p.typ == typ {
+				return nil
+			}
+		}
+		// Remember, remember...
+		visited[h] = &visit{addr, typ, seen}
+	}
+
+	switch dst.Kind() {
+	case reflect.Struct:
+		if hasExportedField(dst) {
+			for i, n := 0, dst.NumField(); i < n; i++ {
+				if err = deepMerge(dst.Field(i), src.Field(i), visited, depth+1); err != nil {
+					return
+				}
+			}
+		} else {
+			if dst.CanSet() && (!IsEmptyValue(src) || overwriteWithEmptySrc) && (overwrite || IsEmptyValue(dst)) {
+				dst.Set(src)
+			}
+		}
+	case reflect.Ptr:
+		fallthrough
+	case reflect.Interface:
+		if src.IsNil() {
+			break
+		}
+
+		if dst.Kind() != reflect.Ptr && src.Type().AssignableTo(dst.Type()) {
+			if dst.IsNil() && dst.CanSet() {
+				dst.Set(src)
+			}
+			break
+		}
+
+		if src.Kind() != reflect.Interface {
+			if dst.IsNil() && dst.CanSet() {
+				dst.Set(src)
+			} else if src.Kind() == reflect.Ptr {
+				if err = deepMerge(dst.Elem(), src.Elem(), visited, depth+1); err != nil {
+					return
+				}
+			} else if dst.Elem().Type() == src.Type() {
+				if err = deepMerge(dst.Elem(), src, visited, depth+1); err != nil {
+					return
+				}
+			} else {
+				return ErrDifferentArgumentsTypes
+			}
+			break
+		}
+		if dst.IsNil() && dst.CanSet() {
+			dst.Set(src)
+		} else if err = deepMerge(dst.Elem(), src.Elem(), visited, depth+1); err != nil {
+			return
+		}
+	default:
+		if dst.CanSet() && (!IsEmptyValue(src) || overwriteWithEmptySrc) && (overwrite || IsEmptyValue(dst)) {
+			dst.Set(src)
+		}
+	}
+	return
+}
+
+func resolveValues(dst, src interface{}) (vDst, vSrc reflect.Value, err error) {
+	if dst == nil || src == nil {
+		err = ErrNilArguments
+		return
+	}
+	vDst = reflect.ValueOf(dst)
+	if vDst.Kind() != reflect.Ptr {
+		err = ErrExpectedPointerAsDestination
+		return
+	}
+	vDst = vDst.Elem()
+	if vDst.Kind() != reflect.Struct {
+		err = ErrNotSupported
+		return
+	}
+	vSrc = reflect.ValueOf(src)
+	// We check if vSrc is a pointer to dereference it.
+	if vSrc.Kind() == reflect.Ptr {
+		vSrc = vSrc.Elem()
+	}
+	return
+}
+
+// merge struct
+func Merge(dst, src interface{}) error {
+	var (
+		vDst, vSrc reflect.Value
+		err        error
+	)
+
+	if vDst, vSrc, err = resolveValues(dst, src); err != nil {
+		return err
+	}
+	if vDst.Type() != vSrc.Type() {
+		return ErrDifferentArgumentsTypes
+	}
+	return deepMerge(vDst, vSrc, make(map[uintptr]*visit), 0)
 }
 
 /* {{{ func ReadStructColumns(i interface{}, underscore bool, tags ...string) (cols []string)

@@ -91,7 +91,7 @@ func (rest *REST) WillGet(i interface{}) (interface{}, error) {
  */
 func (rest *REST) OnGet(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	if row, err := m.Row(m); err == nil {
+	if row, err := m.Row(); err == nil {
 		return rest.SetModel(row.(Model)), err
 		// return row, err
 	} else {

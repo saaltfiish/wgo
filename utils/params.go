@@ -11,7 +11,6 @@ package utils
 import (
 	"errors"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -20,6 +19,7 @@ type Params struct {
 	params           map[string]interface{}
 	primaryStringKey string
 	primaryInt64Key  int64
+	primaryIntKey    int
 }
 
 func NewParams(p []interface{}) *Params {
@@ -29,28 +29,9 @@ func NewParams(p []interface{}) *Params {
 
 func (p *Params) Parse() *Params {
 	if p.origin != nil && len(p.origin) == 1 {
-		// 只传入了一个参数
+		// 只分析第一个参数
 		primary := p.origin[0]
-		switch pv := primary.(type) {
-		case string:
-			p.primaryStringKey = pv
-			p.primaryInt64Key, _ = strconv.ParseInt(pv, 10, 64)
-		case *string:
-			p.primaryStringKey = *pv
-			p.primaryInt64Key, _ = strconv.ParseInt(*pv, 10, 64)
-		case int64:
-			p.primaryStringKey = strconv.FormatInt(pv, 10)
-			p.primaryInt64Key = pv
-		case int:
-			p.primaryStringKey = strconv.FormatInt(int64(pv), 10)
-			p.primaryInt64Key = int64(pv)
-		case *int64:
-			p.primaryStringKey = strconv.FormatInt(*pv, 10)
-			p.primaryInt64Key = *pv
-		case *int:
-			p.primaryStringKey = strconv.FormatInt(int64(*pv), 10)
-			p.primaryInt64Key = int64(*pv)
-		case map[string]interface{}:
+		if pv, ok := primary.(map[string]interface{}); ok {
 			for k, v := range pv {
 				switch rv := reflect.ValueOf(v); rv.Kind() {
 				case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Interface, reflect.Func, reflect.Map:
@@ -62,8 +43,12 @@ func (p *Params) Parse() *Params {
 					p.params[strings.ToLower(k)] = v
 				}
 			}
+		} else {
+			p.primaryStringKey = MustString(primary)
+			p.primaryInt64Key = MustInt64(primary)
+			p.primaryIntKey = MustInt(primary)
 		}
-	} else if p.origin != nil && len(p.origin) > 0 && len(p.origin)%2 == 0 {
+	} else if p.origin != nil && len(p.origin) > 1 && len(p.origin)%2 == 0 {
 		// even number params, odd is name, even is value
 		for i := 0; i < len(p.origin); i += 2 {
 			if name, ok := p.origin[i].(string); ok && name != "" {
@@ -87,6 +72,14 @@ func PrimaryInt64Key(ps []interface{}) int64 {
 
 func (p *Params) PrimaryInt64Key() int64 {
 	return p.primaryInt64Key
+}
+
+func PrimaryIntKey(ps []interface{}) int {
+	return NewParams(ps).PrimaryIntKey()
+}
+
+func (p *Params) PrimaryIntKey() int {
+	return p.primaryIntKey
 }
 
 func PrimaryStringKey(ps []interface{}) string {

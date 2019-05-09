@@ -1192,17 +1192,15 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 	if m == nil {
 		return nil, ErrNoModel
 	}
+	params := utils.NewParams(opts)
 	//找rowkey
 	pf, pv, _ := m.PKey()
 	if pv != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if len(opts) > 0 {
-		rk := utils.PrimaryStringKey(opts)
-		if rk != "" {
-			m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
-		} else if len(opts) == 2 { // 2个为条件
-			m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
-		}
+	} else if rk := params.PrimaryStringKey(); rk != "" {
+		m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
+	} else {
+		params.Bind(m)
 	}
 
 	if builder, err := m.ReadPrepare(false, true); err != nil {
@@ -1543,6 +1541,12 @@ func (rest *REST) UpdateRecord(opts ...interface{}) error {
 		return err
 	}
 	// update local cache
+	// 1. if cache exists
+	if cvi, err := LocalGet(ck); err == nil {
+		if err := utils.Merge(m, cvi); err != nil {
+			Warn("[UpdateRecord]merge failed: %s", err)
+		}
+	}
 	LocalSet(ck, reflect.Indirect(reflect.ValueOf(m)).Interface().(Model), CACHE_EXPIRE)
 	return nil
 }

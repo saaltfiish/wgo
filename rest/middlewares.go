@@ -43,7 +43,8 @@ func Init() wgo.MiddlewareFunc {
 				}
 			}
 
-			// get user id
+			c.Info("[REST]-->%s<--", c.Query())
+			// set user id
 			rest.SetUserID()
 
 			// 处理起始时间

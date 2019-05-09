@@ -57,6 +57,28 @@ func MustInt64(vi interface{}) int64 {
 	return 0
 }
 
+func MustInt(vi interface{}) int {
+	if vi != nil {
+		switch v := vi.(type) {
+		case string:
+			v64, _ := strconv.Atoi(v)
+			return v64
+		case *string:
+			v64, _ := strconv.Atoi(*v)
+			return v64
+		case *int:
+			return *v
+		case int:
+			return v
+		case *int64:
+			return int(*v)
+		case int64:
+			return int(v)
+		}
+	}
+	return 0
+}
+
 // second arg is default
 func MustBool(opts ...interface{}) bool {
 	params := NewParams(opts)
