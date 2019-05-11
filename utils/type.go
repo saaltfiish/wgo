@@ -18,13 +18,19 @@ func MustString(vi interface{}) string {
 		case string:
 			return v
 		case *string:
-			return *v
+			if v != nil {
+				return *v
+			}
 		case *int:
-			return strconv.Itoa(*v)
+			if v != nil {
+				return strconv.Itoa(*v)
+			}
 		case int:
 			return strconv.Itoa(v)
 		case *int64:
-			return strconv.FormatInt(*v, 10)
+			if v != nil {
+				return strconv.FormatInt(*v, 10)
+			}
 		case int64:
 			return strconv.FormatInt(v, 10)
 		default:
@@ -36,22 +42,28 @@ func MustString(vi interface{}) string {
 }
 
 func MustInt64(vi interface{}) int64 {
-	if vi != nil {
+	if vi != nil { // 这个检测不到(*Ptr)(nil), 指针都在switch中检查
 		switch v := vi.(type) {
 		case string:
 			v64, _ := strconv.ParseInt(v, 10, 64)
 			return v64
 		case *string:
-			v64, _ := strconv.ParseInt(*v, 10, 64)
-			return v64
-		case *int:
-			return int64(*v)
+			if v != nil {
+				v64, _ := strconv.ParseInt(*v, 10, 64)
+				return v64
+			}
 		case int:
 			return int64(v)
-		case *int64:
-			return *v
+		case *int:
+			if v != nil {
+				return int64(*v)
+			}
 		case int64:
 			return v
+		case *int64:
+			if v != nil {
+				return *v
+			}
 		}
 	}
 	return 0
@@ -64,14 +76,20 @@ func MustInt(vi interface{}) int {
 			v64, _ := strconv.Atoi(v)
 			return v64
 		case *string:
-			v64, _ := strconv.Atoi(*v)
-			return v64
+			if v != nil {
+				v64, _ := strconv.Atoi(*v)
+				return v64
+			}
 		case *int:
-			return *v
+			if v != nil {
+				return *v
+			}
 		case int:
 			return v
 		case *int64:
-			return int(*v)
+			if v != nil {
+				return int(*v)
+			}
 		case int64:
 			return int(v)
 		}

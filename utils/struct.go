@@ -923,7 +923,26 @@ func setIntPtrField(value string, bitSize int, field reflect.Value) error {
 	}
 	intVal, err := strconv.ParseInt(value, 10, bitSize)
 	if err == nil {
-		field.Set(reflect.ValueOf(&intVal))
+		switch bitSize {
+		case 0: // *int
+			val := new(int)
+			*val = int(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 8:
+			val := new(int8)
+			*val = int8(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 16:
+			val := new(int16)
+			*val = int16(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 32:
+			val := new(int32)
+			*val = int32(intVal)
+			field.Set(reflect.ValueOf(val))
+		default: // default 64
+			field.Set(reflect.ValueOf(&intVal))
+		}
 	}
 	return err
 }
@@ -945,7 +964,26 @@ func setUintPtrField(value string, bitSize int, field reflect.Value) error {
 	}
 	uintVal, err := strconv.ParseUint(value, 10, bitSize)
 	if err == nil {
-		field.Set(reflect.ValueOf(&uintVal))
+		switch bitSize {
+		case 0: // *uint
+			uval := new(uint)
+			*uval = uint(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 8:
+			uval := new(uint8)
+			*uval = uint8(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 16:
+			uval := new(uint16)
+			*uval = uint16(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 32:
+			uval := new(uint32)
+			*uval = uint32(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		default: // default *uint64
+			field.Set(reflect.ValueOf(&uintVal))
+		}
 	}
 	return err
 }
