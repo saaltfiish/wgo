@@ -9,6 +9,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/bitly/go-simplejson"
 )
@@ -26,6 +27,18 @@ func ConvertJson(i interface{}) (*Json, error) {
 		return nil, err
 	}
 	return NewJson(b)
+}
+
+func ConvertJsons(is []interface{}) (js []*Json, err error) {
+	if is == nil || len(is) == 0 {
+		return nil, errors.New("invalid input")
+	}
+	for _, i := range is {
+		if j, err := ConvertJson(i); err == nil {
+			js = append(js, j)
+		}
+	}
+	return js, nil
 }
 
 func NewJson(body []byte) (*Json, error) {
