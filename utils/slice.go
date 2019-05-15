@@ -73,6 +73,17 @@ func PurgeSliceInt(v int, sl []int) []int {
 	return nsl
 }
 
+// Purge Slice Int64
+func PurgeSliceInt64(v int64, sl []int64) []int64 {
+	nsl := []int64{}
+	for _, vv := range sl {
+		if vv != v {
+			nsl = append(nsl, vv)
+		}
+	}
+	return nsl
+}
+
 // InSliceIface checks given interface in interface slice.
 func InSliceIface(v interface{}, sl []interface{}) bool {
 	for _, vv := range sl {
