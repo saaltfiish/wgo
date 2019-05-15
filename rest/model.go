@@ -1590,7 +1590,7 @@ func (r *REST) Write(opts ...interface{}) (Model, error) {
 	// check if record exists
 	if m.GetRecord(pk) != nil {
 		// update
-		Debug("[model.Write]record exists: %s, update it", pk)
+		Debug("[model.Write]record exists, update it")
 		if err := m.UpdateRecord(pk); err != nil {
 			return nil, err
 		}
@@ -1829,14 +1829,27 @@ func (r *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error) {
 		}
 	} else { // 从自身找， primary key/key
 		hasCon := false
-		v := reflect.ValueOf(m)
-		for _, col := range cols {
-			fv := utils.FieldByIndex(v, col.Index)
-			if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
-				//有值
-				if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
-					hasCon = true
-					b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
+		if pf, pk, _ := m.PKey(); pk != "" {
+			hasCon = true
+			b.Where(fmt.Sprintf("T.`%s` = ?", pf), pk)
+		} else if kf, v, _ := m.Key(); v != "" {
+			hasCon = true
+			b.Where(fmt.Sprintf("T.`%s` = ?", kf), v)
+		} else if uks := m.UnionKeys(); len(uks) > 0 {
+			hasCon = true
+			for f, v := range uks {
+				b.Where(fmt.Sprintf("T.`%s` = ?", f), v)
+			}
+		} else {
+			// 最后再找conditional 字段
+			for _, col := range cols {
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if (col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+					//有值
+					if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
+						hasCon = true
+						b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
+					}
 				}
 			}
 		}
