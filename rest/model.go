@@ -736,7 +736,7 @@ func (r *REST) DBConn(tag string) *gorp.DbMap {
  */
 func (r *REST) Transaction(opts ...interface{}) (*Transaction, error) {
 	if r == nil {
-		return nil, fmt.Errorf("not r model")
+		return nil, fmt.Errorf("not rest model")
 	}
 	if r.transaction != nil && !r.transaction.Committed() {
 		// auto gen savepoint for this sub transaction
@@ -745,13 +745,11 @@ func (r *REST) Transaction(opts ...interface{}) (*Transaction, error) {
 		return r.transaction, nil
 	}
 	// 可以传入一个Transaction来继承
-	if len(opts) > 0 {
-		if trans, ok := opts[0].(*Transaction); ok && trans != nil && !trans.Committed() {
-			sp := utils.NewShortUUID()
-			trans.Savepoint(sp)
-			r.transaction = trans
-			return r.transaction, nil
-		}
+	if trans, ok := utils.NewParams(opts).ItfByIndex(0).(*Transaction); ok && trans != nil && !trans.Committed() {
+		sp := utils.NewShortUUID()
+		trans.Savepoint(sp)
+		r.transaction = trans
+		return r.transaction, nil
 	}
 	trans, err := r.DBConn(WRITETAG).Begin()
 	if err != nil {
