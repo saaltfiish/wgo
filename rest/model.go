@@ -47,7 +47,7 @@ type Model interface {
 	TableName() string                                 // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
 	PKey() (string, string, bool)                      // primary key字段,以及是否auto incr
 	Key() (string, string, bool)                       // key字段 name&value
-	UnionKeys() map[string]string                      // union keys, name&value
+	UnionKeys(...interface{}) map[string]string        // union keys, name&value
 	ReadPrepare(...interface{}) (*gorp.Builder, error) // 组条件
 	Row(...interface{}) (Model, error)                 //获取单条记录
 	Rows(...interface{}) (interface{}, error)          //获取多条记录
@@ -873,15 +873,18 @@ func (r *REST) Key() (f string, v string, isPK bool) {
 
 /* }}} */
 
-/* {{{ func (r *REST) UnionKeys() map[string]string
+/* {{{ func (r *REST) UnionKeys(...interface{}) map[string]string
  *  通过配置找到union keys, 返回field => value 的 map
  */
-func (r *REST) UnionKeys() (uks map[string]string) {
+func (r *REST) UnionKeys(opts ...interface{}) (uks map[string]string) {
 	m := r.Model()
 	if m == nil {
 		Warn("[UnionKeys]: %s", ErrNoModel)
 		return
 	}
+
+	withValue := utils.NewParams(opts).BoolByIndex(0, true) //  是否必须有值, 默认为true
+
 	mv := reflect.ValueOf(m)
 	if cols := utils.ReadStructColumns(m, true); cols != nil {
 		tmp := make(map[string]string)
@@ -890,7 +893,10 @@ func (r *REST) UnionKeys() (uks map[string]string) {
 			fv := utils.FieldByIndex(mv, col.Index)
 			if col.TagOptions.Contains(DBTAG_UK) {
 				f := col.Tag
-				tmp[f] = ""
+				if !withValue {
+					// 非必须有值, 默认空字符串
+					tmp[f] = ""
+				}
 				cnt++
 				if fv.IsValid() && !utils.IsEmptyValue(fv) {
 					v := ""
@@ -1493,6 +1499,20 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 			for f, v := range uks {
 				ck += fmt.Sprintf(":%s:%s", f, v)
 			}
+		} else {
+			// 最后再找所有可能的conditional字段
+			cols := utils.ReadStructColumns(m, true)
+			for _, col := range cols {
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if (col.ExtOptions.Contains(TAG_CONDITION) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+					if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
+						ck += fmt.Sprintf(":%s:%s", col.Tag, fs)
+					}
+				}
+			}
+			if ck != "" {
+				ck = m.TableName() + ck
+			}
 		}
 	}
 	Debug("[GetRecord]cachekey: %s", ck)
@@ -1643,7 +1663,7 @@ func (r *REST) AddTable(tags ...string) Model {
 		gtm := gorp.AddTableWithName(mv, tb)
 		if pf, _, ai := m.PKey(); pf != "" {
 			gtm.SetKeys(ai, pf)
-		} else if uks := m.UnionKeys(); len(uks) > 0 {
+		} else if uks := m.UnionKeys(false); len(uks) > 0 {
 			// union keys
 			// Debug("[AddTable]union keys for %s: %s", tb, uks)
 			gtm.SetKeys(false, utils.MapKeys(uks)...)
@@ -1842,7 +1862,7 @@ func (r *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error) {
 			// 最后再找conditional 字段
 			for _, col := range cols {
 				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
-				if (col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+				if (col.ExtOptions.Contains(TAG_CONDITION) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
 					//有值
 					if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
 						hasCon = true
