@@ -41,6 +41,16 @@ func InSliceInt(v int, sl []int) bool {
 	return false
 }
 
+// InSliceInt64 checks given int64 in int64 slice or not.
+func InSliceInt64(v int64, sl []int64) bool {
+	for _, vv := range sl {
+		if vv == v {
+			return true
+		}
+	}
+	return false
+}
+
 // Purge Slice
 func PurgeSlice(v string, sl []string) []string {
 	nsl := []string{}
@@ -55,6 +65,17 @@ func PurgeSlice(v string, sl []string) []string {
 // Purge Slice Int
 func PurgeSliceInt(v int, sl []int) []int {
 	nsl := []int{}
+	for _, vv := range sl {
+		if vv != v {
+			nsl = append(nsl, vv)
+		}
+	}
+	return nsl
+}
+
+// Purge Slice Int64
+func PurgeSliceInt64(v int64, sl []int64) []int64 {
+	nsl := []int64{}
 	for _, vv := range sl {
 		if vv != v {
 			nsl = append(nsl, vv)

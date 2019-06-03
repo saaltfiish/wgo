@@ -40,15 +40,16 @@ func init() {
 }
 
 // new rest
-func NewREST(c *wgo.Context) (rest *REST) {
-	rest = new(REST)
-	c.Set("__!rest!__", rest)
-	rest.SetContext(c)
-	// rest.env = make(map[interface{}]interface{})
-	// c.SetExt(rest)
-	return
+func NewREST(c *wgo.Context) *REST {
+	r := new(REST).setContext(c)
+	if base := r.Options(BaseModelKey); base != nil {
+		r.NewModel(base)
+	}
+	c.Set("__!rest!__", r)
+	return r
 }
 
+// get/build rest instance
 func GetREST(c *wgo.Context) *REST {
 	if r := c.Get("__!rest!__"); r != nil {
 		if rest, ok := r.(*REST); ok {
@@ -59,18 +60,19 @@ func GetREST(c *wgo.Context) *REST {
 }
 
 // release
-func (rest *REST) Release() {
-	if rest.Context() != nil {
-		rest.Context().Set("__!rest!__", nil)
+func (r *REST) Release() {
+	if r.Context() != nil {
+		r.Context().Set("__!rest!__", nil)
 	}
 }
 
 // context
-func (rest *REST) Context() *wgo.Context {
-	return rest.ctx
+func (r *REST) Context() *wgo.Context {
+	return r.ctx
 }
-func (rest *REST) SetContext(c *wgo.Context) {
-	rest.ctx = c
+func (r *REST) setContext(c *wgo.Context) *REST {
+	r.ctx = c
+	return r
 }
 
 // values

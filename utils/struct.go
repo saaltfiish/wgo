@@ -2,12 +2,23 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+)
+
+var (
+	ErrNilArguments                 = errors.New("src and dst must not be nil")
+	ErrDifferentArgumentsTypes      = errors.New("src and dst must be of same type")
+	ErrNotSupported                 = errors.New("only structs and maps are supported")
+	ErrExpectedMapAsDestination     = errors.New("dst was expected to be a map")
+	ErrExpectedPointerAsDestination = errors.New("dst was expected to be a pointer")
+	ErrExpectedStructAsDestination  = errors.New("dst was expected to be a struct")
 )
 
 type Tag struct {
@@ -158,6 +169,147 @@ func ScanStructFields(fs StructFields, tag, prefix, path string) (fields StructF
 	return
 }
 
+func hasExportedField(dst reflect.Value) (exported bool) {
+	for i, n := 0, dst.NumField(); i < n; i++ {
+		field := dst.Type().Field(i)
+		if field.Anonymous && dst.Field(i).Kind() == reflect.Struct {
+			exported = exported || hasExportedField(dst.Field(i))
+		} else {
+			exported = exported || len(field.PkgPath) == 0
+		}
+	}
+	return
+}
+
+// During deepMerge, must keep track of checks that are
+// in progress.  The comparison algorithm assumes that all
+// checks in progress are true when it reencounters them.
+// Visited are stored in a map indexed by 17 * a1 + a2;
+type visit struct {
+	ptr  uintptr
+	typ  reflect.Type
+	next *visit
+}
+
+// Traverses recursively both values, assigning src's fields values to dst.
+// The map argument tracks comparisons that have already been seen, which allows
+// short circuiting on recursive types.
+func deepMerge(dst, src reflect.Value, visited map[uintptr]*visit, depth int) (err error) {
+	overwrite := false
+	overwriteWithEmptySrc := false
+
+	if !src.IsValid() {
+		return
+	}
+	if dst.CanAddr() {
+		addr := dst.UnsafeAddr()
+		h := 17 * addr
+		seen := visited[h]
+		typ := dst.Type()
+		for p := seen; p != nil; p = p.next {
+			if p.ptr == addr && p.typ == typ {
+				return nil
+			}
+		}
+		// Remember, remember...
+		visited[h] = &visit{addr, typ, seen}
+	}
+
+	switch dst.Kind() {
+	case reflect.Struct:
+		if hasExportedField(dst) {
+			for i, n := 0, dst.NumField(); i < n; i++ {
+				if err = deepMerge(dst.Field(i), src.Field(i), visited, depth+1); err != nil {
+					return
+				}
+			}
+		} else {
+			if dst.CanSet() && (!IsEmptyValue(src) || overwriteWithEmptySrc) && (overwrite || IsEmptyValue(dst)) {
+				dst.Set(src)
+			}
+		}
+	case reflect.Ptr:
+		fallthrough
+	case reflect.Interface:
+		if src.IsNil() {
+			break
+		}
+
+		if dst.Kind() != reflect.Ptr && src.Type().AssignableTo(dst.Type()) {
+			if dst.IsNil() && dst.CanSet() {
+				dst.Set(src)
+			}
+			break
+		}
+
+		if src.Kind() != reflect.Interface {
+			if dst.IsNil() && dst.CanSet() {
+				dst.Set(src)
+			} else if src.Kind() == reflect.Ptr {
+				if err = deepMerge(dst.Elem(), src.Elem(), visited, depth+1); err != nil {
+					return
+				}
+			} else if dst.Elem().Type() == src.Type() {
+				if err = deepMerge(dst.Elem(), src, visited, depth+1); err != nil {
+					return
+				}
+			} else {
+				return ErrDifferentArgumentsTypes
+			}
+			break
+		}
+		if dst.IsNil() && dst.CanSet() {
+			dst.Set(src)
+		} else if err = deepMerge(dst.Elem(), src.Elem(), visited, depth+1); err != nil {
+			return
+		}
+	default:
+		if dst.CanSet() && (!IsEmptyValue(src) || overwriteWithEmptySrc) && (overwrite || IsEmptyValue(dst)) {
+			dst.Set(src)
+		}
+	}
+	return
+}
+
+func resolveValues(dst, src interface{}) (vDst, vSrc reflect.Value, err error) {
+	if dst == nil || src == nil {
+		err = ErrNilArguments
+		return
+	}
+	vDst = reflect.ValueOf(dst)
+	if vDst.Kind() != reflect.Ptr {
+		err = ErrExpectedPointerAsDestination
+		return
+	}
+	vDst = vDst.Elem()
+	if vDst.Kind() != reflect.Struct {
+		err = ErrNotSupported
+		return
+	}
+	vSrc = reflect.ValueOf(src)
+	// We check if vSrc is a pointer to dereference it.
+	if vSrc.Kind() == reflect.Ptr {
+		vSrc = vSrc.Elem()
+	}
+	return
+}
+
+// merge struct
+func Merge(dst, src interface{}) error {
+	var (
+		vDst, vSrc reflect.Value
+		err        error
+	)
+
+	if vDst, vSrc, err = resolveValues(dst, src); err != nil {
+		return err
+	}
+	if vDst.Type() != vSrc.Type() {
+		return ErrDifferentArgumentsTypes
+	}
+	return deepMerge(vDst, vSrc, make(map[uintptr]*visit), 0)
+}
+
 /* {{{ func ReadStructColumns(i interface{}, underscore bool, tags ...string) (cols []string)
  * 从struct type中读取字段名
  * 默认从struct的FieldName读取, 如果tag里有db, 则以db为准
@@ -233,29 +385,30 @@ func ImportValue(i interface{}, is map[string]string) (err error) {
 		for _, col := range cols {
 			for tag, iv := range is {
 				if col.TagOptions.Contains(tag) {
-					fv := FieldByIndex(v, col.Index)
-					switch fv.Type().String() {
-					case "*string":
-						fv.Set(reflect.ValueOf(&iv))
-					case "string":
-						fv.Set(reflect.ValueOf(iv))
-					case "*int64":
-						pv, _ := strconv.ParseInt(iv, 10, 64)
-						fv.Set(reflect.ValueOf(&pv))
-					case "int64":
-						pv, _ := strconv.ParseInt(iv, 10, 64)
-						fv.Set(reflect.ValueOf(pv))
-					case "*int":
-						tv, _ := strconv.ParseInt(iv, 10, 0)
-						pv := int(tv)
-						fv.Set(reflect.ValueOf(&pv))
-					case "int":
-						tv, _ := strconv.ParseInt(iv, 10, 0)
-						pv := int(tv)
-						fv.Set(reflect.ValueOf(pv))
-					default:
-						err = fmt.Errorf("field(%s) not support %s", col.Tag, fv.Kind().String())
-					}
+					// fv := FieldByIndex(v, col.Index)
+					// switch fv.Type().String() {
+					// case "*string":
+					// 	fv.Set(reflect.ValueOf(&iv))
+					// case "string":
+					// 	fv.Set(reflect.ValueOf(iv))
+					// case "*int64":
+					// 	pv, _ := strconv.ParseInt(iv, 10, 64)
+					// 	fv.Set(reflect.ValueOf(&pv))
+					// case "int64":
+					// 	pv, _ := strconv.ParseInt(iv, 10, 64)
+					// 	fv.Set(reflect.ValueOf(pv))
+					// case "*int":
+					// 	tv, _ := strconv.ParseInt(iv, 10, 0)
+					// 	pv := int(tv)
+					// 	fv.Set(reflect.ValueOf(&pv))
+					// case "int":
+					// 	tv, _ := strconv.ParseInt(iv, 10, 0)
+					// 	pv := int(tv)
+					// 	fv.Set(reflect.ValueOf(pv))
+					// default:
+					// 	err = fmt.Errorf("field(%s) not support %s", col.Tag, fv.Kind().String())
+					// }
+					err = SetWithProperType(iv, FieldByIndex(v, col.Index))
 				}
 			}
 		}
@@ -519,28 +672,29 @@ func Instance(ob interface{}) interface{} {
 func Fields(i interface{}, opts ...interface{}) []string {
 	tag := "json"
 	must := ""
-	skip := []string{}
-	if len(opts) > 0 {
-		if ot, ok := opts[0].(string); ok && ot != "" {
-			tag = ot
-		}
+	skip := []interface{}{}
+	skipTag := "sf" // 默认`sf`(=skip filed)就是忽略关键词
+	params := NewParams(opts)
+	if ot := params.StringByIndex(0); ot != "" {
+		tag = ot
 	}
-	if len(opts) > 1 {
-		if om, ok := opts[1].(string); ok && om != "" {
-			must = om
-		}
+	if om := params.StringByIndex(1); om != "" {
+		must = om
 	}
-	if len(opts) > 2 {
-		if os, ok := opts[2].([]string); ok && len(os) > 0 {
-			skip = os
-		}
+	if oskip := params.ArrayByIndex(2); len(oskip) > 0 {
+		skip = oskip
+	} else if ost := params.StringByIndex(2); ost != "" {
+		skipTag = ost
 	}
 	fs := make([]string, 0)
 	if fields := ReadStructFields(i, true, tag); fields != nil {
 		for _, field := range fields {
-			if field.SubFields == nil && field.Tags[tag].Name != "" {
+			// if field.SubFields == nil && field.Tags[tag].Name != "" {
+			if field.Tags[tag].Name != "" {
 				options := field.Tags[tag].Options
-				if (must == "" || options.Contains(must)) && (len(skip) == 0 || !InSliceIgnorecase(field.Tags[tag].Name, skip)) {
+				if (must == "" || options.Contains(must)) &&
+					(len(skip) == 0 || !InSliceIface(field.Tags[tag].Name, skip)) &&
+					(skipTag == "" || !options.Contains(skipTag)) {
 					fs = append(fs, field.Tags[tag].Name)
 				}
 			}
@@ -599,9 +753,289 @@ func Convert(i interface{}, o interface{}) (interface{}, error) {
 		return nil, err
 	}
 	// fmt.Printf("converting: %s\n", string(b))
-	err = json.Unmarshal(b, o)
+	// https://stackoverflow.com/questions/22343083/json-marshaling-with-long-numbers-in-golang-gives-floating-point-number
+	// Unmarshal会存在数字问题
+	// err = json.Unmarshal(b, o)
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.UseNumber()
+	err = d.Decode(o)
 	if err != nil {
 		return nil, err
 	}
 	return o, nil
+}
+
+func Bind(ptr interface{}, data map[string]interface{}) error {
+	typ := reflect.TypeOf(ptr).Elem()
+	val := reflect.ValueOf(ptr).Elem()
+
+	if typ.Kind() != reflect.Struct {
+		return errors.New("binding element must be a struct")
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		typeField := typ.Field(i)
+		structField := val.Field(i)
+		if !structField.CanSet() {
+			// fmt.Printf("can not set: %s, %s\n", typeField.Name, structField.Kind().String())
+			// not bind struct field, for now
+			continue
+		}
+		if structField.Kind() == reflect.Struct {
+			// not bind struct field, for now
+			continue
+		}
+		//if structField.Kind() == reflect.Struct {
+		//	err := Bind(structField.Addr().Interface(), data)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	continue
+		//}
+		// first check field name
+		inputValue, exists := data[typeField.Name]
+		// second check field name(ignorecase)
+		if !exists {
+			inputValue, exists = data[strings.ToLower(typeField.Name)]
+		}
+		// third check field name(Underscore)
+		if !exists {
+			inputValue, exists = data[Underscore(typeField.Name)]
+		}
+		// forth check tag `json` name
+		if !exists {
+			inputFieldName := typeField.Tag.Get("json")
+			inputValue, exists = data[inputFieldName]
+		}
+		if !exists {
+			inputFieldName := typeField.Tag.Get("json")
+			inputValue, exists = data[inputFieldName]
+		}
+		// not found field to set
+		if !exists {
+			continue
+		}
+		// fmt.Printf("will set: %s, %s, %s\n", typeField.Name, structField.Kind().String(), structField.Type().String())
+
+		if err := SetWithProperType(inputValue, structField); err != nil {
+			fmt.Printf("set failed: %s\n", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func SetWithProperType(vi interface{}, structField reflect.Value) error {
+	val := ""
+	switch pv := vi.(type) {
+	case string:
+		val = pv
+	case *string:
+		val = *pv
+	case int64:
+		val = strconv.FormatInt(pv, 10)
+	case int:
+		val = strconv.FormatInt(int64(pv), 10)
+	case *int64:
+		val = strconv.FormatInt(*pv, 10)
+	case *int:
+		val = strconv.FormatInt(int64(*pv), 10)
+	default:
+		return errors.New("unknown support type")
+	}
+	switch structField.Type().String() {
+	case "int":
+		return setIntField(val, 0, structField)
+	case "*int":
+		return setIntPtrField(val, 0, structField)
+	case "int8":
+		return setIntField(val, 8, structField)
+	case "*int8":
+		return setIntPtrField(val, 8, structField)
+	case "int16":
+		return setIntField(val, 16, structField)
+	case "*int16":
+		return setIntPtrField(val, 16, structField)
+	case "int32":
+		return setIntField(val, 32, structField)
+	case "*int32":
+		return setIntPtrField(val, 32, structField)
+	case "int64":
+		return setIntField(val, 64, structField)
+	case "*int64":
+		return setIntPtrField(val, 64, structField)
+	case "uint":
+		return setUintField(val, 0, structField)
+	case "*uint":
+		return setUintPtrField(val, 0, structField)
+	case "uint8":
+		return setUintField(val, 8, structField)
+	case "*uint8":
+		return setUintPtrField(val, 8, structField)
+	case "uint16":
+		return setUintField(val, 16, structField)
+	case "*uint16":
+		return setUintPtrField(val, 16, structField)
+	case "uint32":
+		return setUintField(val, 32, structField)
+	case "*uint32":
+		return setUintPtrField(val, 32, structField)
+	case "uint64":
+		return setUintField(val, 64, structField)
+	case "*uint64":
+		return setUintPtrField(val, 64, structField)
+	case "bool":
+		return setBoolField(val, structField)
+	case "*bool":
+		return setBoolPtrField(val, structField)
+	case "float32":
+		return setFloatField(val, 32, structField)
+	case "*float32":
+		return setFloatPtrField(val, 32, structField)
+	case "float64":
+		return setFloatField(val, 64, structField)
+	case "*float64":
+		return setFloatPtrField(val, 64, structField)
+	case "string":
+		structField.SetString(val)
+	case "*string":
+		return setStringPtrField(val, structField)
+	default:
+		return fmt.Errorf("unknown type: %s", structField.Type().String())
+	}
+	return nil
+}
+
+func setIntField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	intVal, err := strconv.ParseInt(value, 10, bitSize)
+	if err == nil {
+		field.SetInt(intVal)
+	}
+	return err
+}
+
+func setIntPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	intVal, err := strconv.ParseInt(value, 10, bitSize)
+	if err == nil {
+		switch bitSize {
+		case 0: // *int
+			val := new(int)
+			*val = int(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 8:
+			val := new(int8)
+			*val = int8(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 16:
+			val := new(int16)
+			*val = int16(intVal)
+			field.Set(reflect.ValueOf(val))
+		case 32:
+			val := new(int32)
+			*val = int32(intVal)
+			field.Set(reflect.ValueOf(val))
+		default: // default 64
+			field.Set(reflect.ValueOf(&intVal))
+		}
+	}
+	return err
+}
+
+func setUintField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	uintVal, err := strconv.ParseUint(value, 10, bitSize)
+	if err == nil {
+		field.SetUint(uintVal)
+	}
+	return err
+}
+
+func setUintPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0"
+	}
+	uintVal, err := strconv.ParseUint(value, 10, bitSize)
+	if err == nil {
+		switch bitSize {
+		case 0: // *uint
+			uval := new(uint)
+			*uval = uint(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 8:
+			uval := new(uint8)
+			*uval = uint8(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 16:
+			uval := new(uint16)
+			*uval = uint16(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		case 32:
+			uval := new(uint32)
+			*uval = uint32(uintVal)
+			field.Set(reflect.ValueOf(uval))
+		default: // default *uint64
+			field.Set(reflect.ValueOf(&uintVal))
+		}
+	}
+	return err
+}
+
+func setBoolField(value string, field reflect.Value) error {
+	if value == "" {
+		value = "false"
+	}
+	boolVal, err := strconv.ParseBool(value)
+	if err == nil {
+		field.SetBool(boolVal)
+	}
+	return err
+}
+
+func setBoolPtrField(value string, field reflect.Value) error {
+	if value == "" {
+		value = "false"
+	}
+	boolVal, err := strconv.ParseBool(value)
+	if err == nil {
+		field.Set(reflect.ValueOf(&boolVal))
+	}
+	return err
+}
+
+func setFloatField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0.0"
+	}
+	floatVal, err := strconv.ParseFloat(value, bitSize)
+	if err == nil {
+		field.SetFloat(floatVal)
+	}
+	return err
+}
+
+func setFloatPtrField(value string, bitSize int, field reflect.Value) error {
+	if value == "" {
+		value = "0.0"
+	}
+	floatVal, err := strconv.ParseFloat(value, bitSize)
+	if err == nil {
+		field.Set(reflect.ValueOf(&floatVal))
+	}
+	return err
+}
+
+func setStringPtrField(value string, field reflect.Value) error {
+	if value == "" {
+		return nil
+	}
+	field.Set(reflect.ValueOf(&value))
+	return nil
 }

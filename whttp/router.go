@@ -18,9 +18,10 @@ type (
 
 	// Route contains a handler and information for matching against requests.
 	Route struct {
-		Method     string
-		Path       string
-		Handler    HandlerFunc
+		Method  string
+		Path    string
+		Handler HandlerFunc
+
 		Middleware []*Middleware
 		opts       Options
 
@@ -195,6 +196,7 @@ func (r *Route) SetOptions(key string, value interface{}) *Route {
 	if r.opts == nil {
 		r.opts = make(Options)
 	}
+	// Debug("[SetOptions]key: %s, value: %+v", key, value)
 	r.opts[key] = value
 	return r
 }

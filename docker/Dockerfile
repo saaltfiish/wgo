@@ -1,4 +1,10 @@
-FROM ccr.ccs.tencentyun.com/phyzi/golang:grpc
+FROM ccr.ccs.tencentyun.com/phyzi/wgo:basic
 MAINTAINER Odin Lee <odin@godigitalchina.com>
 
-ADD . /go/src/wgo
+ENV GO111MODULE=on
+
+WORKDIR /wgo
+
+ADD . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build

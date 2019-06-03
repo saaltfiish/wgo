@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gorp"
 	"wgo"
+	"wgo/gorp"
 	"wgo/utils"
 )
 
@@ -42,25 +42,26 @@ type Model interface {
 	NewList() interface{} // 返回一个空结构列表
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
-	DBConn(string) *gorp.DbMap                        // 数据库连接
-	Transaction(...interface{}) (*Transaction, error) // transaction
-	TableName() string                                // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
-	PKey() (string, string, bool)                     // primary key字段,以及是否auto incr
-	Key() (string, string, bool)                      // key字段 name&value
-	ReadPrepare(...interface{}) (interface{}, error)  // 组条件
-	Row(...interface{}) (Model, error)                //获取单条记录
-	Rows(...interface{}) (interface{}, error)         //获取多条记录
-	List() (*List, error)                             // 获取多条记录并返回list
-	GetRecord(rk ...interface{}) Model                // 获取一条记录, 可缓存
-	UpdateRecord(...interface{}) error                // 更新一条记录(包括缓存)
-	Write(...interface{}) (Model, error)              // 写记录, 若果不存在创建, 存在则更新
-	GetOlder(rk ...string) Model                      //获取旧记录
-	GetSum(...string) (*List, error)                  //获取多条记录
-	GetCount() (int64, error)                         //获取多条记录
-	GetCountNSum() (int64, float64)                   //获取count and sum
-	CreateRow() (Model, error)                        //创建单条记录
-	UpdateRow(...interface{}) (int64, error)          //更新记录
-	DeleteRow(rk string) (int64, error)               //删除记录
+	DBConn(string) *gorp.DbMap                         // 数据库连接
+	Transaction(...interface{}) (*Transaction, error)  // transaction
+	TableName() string                                 // 返回表名称, 默认结构type名字(小写), 有特别的表名称,则自己implement 这个方法
+	PKey() (string, string, bool)                      // primary key字段,以及是否auto incr
+	Key() (string, string, bool)                       // key字段 name&value
+	UnionKeys(...interface{}) map[string]string        // union keys, name&value
+	ReadPrepare(...interface{}) (*gorp.Builder, error) // 组条件
+	Row(...interface{}) (Model, error)                 //获取单条记录
+	Rows(...interface{}) (interface{}, error)          //获取多条记录
+	List() (*List, error)                              // 获取多条记录并返回list
+	GetRecord(rk ...interface{}) Model                 // 获取一条记录, 可缓存
+	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
+	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
+	GetOlder(rk ...string) Model                       //获取旧记录
+	GetSum(...string) (*List, error)                   //获取多条记录
+	GetCount() (int64, error)                          //获取多条记录
+	GetCountNSum() (int64, float64)                    //获取count and sum
+	CreateRow() (Model, error)                         //创建单条记录
+	UpdateRow(...interface{}) (int64, error)           //更新记录
+	DeleteRow(rk string) (int64, error)                //删除记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -245,7 +246,7 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 }
 
 /* {{{ func (v *Condition) DoWhere(b *gorp.Builder)
- * 只负责生成部分sql, IS/NOT/LIKE/GT/LT
+* 只负责生成部分sql, IS/NOT/LIKE/GT/LT
  */
 func (v *Condition) DoWhere(b *gorp.Builder) {
 	if v.Raw != "" {
@@ -400,7 +401,7 @@ func (v *Condition) DoWhere(b *gorp.Builder) {
 /* }}} */
 
 /* {{{ func (con *Condition) Merge(oc *Condition)
- * 直接覆盖
+* 直接覆盖
  */
 func (con *Condition) Merge(oc *Condition) {
 	if oc == nil {
@@ -448,66 +449,79 @@ func ModelFromContext(c *wgo.Context, i interface{}) Model {
 
 // 基于类型创建一个全新的model, i会被置为空
 func NewModel(i interface{}) Model {
-	rest := new(REST)
-	return rest.NewModel(i)
-}
-
-// SetModel
-func (rest *REST) SetModel(m Model) Model {
-	rest.model = m
-	// 注入m
-	rest.importTo(m)
-	return m
-}
-
-// 把rest注入i
-func (rest *REST) importTo(i interface{}, fields ...string) {
-	field := "REST"
-	if len(fields) > 0 {
-		field = fields[0]
-	}
-	if fv := utils.FieldByName(i, field); fv.IsValid() {
-		if fv.Kind() == reflect.Ptr {
-			fv.Set(reflect.ValueOf(rest))
-		} else {
-			fv.Set(reflect.ValueOf(rest).Elem())
-		}
-	}
-}
-
-// Model
-func (rest *REST) Model() Model {
-	if rest == nil {
-		return nil
-	}
-	return rest.model
+	r := new(REST)
+	return r.NewModel(i)
 }
 
 // 基于变量创建全新的model,  i的值保留
 func SetModel(i interface{}) Model {
-	rest := new(REST)
-	return rest.SetModel(i.(Model))
+	r := new(REST)
+	return r.SetModel(i.(Model))
 }
 
-// 创建一个跟rest有关的model
-func (rest *REST) NewModel(i interface{}) Model {
+// 创建一个跟r有关的model
+func (r *REST) NewModel(i interface{}) Model {
 	//m := reflect.New(reflect.Indirect(reflect.ValueOf(i)).Type()).Interface().(Model)
 	m := reflect.New(reflect.TypeOf(i).Elem()).Interface().(Model)
-	return rest.SetModel(m)
+	return r.SetModel(m)
+}
+
+// SetModel
+func (r *REST) SetModel(m Model) Model {
+	r.model = m
+	// 注入m
+	r.importTo(m)
+	return m
+}
+
+// 创造一个全新的model, 并传递context
+func (r *REST) GenModel(m Model) Model {
+	nr := new(REST)
+	nr.setContext(r.Context())
+	return nr.NewModel(m)
+}
+
+func (r *REST) Modelize(m Model) Model {
+	nr := new(REST)
+	nr.setContext(r.Context())
+	return nr.SetModel(m)
 }
 
 // 从rest创建一个全新的model, 不需要传参,因为类型已经知道
 // return a new instance
-func (rest *REST) New() Model {
-	if m := rest.Model(); m != nil {
+func (r *REST) New() Model {
+	if m := r.Model(); m != nil {
 		//return reflect.New(reflect.Indirect(reflect.ValueOf(m)).Type()).Interface().(Model)
 		return NewModel(m)
 	}
 	return nil
 }
 
+// 把rest注入i
+func (r *REST) importTo(i interface{}, fields ...string) {
+	field := "REST"
+	if len(fields) > 0 {
+		field = fields[0]
+	}
+	if fv := utils.FieldByName(i, field); fv.IsValid() {
+		if fv.Kind() == reflect.Ptr {
+			fv.Set(reflect.ValueOf(r))
+		} else {
+			fv.Set(reflect.ValueOf(r).Elem())
+		}
+	}
+}
+
+// Model
+func (r *REST) Model() Model {
+	if r == nil {
+		return nil
+	}
+	return r.model
+}
+
 /* {{{ func GetCondition(cs []*Condition, k string) (con *Condition, err error)
- *
+*
  */
 func GetCondition(cs []*Condition, k string) (con *Condition, err error) {
 	if cs == nil || len(cs) == 0 {
@@ -526,64 +540,64 @@ func GetCondition(cs []*Condition, k string) (con *Condition, err error) {
 /* }}} */
 
 // sugar
-func (rest *REST) Is(field string, value ...interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_IS, field, value...))
+func (r *REST) Is(field string, value ...interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_IS, field, value...))
 }
-func (rest *REST) Not(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_NOT, field, value))
+func (r *REST) Not(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_NOT, field, value))
 }
-func (rest *REST) Or(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_OR, field, value))
+func (r *REST) Or(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_OR, field, value))
 }
-func (rest *REST) Like(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_LIKE, field, value))
+func (r *REST) Like(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_LIKE, field, value))
 }
-func (rest *REST) Gt(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_GT, field, value))
+func (r *REST) Gt(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_GT, field, value))
 }
-func (rest *REST) Lt(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_LT, field, value))
+func (r *REST) Lt(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_LT, field, value))
 }
-func (rest *REST) Range(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_RANGE, field, value))
+func (r *REST) Range(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_RANGE, field, value))
 }
-func (rest *REST) Join(field string, value interface{}, opts ...interface{}) Model {
+func (r *REST) Join(field string, value interface{}, opts ...interface{}) Model {
 	js := strings.SplitN(field, ".", 2)
 	// join的field一定是 `table.field`
 	if js[0] != "" && js[1] != "" {
 		vs := []interface{}{NewCondition(CTYPE_IS, js[1], value)}
-		return rest.SetConditions(NewCondition(CTYPE_JOIN, js[0], append(vs, opts...)...))
+		return r.SetConditions(NewCondition(CTYPE_JOIN, js[0], append(vs, opts...)...))
 	}
-	return rest
+	return r
 }
-func (rest *REST) Order(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_ORDER, field, value))
+func (r *REST) Order(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_ORDER, field, value))
 }
-func (rest *REST) Raw(field string, value interface{}) Model {
-	return rest.SetConditions(NewCondition(CTYPE_RAW, field, value))
+func (r *REST) Raw(field string, value interface{}) Model {
+	return r.SetConditions(NewCondition(CTYPE_RAW, field, value))
 }
 
-/* {{{ func (rest *REST) SetConditions(cs ...*Condition) Model
- * 设置条件
+/* {{{ func (r *REST) SetConditions(cs ...*Condition) Model
+* 设置条件
  */
-func (rest *REST) SetConditions(cs ...*Condition) Model {
-	if rest.conditions == nil {
-		rest.conditions = make([]*Condition, 0)
+func (r *REST) SetConditions(cs ...*Condition) Model {
+	if r.conditions == nil {
+		r.conditions = make([]*Condition, 0)
 	}
-	if m := rest.Model(); m == nil {
-		Warn("[rest.SetConditions]: %s", ErrNoModel)
+	if m := r.Model(); m == nil {
+		Warn("[r.SetConditions]: %s", ErrNoModel)
 	} else if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
 			// Debug("[SetConditions][tag: %s][ext: %s][type: %s]", col.Tag, col.ExtTag, col.Type.String())
 			// join
 			if condition, e := GetCondition(cs, col.ExtTag); e == nil && condition.Join != nil {
 				// Debug("[SetConditions][join][table: %s]%v", col.ExtTag, condition)
-				rest.conditions = append(rest.conditions, condition)
+				r.conditions = append(r.conditions, condition)
 			}
 			// raw
 			if condition, e := GetCondition(cs, col.Tag); e == nil && condition.Raw != "" {
 				//Debug("[SetConditions][raw][tag: %s]%v", col.Tag, condition)
-				rest.conditions = append(rest.conditions, condition)
+				r.conditions = append(r.conditions, condition)
 			}
 			// time range
 			if col.ExtOptions.Contains(TAG_TIMERANGE) {
@@ -591,17 +605,17 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 					// 直接对字段查询
 					Debug("[SetConditions]timerange: %+v, %+v, %+v", col.Tag, condition.Is, condition.Range)
 					if condition.Range != nil {
-						rest.conditions = append(rest.conditions, condition)
+						r.conditions = append(r.conditions, condition)
 					} else if condition.Is != nil {
 						if is, ok := condition.Is.([]string); ok && len(is) > 1 {
 							condition.Is = nil
 							condition.Range = getTimeRange(is[0], is[1])
-							rest.conditions = append(rest.conditions, condition)
+							r.conditions = append(r.conditions, condition)
 						}
 					}
 				} else if condition, e := GetCondition(cs, TAG_TIMERANGE); e == nil && condition.Is != nil {
 					condition.Field = col.Tag
-					rest.conditions = append(rest.conditions, condition)
+					r.conditions = append(r.conditions, condition)
 				} else {
 					//Info("get condition failed: %s", e)
 				}
@@ -610,91 +624,91 @@ func (rest *REST) SetConditions(cs ...*Condition) Model {
 				if condition, e := GetCondition(cs, TAG_ORDERBY); e == nil && condition.Order != nil {
 					//Debug("[SetConditions]order")
 					condition.Field = col.Tag
-					rest.conditions = append(rest.conditions, condition)
+					r.conditions = append(r.conditions, condition)
 				} else {
 					//Trace("get condition failed: %s", e)
 				}
 			}
-			if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or conditional
+			if col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or union key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
 					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
-					rest.conditions = append(rest.conditions, ParseCondition(col.Type.String(), condition))
+					r.conditions = append(r.conditions, ParseCondition(col.Type.String(), condition))
 				}
 			}
 		}
 	}
-	return rest
+	return r
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Conditions() []*Condition
- *
+/* {{{ func (r *REST) Conditions() []*Condition
+*
  */
-func (rest *REST) Conditions() []*Condition {
-	return rest.conditions
+func (r *REST) Conditions() []*Condition {
+	return r.conditions
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) SetPagination(p *Pagination) Model
- * 生成条件
+/* {{{ func (r *REST) SetPagination(p *Pagination) Model
+* 生成条件
  */
-func (rest *REST) SetPagination(p *Pagination) Model {
-	rest.pagination = p
-	return rest
+func (r *REST) SetPagination(p *Pagination) Model {
+	r.pagination = p
+	return r
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Pagination() *Pagination
- *
+/* {{{ func (r *REST) Pagination() *Pagination
+*
  */
-func (rest *REST) Pagination() *Pagination {
-	return rest.pagination
+func (r *REST) Pagination() *Pagination {
+	return r.pagination
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) SetFields(fs ...string) Model
- * 生成条件
+/* {{{ func (r *REST) SetFields(fs ...string) Model
+* 生成条件
  */
-func (rest *REST) SetFields(fs ...string) Model {
-	if rest.fields == nil {
-		rest.fields = make([]string, 0)
+func (r *REST) SetFields(fs ...string) Model {
+	if r.fields == nil {
+		r.fields = make([]string, 0)
 	}
-	rest.fields = fs
-	return rest
+	r.fields = fs
+	return r
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Fields() []string
- *
+/* {{{ func (r *REST) Fields() []string
+*
  */
-func (rest *REST) Fields() []string {
-	return rest.fields
+func (r *REST) Fields() []string {
+	return r.fields
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Keeper() func(string) (interface{}, error)
- *
+/* {{{ func (r *REST) Keeper() func(string) (interface{}, error)
+*
  */
-func (rest *REST) Keeper() func(string) (interface{}, error) {
-	if rest.keeper == nil && rest.Model() != nil {
-		rest.keeper = rest.Model().KeeperFactory()
+func (r *REST) Keeper() func(string) (interface{}, error) {
+	if r.keeper == nil && r.Model() != nil {
+		r.keeper = r.Model().KeeperFactory()
 	}
-	return rest.keeper
+	return r.keeper
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) NewList() *[]Model
- *
+/* {{{ func (r *REST) NewList() *[]Model
+*
  */
-func (rest *REST) NewList() interface{} {
-	if m := rest.Model(); m == nil {
+func (r *REST) NewList() interface{} {
+	if m := r.Model(); m == nil {
 		Warn("[NewList]: %s", ErrNoModel)
 		return nil
 	} else {
@@ -704,11 +718,11 @@ func (rest *REST) NewList() interface{} {
 
 /* }}} */
 
-/* {{{ func (rest *REST) DBConn(tag string) *gorp.DbMap
- * 默认数据库连接为admin
+/* {{{ func (r *REST) DBConn(tag string) *gorp.DbMap
+* 默认数据库连接为admin
  */
-func (rest *REST) DBConn(tag string) *gorp.DbMap {
-	tb := rest.TableName()
+func (r *REST) DBConn(tag string) *gorp.DbMap {
+	tb := r.TableName()
 	if dt, ok := DataAccessor[tb+"::"+tag]; ok && dt != "" {
 		return gorp.Using(dt)
 	}
@@ -717,46 +731,44 @@ func (rest *REST) DBConn(tag string) *gorp.DbMap {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Transaction(...ineterface{}) (*Transaction, error)
- * 获取transaction
+/* {{{ func (r *REST) Transaction(...ineterface{}) (*Transaction, error)
+* 获取transaction
  */
-func (rest *REST) Transaction(opts ...interface{}) (*Transaction, error) {
-	if rest == nil {
+func (r *REST) Transaction(opts ...interface{}) (*Transaction, error) {
+	if r == nil {
 		return nil, fmt.Errorf("not rest model")
 	}
-	if rest.transaction != nil && !rest.transaction.Committed() {
+	if r.transaction != nil && !r.transaction.Committed() {
 		// auto gen savepoint for this sub transaction
 		sp := utils.NewShortUUID()
-		rest.transaction.Savepoint(sp)
-		return rest.transaction, nil
+		r.transaction.Savepoint(sp)
+		return r.transaction, nil
 	}
 	// 可以传入一个Transaction来继承
-	if len(opts) > 0 {
-		if trans, ok := opts[0].(*Transaction); ok && trans != nil && !trans.Committed() {
-			sp := utils.NewShortUUID()
-			trans.Savepoint(sp)
-			rest.transaction = trans
-			return rest.transaction, nil
-		}
+	if trans, ok := utils.NewParams(opts).ItfByIndex(0).(*Transaction); ok && trans != nil && !trans.Committed() {
+		sp := utils.NewShortUUID()
+		trans.Savepoint(sp)
+		r.transaction = trans
+		return r.transaction, nil
 	}
-	trans, err := rest.DBConn(WRITETAG).Begin()
+	trans, err := r.DBConn(WRITETAG).Begin()
 	if err != nil {
 		return nil, err
 	}
-	rest.transaction = &Transaction{
+	r.transaction = &Transaction{
 		Transaction: trans,
 		savepoints:  make([]string, 0),
 	}
-	return rest.transaction, nil
+	return r.transaction, nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) TableName() (n string)
- * 获取表名称, 默认为结构名
+/* {{{ func (r *REST) TableName() (n string)
+* 获取表名称, 默认为结构名
  */
-func (rest *REST) TableName() (n string) { //默认, struct的名字就是表名, 如果不是请在各自的model里定义
-	if m := rest.Model(); m == nil {
+func (r *REST) TableName() (n string) { //默认, struct的名字就是表名, 如果不是请在各自的model里定义
+	if m := r.Model(); m == nil {
 		Info("[TableName]error: not found model")
 	} else {
 		reflectVal := reflect.ValueOf(m)
@@ -768,11 +780,11 @@ func (rest *REST) TableName() (n string) { //默认, struct的名字就是表名
 
 /* }}} */
 
-/* {{{ func (rest *REST) PKey() (string, string, bool)
- *  通过配置找到pk
+/* {{{ func (r *REST) PKey() (string, string, bool)
+*  通过配置找到pk
  */
-func (rest *REST) PKey() (f string, v string, ai bool) {
-	m := rest.Model()
+func (r *REST) PKey() (f string, v string, ai bool) {
+	m := r.Model()
 	if m == nil {
 		Warn("[PKey]: %s", ErrNoModel)
 		return "", "", false
@@ -819,11 +831,11 @@ func (rest *REST) PKey() (f string, v string, ai bool) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Key() (string, string, bool)
- *  通过配置找到第一个有值的pk or key,  返回field & value & 是否pk
+/* {{{ func (r *REST) Key() (string, string, bool)
+*  通过配置找到第一个有值的pk or key,  返回field & value & 是否pk
  */
-func (rest *REST) Key() (f string, v string, isPK bool) {
-	m := rest.Model()
+func (r *REST) Key() (f string, v string, isPK bool) {
+	m := r.Model()
 	if m == nil {
 		Warn("[Key]: %s", ErrNoModel)
 		return "", "", false
@@ -861,10 +873,64 @@ func (rest *REST) Key() (f string, v string, isPK bool) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) KeeperFactory() func(string) (interface{}, error)
+/* {{{ func (r *REST) UnionKeys(...interface{}) map[string]string
+ *  通过配置找到union keys, 返回field => value 的 map
+ */
+func (r *REST) UnionKeys(opts ...interface{}) (uks map[string]string) {
+	m := r.Model()
+	if m == nil {
+		Warn("[UnionKeys]: %s", ErrNoModel)
+		return
+	}
+
+	withValue := utils.NewParams(opts).BoolByIndex(0, true) //  是否必须有值, 默认为true
+
+	mv := reflect.ValueOf(m)
+	if cols := utils.ReadStructColumns(m, true); cols != nil {
+		tmp := make(map[string]string)
+		cnt := 0
+		for _, col := range cols {
+			fv := utils.FieldByIndex(mv, col.Index)
+			if col.TagOptions.Contains(DBTAG_UK) {
+				f := col.Tag
+				if !withValue {
+					// 非必须有值, 默认空字符串
+					tmp[f] = ""
+				}
+				cnt++
+				if fv.IsValid() && !utils.IsEmptyValue(fv) {
+					v := ""
+					switch fv.Type().String() {
+					case "*string":
+						v = fv.Elem().String()
+					case "string":
+						v = fv.String()
+					case "*int", "*int64":
+						v = strconv.Itoa(int(fv.Elem().Int()))
+					case "int", "int64":
+						v = strconv.Itoa(int(fv.Int()))
+					default:
+						// nothing
+					}
+					if v != "" {
+						tmp[f] = v
+					}
+				}
+			}
+		}
+		if cnt == len(tmp) {
+			return tmp
+		}
+	}
+	return
+}
+
+/* }}} */
+
+/* {{{ func (r *REST) KeeperFactory() func(string) (interface{}, error)
  *
  */
-func (rest *REST) KeeperFactory() func(string) (interface{}, error) {
+func (r *REST) KeeperFactory() func(string) (interface{}, error) {
 	return func(tag string) (interface{}, error) {
 		return nil, nil
 	}
@@ -872,19 +938,19 @@ func (rest *REST) KeeperFactory() func(string) (interface{}, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Filter() (Model, error)
+/* {{{ func (r *REST) Filter() (Model, error)
  * 数据过滤
  */
-func (rest *REST) Filter() (Model, error) {
-	if m := rest.Model(); m != nil {
-		r := rest.NewModel(m)
+func (r *REST) Filter() (Model, error) {
+	if m := r.Model(); m != nil {
+		r := r.NewModel(m)
 		rv := reflect.ValueOf(r)
 		v := reflect.ValueOf(m)
 		if cols := utils.ReadStructColumns(m, true); cols != nil {
 			for _, col := range cols {
 				fv := utils.FieldByIndex(v, col.Index)
 				mv := utils.FieldByIndex(rv, col.Index)
-				//rest.Debug("field:%s; name: %s, kind:%v; type:%s", col.Tag, col.Name, fv.Kind(), fv.Type().String())
+				//r.Debug("field:%s; name: %s, kind:%v; type:%s", col.Tag, col.Name, fv.Kind(), fv.Type().String())
 				if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_RETURN) {
 					//pk以及定义了返回tag的赋值
 					mv.Set(fv)
@@ -898,38 +964,38 @@ func (rest *REST) Filter() (Model, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Fill(j []byte) error
+/* {{{ func (r *REST) Fill(j []byte) error
  * 填充新对象
  */
-func (rest *REST) Fill(j []byte) error {
-	if rest.filled == true {
+func (r *REST) Fill(j []byte) error {
+	if r.filled == true {
 		return nil
 	}
-	if m := rest.Model(); m == nil {
+	if m := r.Model(); m == nil {
 		return ErrNoModel
 	} else if err := json.Unmarshal(j, m); err != nil {
 		return err
 	} else {
-		rest.SetModel(m)
+		r.SetModel(m)
 		if reflect.ValueOf(m).Kind() == reflect.Ptr {
 			// Info("fill to new: %+v", reflect.Indirect(reflect.ValueOf(m)))
-			rest.new = reflect.Indirect(reflect.ValueOf(m)).Interface()
+			r.new = reflect.Indirect(reflect.ValueOf(m)).Interface()
 		} else {
-			rest.new = m
+			r.new = m
 		}
-		rest.filled = true
+		r.filled = true
 	}
 	return nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Valid(opts ...string) (Model, error)
+/* {{{ func (r *REST) Valid(opts ...string) (Model, error)
  * 验证
  */
-func (rest *REST) Valid(fields ...string) (Model, error) {
-	c := rest.Context()
-	m := rest.Model()
+func (r *REST) Valid(fields ...string) (Model, error) {
+	c := r.Context()
+	m := r.Model()
 	if m == nil {
 		return nil, ErrNoModel
 	}
@@ -940,12 +1006,13 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 		return nil, err
 	}
 	older := m.GetOlder()
-	if rest.Updating() && older == nil {
+	if r.Updating() && older == nil {
 		return nil, fmt.Errorf("updating object is not exists")
 	}
 	keeper := m.Keeper()
 	v := reflect.ValueOf(m)
 	if cols := utils.ReadStructColumns(m, true); cols != nil {
+		cnt := 0
 		for _, col := range cols {
 			if len(fields) > 0 && !utils.InSlice(col.Tag, fields) { // 如果传了fields, 只验证fields包含的字段
 				continue
@@ -955,13 +1022,16 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 			if fv.IsValid() && !utils.IsEmptyValue(fv) { //传入了内容
 				if col.ExtOptions.Contains(TAG_GENERATE) && !col.TagOptions.Contains(DBTAG_PK) { //服务器生成, 忽略传入
 					fv.Set(reflect.Zero(fv.Type()))
-				} else if rest.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
-					// 注意不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
+				} else if r.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
+					// 不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
 					c.Warn("%s is uneditable: %v", col.Tag, fv)
 					//return nil, fmt.Errorf("%s is uneditable", col.Tag) //尝试编辑不可编辑的字段,直接报错
 					fv.Set(reflect.Zero(fv.Type())) // 不报错, 忽略之
+				} else {
+					// 可编辑字段
+					cnt++
 				}
-			} else if col.ExtOptions.Contains(TAG_REQUIRED) && rest.Creating() { // 创建时必须传入,但是为空
+			} else if col.ExtOptions.Contains(TAG_REQUIRED) && r.Creating() { // 创建时必须传入,但是为空
 				err := fmt.Errorf("field `%s` required, but empty", col.Tag)
 				c.Info(err.Error())
 				return nil, err
@@ -983,38 +1053,43 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					}
 				}
 			case "userid": //替换为userid,如果指定了数值
-				if rest.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
 					var userid string
-					if uid := rest.GetEnv(USERID_KEY); uid == nil {
-						userid = "0"
-						//c.Debug("userid not exists")
+					if uid := r.GetEnv(USERID_KEY); uid == nil {
+						// 如果没找到userid, 大可能性是inner请求, 采用传入数值
+						if !fv.IsValid() || utils.IsEmptyValue(fv) {
+							userid = "0"
+						}
 					} else {
 						userid = uid.(string)
 						//c.Debug("userid: %s", userid)
 					}
-					switch fv.Type().String() {
-					case "*string":
-						fv.Set(reflect.ValueOf(&userid))
-					case "string":
-						fv.Set(reflect.ValueOf(userid))
-					case "int":
-						ui, _ := strconv.Atoi(userid)
-						fv.Set(reflect.ValueOf(ui))
-					case "*int":
-						ui, _ := strconv.Atoi(userid)
-						fv.Set(reflect.ValueOf(&ui))
-					case "int64":
-						ui64, _ := strconv.ParseInt(userid, 10, 64)
-						fv.Set(reflect.ValueOf(ui64))
-					case "*int64":
-						ui64, _ := strconv.ParseInt(userid, 10, 64)
-						fv.Set(reflect.ValueOf(&ui64))
-					default:
-						return nil, fmt.Errorf("field(%s) must be string/int(64), not %s", col.Tag, fv.Kind().String())
+					if err := utils.SetWithProperType(userid, fv); err != nil {
+						return nil, fmt.Errorf("field(%s-%s) set value failed: %s", col.Tag, fv.Kind().String(), err)
 					}
+					// switch fv.Type().String() {
+					// case "*string":
+					// 	fv.Set(reflect.ValueOf(&userid))
+					// case "string":
+					// 	fv.Set(reflect.ValueOf(userid))
+					// case "int":
+					// 	ui, _ := strconv.Atoi(userid)
+					// 	fv.Set(reflect.ValueOf(ui))
+					// case "*int":
+					// 	ui, _ := strconv.Atoi(userid)
+					// 	fv.Set(reflect.ValueOf(&ui))
+					// case "int64":
+					// 	ui64, _ := strconv.ParseInt(userid, 10, 64)
+					// 	fv.Set(reflect.ValueOf(ui64))
+					// case "*int64":
+					// 	ui64, _ := strconv.ParseInt(userid, 10, 64)
+					// 	fv.Set(reflect.ValueOf(&ui64))
+					// default:
+					// 	return nil, fmt.Errorf("field(%s) must be string/int(64), not %s", col.Tag, fv.Kind().String())
+					// }
 				}
 			case "time": //如果没有传值, 就是当前时间
-				if rest.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
 					now := time.Now()
 					switch fv.Type().String() {
 					case "*time.Time":
@@ -1026,7 +1101,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					}
 				}
 			case "existense": //检查存在性
-				//if rest.Creating() { //创建时才检查,这里不够安全(将来改)
+				//if r.Creating() { //创建时才检查,这里不够安全(将来改)
 				if exValue, err := keeper(col.Tag); err != nil {
 					c.Debug("%s existense check failed: %s", col.Tag, err)
 					return nil, err
@@ -1038,7 +1113,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 				//	c.Warn("not need check existense")
 				//}
 			case "uuid":
-				if rest.Creating() {
+				if r.Creating() {
 					switch fv.Type().String() {
 					case "*string":
 						h := utils.NewShortUUID()
@@ -1051,7 +1126,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					}
 				}
 			case "luuid":
-				if rest.Creating() {
+				if r.Creating() {
 					switch fv.Type().String() {
 					case "*string":
 						h := utils.NewUUID()
@@ -1064,8 +1139,8 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					}
 				}
 			case "stag":
-				if rest.Creating() { // 创建时加上内容
-					if stag := rest.GetEnv(STAG_KEY).(string); stag != "" {
+				if r.Creating() { // 创建时加上内容
+					if stag := r.GetEnv(STAG_KEY).(string); stag != "" {
 						switch fv.Type().String() {
 						case "*string":
 							fv.Set(reflect.ValueOf(&stag))
@@ -1077,7 +1152,7 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 					}
 				}
 			case "forbbiden": //这个字段如果旧记录有值, 则返回错误
-				if rest.Updating() {
+				if r.Updating() {
 					ov := reflect.ValueOf(older)
 					fov := utils.FieldByIndex(ov, col.Index)
 					if fov.IsValid() && !utils.IsEmptyValue(fov) {
@@ -1095,17 +1170,21 @@ func (rest *REST) Valid(fields ...string) (Model, error) {
 				//	}
 			}
 		}
+		if r.Updating() && cnt == 0 {
+			// 没什么可以编辑的
+			return nil, errors.New("nothing to update")
+		}
 	}
 	return m, nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Protect() (Model, error)
+/* {{{ func (r *REST) Protect() (Model, error)
  * 数据过滤
  */
-func (rest *REST) Protect() (Model, error) {
-	if m := rest.Model(); m != nil {
+func (r *REST) Protect() (Model, error) {
+	if m := r.Model(); m != nil {
 		if cols := utils.ReadStructColumns(m, true); cols != nil {
 			v := reflect.ValueOf(m)
 			for _, col := range cols {
@@ -1122,47 +1201,30 @@ func (rest *REST) Protect() (Model, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Row(opts ...interface{}) (Model, error)
+/* {{{ func (r *REST) Row(opts ...interface{}) (Model, error)
  * 根据条件获取一条记录, model为表结构
  */
-func (rest *REST) Row(opts ...interface{}) (Model, error) {
-	m := rest.Model()
+func (r *REST) Row(opts ...interface{}) (Model, error) {
+	m := r.Model()
 	if m == nil {
 		return nil, ErrNoModel
 	}
+	params := utils.NewParams(opts)
 	//找rowkey
-	if pf, pv, _ := m.PKey(); pv != "" {
-		//Info("pk: %s", pv)
+	pf, pv, _ := m.PKey()
+	if pv != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if len(opts) == 1 { // 只有一个, 为传入pk
-		switch rk := opts[0].(type) {
-		case string:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
-		case *string:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, *rk))
-		case *int:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(*rk)))
-		case int:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.Itoa(rk)))
-		case int64:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(rk, 10)))
-		case *int64:
-			m.SetConditions(NewCondition(CTYPE_IS, pf, strconv.FormatInt(*rk, 10)))
-		}
-		// if id, ok := opts[0].(string); ok && id != "" {
-		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		// } else if id, ok := opts[0].(int); ok && id > 0 {
-		// 	m.SetConditions(NewCondition(CTYPE_IS, pf, id))
-		// }
-	} else if len(opts) == 2 { // 2个为条件
-		m.SetConditions(NewCondition(CTYPE_IS, opts[0].(string), opts[1].(string)))
+	} else if rk := params.PrimaryStringKey(); rk != "" {
+		m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
+	} else {
+		params.Bind(m)
 	}
 
-	if bi, err := m.ReadPrepare(false, true); err != nil {
+	if builder, err := m.ReadPrepare(false, true); err != nil {
 		//没找到记录
 		return nil, err
 	} else {
-		builder := bi.(*gorp.Builder)
+		// builder := bi.(*gorp.Builder)
 		ms := m.NewList()
 		err := builder.Select(GetDbFields(m)).Limit("1").Find(ms)
 		if err != nil && err != sql.ErrNoRows {
@@ -1180,20 +1242,20 @@ func (rest *REST) Row(opts ...interface{}) (Model, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) CreateRow() (Model, error)
+/* {{{ func (r *REST) CreateRow() (Model, error)
  * 根据条件获取一条记录, model为表结构
  */
-func (rest *REST) CreateRow() (Model, error) {
-	if m := rest.Model(); m != nil {
-		db := rest.DBConn(WRITETAG)
-		if rest.Saved() {
+func (r *REST) CreateRow() (Model, error) {
+	if m := r.Model(); m != nil {
+		db := r.DBConn(WRITETAG)
+		if r.Saved() {
 			// 防止重复入库
 			return m, nil
 		}
 		if err := db.Insert(m); err != nil { //Insert会把m换成新的
 			return nil, err
 		} else {
-			return rest.Save(m), nil
+			return r.Save(m), nil
 		}
 	}
 	return nil, ErrNoModel
@@ -1201,53 +1263,43 @@ func (rest *REST) CreateRow() (Model, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Save()
+/* {{{ func (r *REST) Save()
  *
  */
-func (rest *REST) Save(m Model) Model {
-	rest.saved = true
-	return rest.SetModel(m)
+func (r *REST) Save(m Model) Model {
+	r.saved = true
+	return r.SetModel(m)
 }
-func (rest *REST) Saved() bool {
-	return rest.saved
+func (r *REST) Saved() bool {
+	return r.saved
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error)
+/* {{{ func (r *REST) UpdateRow(opts ...interface{}) (affected int64, err error)
  * 更新record
  */
-func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
-	if m := rest.Model(); m != nil {
-		id := ""
+func (r *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
+	if m := r.Model(); m != nil {
 		if len(opts) > 0 {
-			switch rk := opts[0].(type) {
-			case string:
-				id = rk
-			case *string:
-				id = *rk
-			case *int:
-				id = strconv.Itoa(*rk)
-			case int:
-				id = strconv.Itoa(rk)
-			case int64:
-				id = strconv.FormatInt(rk, 10)
-			case *int64:
-				id = strconv.FormatInt(*rk, 10)
-			}
-			if id != "" {
+			if id := utils.PrimaryStringKey(opts); id != "" {
 				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
 					return
 				}
+			} else {
+				Warn("[UpdateRow]not found id: %s, %+v", id, opts)
+				return 0, ErrNoRecord
 			}
-		} else if _, pv, _ := m.PKey(); pv != "" {
-			id = pv
-		}
-		if id == "" {
+		} else if pf, pv, _ := m.PKey(); pf != "" {
+			if pv == "" {
+				Warn("[UpdateRow]pk empty: %s, %s", pf, pv)
+				return 0, ErrNoRecord
+			}
+		} else if uks := m.UnionKeys(); len(uks) <= 0 {
+			Warn("[UpdateRow]union keys empty")
 			return 0, ErrNoRecord
 		}
-		db := rest.DBConn(WRITETAG)
-		return db.Update(m)
+		return r.DBConn(WRITETAG).Update(m)
 	}
 	err = ErrNoModel
 	return
@@ -1255,12 +1307,12 @@ func (rest *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) DeleteRow(id string) (affected int64, err error)
+/* {{{ func (r *REST) DeleteRow(id string) (affected int64, err error)
  * 删除记录(逻辑删除)
  */
-func (rest *REST) DeleteRow(id string) (affected int64, err error) {
-	if m := rest.Model(); m != nil {
-		db := rest.DBConn(WRITETAG)
+func (r *REST) DeleteRow(id string) (affected int64, err error) {
+	if m := r.Model(); m != nil {
+		db := r.DBConn(WRITETAG)
 		if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id, DBTAG_LOGIC: "-1"}); err != nil {
 			return
 		}
@@ -1271,31 +1323,30 @@ func (rest *REST) DeleteRow(id string) (affected int64, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) Rows(...interface{}) (rs interface{}, err error)
+/* {{{ func (r *REST) Rows(...interface{}) (rs interface{}, err error)
  * 获取list, 通用函数
  */
-func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
-	if m := rest.Model(); m != nil {
-		//c := rest.Context()
-		bi, pe := rest.ReadPrepare()
+func (r *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
+	if m := r.Model(); m != nil {
+		params := utils.NewParams(opts)
+		// find pagination
+		var p *Pagination
+		if pp, ok := params.ItfByIndex(0).(*Pagination); ok {
+			p = pp
+		}
+		// read tag
+		readTag := true
+		if force := params.BoolByIndex(1); force {
+			readTag = false
+		}
+
+		builder, pe := r.ReadPrepare()
 		if pe != nil {
 			return nil, pe
 		}
-		builder := bi.(*gorp.Builder)
-		ms = rest.NewList()
-		// find pagination
-		var p *Pagination
-		if len(opts) > 0 {
-			if pp, ok := opts[0].(*Pagination); ok {
-				p = pp
-			}
-		}
-		readTag := true
-		if len(opts) > 1 {
-			if force, ok := opts[1].(bool); ok && force {
-				readTag = false // 强制读取
-			}
-		}
+		// builder := bi.(*gorp.Builder)
+
+		ms = r.NewList()
 		if p != nil {
 			err = builder.Select(GetDbFields(m, readTag)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 		} else {
@@ -1313,25 +1364,25 @@ func (rest *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) List() (l *List, err error)
+/* {{{ func (r *REST) List() (l *List, err error)
  * 获取list, 通用函数
  */
-func (rest *REST) List() (l *List, err error) {
-	if m := rest.Model(); m != nil {
-		//c := rest.Context()
+func (r *REST) List() (l *List, err error) {
+	if m := r.Model(); m != nil {
+		//c := r.Context()
 		l = new(List)
-		bi, _ := rest.ReadPrepare()
-		builder := bi.(*gorp.Builder)
+		builder, _ := r.ReadPrepare()
+		// builder := bi.(*gorp.Builder)
 		count, _ := builder.Count() //结果数
-		ms := rest.NewList()
-		if p := rest.Pagination(); p != nil {
+		ms := r.NewList()
+		if p := r.Pagination(); p != nil {
 			l.Info.Page = &p.Page
 			l.Info.PerPage = &p.PerPage
 			l.Info.Total = count
 			err = builder.Select(GetDbFields(m, true)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 			//c.Debug("[offset: %d][per_page: %d]", p.Offset, p.PerPage)
 		} else {
-			//rest.Debug("get fields: %v", GetDbFields(m, true))
+			//r.Debug("get fields: %v", GetDbFields(m, true))
 			err = builder.Select(GetDbFields(m, true)).Find(ms)
 		}
 		if err != nil && err != sql.ErrNoRows {
@@ -1351,18 +1402,18 @@ func (rest *REST) List() (l *List, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) GetSum(d ...string) (l *List, err error)
+/* {{{ func (r *REST) GetSum(d ...string) (l *List, err error)
  * 获取list, 通用函数
  */
-func (rest *REST) GetSum(d ...string) (l *List, err error) {
-	if m := rest.Model(); m != nil {
-		bi, _ := rest.ReadPrepare(true)
-		builder := bi.(*gorp.Builder)
+func (r *REST) GetSum(d ...string) (l *List, err error) {
+	if m := r.Model(); m != nil {
+		builder, _ := r.ReadPrepare(true)
+		// builder := bi.(*gorp.Builder)
 
 		l = new(List)
 
 		group := make([]string, 0)
-		ms := rest.NewList()
+		ms := r.NewList()
 		if err := builder.Select(GetSumFields(m, group...)).Find(ms); err == nil {
 			sumValue := reflect.Indirect(reflect.ValueOf(ms))
 			if sumValue.Len() > 0 {
@@ -1375,7 +1426,7 @@ func (rest *REST) GetSum(d ...string) (l *List, err error) {
 		}
 		builder.Group(group)
 
-		ms = rest.NewList()
+		ms = r.NewList()
 
 		if err = builder.Select(GetSumFields(m, group...)).Find(ms); err != nil {
 			return l, err
@@ -1395,72 +1446,76 @@ func (rest *REST) GetSum(d ...string) (l *List, err error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) GetCount() (cnt int64, err error)
+/* {{{ func (r *REST) GetCount() (cnt int64, err error)
  * 获取list, 通用函数
  */
-func (rest *REST) GetCount() (cnt int64, err error) {
-	if rest.Count > 0 {
-		return rest.Count, nil
+func (r *REST) GetCount() (cnt int64, err error) {
+	if r.Count > 0 {
+		return r.Count, nil
 	} else {
-		bi, _ := rest.ReadPrepare()
-		builder := bi.(*gorp.Builder)
+		builder, _ := r.ReadPrepare()
+		// builder := bi.(*gorp.Builder)
 		return builder.Count()
 	}
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) GetCountNSum() (cnt int64, sum float64)
+/* {{{ func (r *REST) GetCountNSum() (cnt int64, sum float64)
  * 获取计数以及求和, 通用函数
  */
-func (rest *REST) GetCountNSum() (cnt int64, sum float64) {
-	return rest.Count, rest.Sum
+func (r *REST) GetCountNSum() (cnt int64, sum float64) {
+	return r.Count, r.Sum
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) GetRecord(opts ...interface{}) Model
+/* {{{ func (r *REST) GetRecord(opts ...interface{}) Model
  * get record (cacheable), 注意返回不是指针
  */
-func (rest *REST) GetRecord(opts ...interface{}) Model {
-	m := rest.Model()
+func (r *REST) GetRecord(opts ...interface{}) Model {
+	m := r.Model()
 	if m == nil {
 		Warn("[GetRecord]: %s", ErrNoModel)
 		return m
 	}
-	rk := ""
 	ck := ""
-	// get row key from params
-	if len(opts) > 0 {
-		switch vt := opts[0].(type) {
-		case int:
-			rk = strconv.Itoa(vt)
-		case *int:
-			rk = strconv.Itoa(*vt)
-		case int64:
-			rk = strconv.FormatInt(vt, 10)
-		case *int64:
-			rk = strconv.FormatInt(*vt, 10)
-		case string:
-			rk = vt
-		case *string:
-			rk = *vt
+	params := utils.NewParams(opts)
+	pk := params.PrimaryStringKey()
+	if pk != "" {
+		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
+			return nil
 		}
-		if rk != "" {
-			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
-				return nil
+		ck = fmt.Sprint(m.TableName(), ":", pk)
+	} else if _, pk, _ := m.PKey(); pk != "" {
+		ck = fmt.Sprintf("%s:%s", m.TableName(), pk)
+	} else {
+		// bind参数, bind不上也没关系
+		params.Bind(m)
+		if kf, v, _ := m.Key(); v != "" {
+			ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
+		} else if uks := m.UnionKeys(); len(uks) > 0 {
+			ck = m.TableName()
+			for f, v := range uks {
+				ck += fmt.Sprintf(":%s:%s", f, v)
+			}
+		} else {
+			// 最后再找所有可能的conditional字段
+			cols := utils.ReadStructColumns(m, true)
+			for _, col := range cols {
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if (col.ExtOptions.Contains(TAG_CONDITION) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+					if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
+						ck += fmt.Sprintf(":%s:%s", col.Tag, fs)
+					}
+				}
+			}
+			if ck != "" {
+				ck = m.TableName() + ck
 			}
 		}
-		ck = fmt.Sprint(m.TableName(), ":", rk)
-	} else if _, v, _ := m.PKey(); v != "" {
-		// check variable primary key
-		rk = v
-		ck = fmt.Sprintf("%s:%s", m.TableName(), rk)
-	} else if kf, v, _ := m.Key(); v != "" {
-		// check first key with value, cache key add field name
-		ck = fmt.Sprintf("%s:%s:%s", m.TableName(), kf, v)
 	}
-	Debug("[GetRecord]rowkey: %s, cachekey: %s", rk, ck)
+	Debug("[GetRecord]cachekey: %s", ck)
 	if ck != "" {
 		// find var in local cache
 		if cvi, err := LocalGet(ck); err == nil {
@@ -1476,6 +1531,8 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface().(Model)
 			LocalSet(ck, recv, CACHE_EXPIRE)
 			return recv
+		} else {
+			Debug("[GetRecord]find %s in db failed: %s", ck, err)
 		}
 	}
 	return nil
@@ -1483,105 +1540,94 @@ func (rest *REST) GetRecord(opts ...interface{}) Model {
 
 /* }}} */
 
-/* {{{ func (rest *REST) UpdateRecord(opts ...interface{}) error
+/* {{{ func (r *REST) UpdateRecord(opts ...interface{}) error
  * 更新record
  */
-func (rest *REST) UpdateRecord(opts ...interface{}) error {
-	m := rest.Model()
+func (r *REST) UpdateRecord(opts ...interface{}) error {
+	m := r.Model()
 	if m == nil {
 		return ErrNoModel
 	}
-	rk := ""
-	if len(opts) > 0 {
-		switch vt := opts[0].(type) {
-		case string:
-			rk = vt
-		case *string:
-			rk = *vt
-		case *int:
-			rk = strconv.Itoa(*vt)
-		case int:
-			rk = strconv.Itoa(vt)
-		case int64:
-			rk = strconv.FormatInt(vt, 10)
-		case *int64:
-			rk = strconv.FormatInt(*vt, 10)
+	ck := ""
+	pk := utils.PrimaryStringKey(opts)
+	if pk != "" {
+		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
+			return err
 		}
-		if rk != "" {
-			if err := utils.ImportValue(m, map[string]string{DBTAG_PK: rk}); err != nil {
-				return err
-			}
+		ck = fmt.Sprint(m.TableName(), ":", pk)
+	} else if _, pk, _ := m.PKey(); pk != "" {
+		ck = fmt.Sprintf("%s:%s", m.TableName(), pk)
+	} else if uks := m.UnionKeys(); len(uks) > 0 {
+		ck = m.TableName()
+		for f, v := range uks {
+			ck += fmt.Sprintf(":%s:%s", f, v)
 		}
-	} else if _, pv, _ := m.PKey(); pv != "" {
-		rk = pv
 	}
-	if rk == "" {
+	if ck == "" {
 		return ErrNoRecord
 	}
+	Debug("[UpdateRecord]cachekey: %s", ck)
 	if _, err := m.UpdateRow(); err != nil {
+		Warn("[UpdateRecord]update failed: %s", err)
 		return err
 	}
 	// update local cache
-	ck := fmt.Sprint(m.TableName(), ":", rk)
+	// 1. if cache exists
+	if cvi, err := LocalGet(ck); err == nil {
+		if err := utils.Merge(m, cvi); err != nil {
+			Warn("[UpdateRecord]merge failed: %s", err)
+		}
+	}
 	LocalSet(ck, reflect.Indirect(reflect.ValueOf(m)).Interface().(Model), CACHE_EXPIRE)
 	return nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) Write(...interface{}) (Model, error)
- *
+/* {{{ func (r *REST) Write(...interface{}) (Model, error)
+ * 判断primary key, 记录存在则更新, 不存在则创建
  */
-func (rest *REST) Write(opts ...interface{}) (Model, error) {
-	m := rest.Model()
+func (r *REST) Write(opts ...interface{}) (Model, error) {
+	m := r.Model()
 	if m == nil {
 		return nil, ErrNoModel
 	}
-	rk := ""
-	if len(opts) > 0 {
-		switch vt := opts[0].(type) {
-		case string:
-			rk = vt
-		case *string:
-			rk = *vt
-		case *int:
-			rk = strconv.Itoa(*vt)
-		case int:
-			rk = strconv.Itoa(vt)
-		case int64:
-			rk = strconv.FormatInt(vt, 10)
-		case *int64:
-			rk = strconv.FormatInt(*vt, 10)
+	pf, pk, ai := m.PKey()
+	if pf != "" { // 具有primary key
+		if pk == "" {
+			pk = utils.PrimaryStringKey(opts)
 		}
-	} else if _, pv, _ := m.PKey(); pv != "" {
-		rk = pv
-	}
-	if rk == "" {
+		if pk == "" && !ai { // 具有primary key, 同时不是auto increasement, 并且没找到primary key value, 则返回没找到
+			return nil, ErrNoRecord
+		}
+	} else if uks := m.UnionKeys(); len(uks) > 0 { // 没有primary key, 超找union keys(有多个)
+		Debug("[model.Write]union keys: %s", uks)
+	} else {
 		return nil, ErrNoRecord
 	}
 	// check if record exists
-	if m.GetRecord(rk) != nil {
+	if m.GetRecord(pk) != nil {
 		// update
-		Debug("[model.Write]record exists: %s", rk)
-		if err := m.UpdateRecord(rk); err != nil {
+		Debug("[model.Write]record exists, update it")
+		if err := m.UpdateRecord(pk); err != nil {
 			return nil, err
 		}
 		return m, nil
 	} else {
 		// create
-		Debug("[model.Write]record not exists: %s", rk)
+		Debug("[model.Write]record(%s) not exists and create it", pk)
 		return m.CreateRow()
 	}
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) GetOlder(opts ...string) Model
+/* {{{ func (r *REST) GetOlder(opts ...string) Model
  * get older record
  */
-func (rest *REST) GetOlder(opts ...string) Model {
-	if rest.older == nil {
-		if m := rest.Model(); m != nil {
+func (r *REST) GetOlder(opts ...string) Model {
+	if r.older == nil {
+		if m := r.Model(); m != nil {
 			rk := ""
 			if len(opts) > 0 && opts[0] != "" {
 				// check params
@@ -1589,39 +1635,39 @@ func (rest *REST) GetOlder(opts ...string) Model {
 			} else if _, v, _ := m.PKey(); v != "" {
 				// check variable primary key
 				rk = v
-			} else if c := rest.Context(); c != nil {
+			} else if c := r.Context(); c != nil {
 				rk = c.Param(RowkeyKey)
 			}
-			// rest.Debug("[GetOlder]rowkey: %s", rk)
+			// r.Debug("[GetOlder]rowkey: %s", rk)
 			if rk != "" {
 				if older, err := m.Row(rk); err == nil {
-					rest.older = older
+					r.older = older
 				}
 			}
 		}
 	}
-	return rest.older
+	return r.older
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) AddTable(tags ...string) Model
+/* {{{ func (r *REST) AddTable(tags ...string) Model
  * 注册表结构
  */
-func (rest *REST) AddTable(tags ...string) Model {
-	if m := rest.Model(); m != nil {
+func (r *REST) AddTable(tags ...string) Model {
+	if m := r.Model(); m != nil {
 		reflectVal := reflect.ValueOf(m)
 		mv := reflect.Indirect(reflectVal).Interface()
-		//Debug("table name: %s", rest.TableName())
-		tb := rest.TableName()
-		pf, _, ai := m.PKey()
-		if !ai {
-			//Debug("[pk not auto incr: %s]", pf)
-		} else {
-			//Debug("[pk auto incr: %s]", pf)
+		//Debug("table name: %s", r.TableName())
+		tb := r.TableName()
+		gtm := gorp.AddTableWithName(mv, tb)
+		if pf, _, ai := m.PKey(); pf != "" {
+			gtm.SetKeys(ai, pf)
+		} else if uks := m.UnionKeys(false); len(uks) > 0 {
+			// union keys
+			// Debug("[AddTable]union keys for %s: %s", tb, uks)
+			gtm.SetKeys(false, utils.MapKeys(uks)...)
 		}
-		//Debug("table: %s", tb)
-		gorp.AddTableWithName(mv, tb).SetKeys(ai, pf)
 
 		//data accessor, 默认都是DBTAG
 		DataAccessor[tb+"::"+WRITETAG] = DBTAG
@@ -1652,19 +1698,19 @@ func (rest *REST) AddTable(tags ...string) Model {
 		Warn("[AddTable]: %s", ErrNoModel)
 	}
 
-	return rest
+	return r
 }
 
 /* }}} */
 
 // 注入checklist的字典
-func (rest *REST) ImportDic(field string, dic ChecklistDic) {
+func (r *REST) ImportDic(field string, dic ChecklistDic) {
 }
 
-/* {{{ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error)
+/* {{{ func (r *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error)
  * 查询准备
  */
-func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
+func (r *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error) {
 	disableOrder := false
 	if len(opts) > 0 {
 		if do, ok := opts[0].(bool); ok && do {
@@ -1678,7 +1724,7 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 		}
 	}
 
-	m := rest.Model()
+	m := r.Model()
 	if m == nil {
 		return nil, ErrNoModel
 	}
@@ -1687,10 +1733,10 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 		return nil, ErrType
 	}
 
-	db := rest.DBConn(READTAG)
-	tb := rest.TableName()
+	db := r.DBConn(READTAG)
+	tb := r.TableName()
 	b := gorp.NewBuilder(db).Table(tb)
-	cons := rest.Conditions()
+	cons := r.Conditions()
 
 	// condition
 	if len(cons) > 0 {
@@ -1801,14 +1847,27 @@ func (rest *REST) ReadPrepare(opts ...interface{}) (interface{}, error) {
 		}
 	} else { // 从自身找， primary key/key
 		hasCon := false
-		v := reflect.ValueOf(m)
-		for _, col := range cols {
-			fv := utils.FieldByIndex(v, col.Index)
-			if (col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
-				//有值
-				if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
-					hasCon = true
-					b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
+		if pf, pk, _ := m.PKey(); pk != "" {
+			hasCon = true
+			b.Where(fmt.Sprintf("T.`%s` = ?", pf), pk)
+		} else if kf, v, _ := m.Key(); v != "" {
+			hasCon = true
+			b.Where(fmt.Sprintf("T.`%s` = ?", kf), v)
+		} else if uks := m.UnionKeys(); len(uks) > 0 {
+			hasCon = true
+			for f, v := range uks {
+				b.Where(fmt.Sprintf("T.`%s` = ?", f), v)
+			}
+		} else {
+			// 最后再找conditional 字段
+			for _, col := range cols {
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if (col.ExtOptions.Contains(TAG_CONDITION) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY)) && fv.IsValid() && !utils.IsEmptyValue(fv) {
+					//有值
+					if fs := utils.GetRealString(fv); fs != "" { // 多个字段有值, 用AND
+						hasCon = true
+						b.Where(fmt.Sprintf("T.`%s` = ?", col.Tag), fs)
+					}
 				}
 			}
 		}

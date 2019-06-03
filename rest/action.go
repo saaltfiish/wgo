@@ -37,62 +37,62 @@ type Action interface { // 把action定义为一个interface, 这样业务代码
 	Defer(i interface{})
 }
 
-/* {{{ func (rest *REST) Trigger(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) Trigger(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) Trigger(i interface{}) (interface{}, error) {
+func (r *REST) Trigger(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) Defer(i interface{})
+/* {{{ func (r *REST) Defer(i interface{})
  *
  */
-func (rest *REST) Defer(i interface{}) {
+func (r *REST) Defer(i interface{}) {
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreGet(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreGet(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreGet(i interface{}) (interface{}, error) {
+func (r *REST) PreGet(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	c := rest.Context()
+	c := r.Context()
 	// pk,放入条件
 	if id := c.Param(RowkeyKey); id != "" {
 		pk, _, _ := m.PKey()
 		//c.Debug("[PreGet][pk: %s, id: %s]", pk, id)
 		m.SetConditions(NewCondition(CTYPE_IS, pk, id))
 	}
-	// 从restcontext里获取条件
-	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
+	// 从rcontext里获取条件
+	if tr := r.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_IS, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
+	m.SetConditions(r.GetParamConds()...) // 获取参数条件
 	// fields
-	if fs := rest.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
+	if fs := r.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
 		m.SetFields(fs.([]string)...)
 	}
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) WillGet(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) WillGet(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) WillGet(i interface{}) (interface{}, error) {
+func (r *REST) WillGet(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnGet(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnGet(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnGet(i interface{}) (interface{}, error) {
+func (r *REST) OnGet(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	if row, err := m.Row(m); err == nil {
-		return rest.SetModel(row.(Model)), err
+	if row, err := m.Row(); err == nil {
+		return r.SetModel(row.(Model)), err
 		// return row, err
 	} else {
 		return nil, err
@@ -100,18 +100,18 @@ func (rest *REST) OnGet(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
-/* {{{ func (rest *REST) DidGet(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) DidGet(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) DidGet(i interface{}) (interface{}, error) {
+func (r *REST) DidGet(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostGet(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostGet(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostGet(i interface{}) (interface{}, error) {
+func (r *REST) PostGet(i interface{}) (interface{}, error) {
 	if i != nil {
 		if m, ok := i.(Model); ok {
 			return m.Protect()
@@ -122,68 +122,68 @@ func (rest *REST) PostGet(i interface{}) (interface{}, error) {
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreSearch(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreSearch(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreSearch(i interface{}) (interface{}, error) {
+func (r *REST) PreSearch(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	// 从rest里获取条件
-	if p := rest.GetEnv(PaginationKey); p != nil { //排序
+	// 从r里获取条件
+	if p := r.GetEnv(PaginationKey); p != nil { //排序
 		m.SetPagination(p.(*Pagination))
 	}
-	if ob := rest.GetEnv(OrderByKey); ob != nil { //排序
+	if ob := r.GetEnv(OrderByKey); ob != nil { //排序
 		m.SetConditions(NewCondition(CTYPE_ORDER, TAG_ORDERBY, ob.(*OrderBy)))
 	}
-	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
+	if tr := r.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_RANGE, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
+	m.SetConditions(r.GetParamConds()...) // 获取参数条件
 	// fields
-	if fs := rest.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
+	if fs := r.GetEnv(FieldsKey); fs != nil { //从context里面获取参数条件
 		m.SetFields(fs.([]string)...)
 	}
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) WillSearch(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) WillSearch(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) WillSearch(i interface{}) (interface{}, error) {
+func (r *REST) WillSearch(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnSearch(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnSearch(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnSearch(i interface{}) (interface{}, error) {
+func (r *REST) OnSearch(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	return m.List()
 }
 
 /* }}} */
-/* {{{ func (rest *REST) DidSearch(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) DidSearch(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) DidSearch(i interface{}) (interface{}, error) {
+func (r *REST) DidSearch(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostSearch(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostSearch(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostSearch(i interface{}) (interface{}, error) {
+func (r *REST) PostSearch(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreCreate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreCreate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreCreate(i interface{}) (interface{}, error) {
+func (r *REST) PreCreate(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	var err error
 	if m, err = m.Valid(); err != nil {
@@ -193,50 +193,50 @@ func (rest *REST) PreCreate(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
-/* {{{ func (rest *REST) WillCreate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) WillCreate(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) WillCreate(i interface{}) (interface{}, error) {
+func (r *REST) WillCreate(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnCreate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnCreate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnCreate(i interface{}) (interface{}, error) {
+func (r *REST) OnCreate(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	if r, err := m.CreateRow(); err != nil {
 		return nil, err
 	} else {
-		// rest.SetModel(r)
+		// r.SetModel(r)
 		return r, nil
 	}
 }
 
 /* }}} */
-/* {{{ func (rest *REST) DidCreate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) DidCreate(i interface{}) (interface{}, error)
  * React灵感,啥也不做,只等覆盖
  */
-func (rest *REST) DidCreate(i interface{}) (interface{}, error) {
+func (r *REST) DidCreate(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostCreate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostCreate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostCreate(i interface{}) (interface{}, error) {
-	//m := rest.SetModel(i.(Model))
+func (r *REST) PostCreate(i interface{}) (interface{}, error) {
+	//m := r.SetModel(i.(Model))
 	return i.(Model).Filter()
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreUpdate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreUpdate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreUpdate(i interface{}) (interface{}, error) {
+func (r *REST) PreUpdate(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	var err error
 	if m, err = m.Valid(); err != nil {
@@ -247,20 +247,20 @@ func (rest *REST) PreUpdate(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
-/* {{{ func (rest *REST) WillUpdate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) WillUpdate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) WillUpdate(i interface{}) (interface{}, error) {
+func (r *REST) WillUpdate(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnUpdate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnUpdate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnUpdate(i interface{}) (interface{}, error) {
+func (r *REST) OnUpdate(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	c := rest.Context()
+	c := r.Context()
 	//Info("context: %v", c)
 	rk := c.Param(RowkeyKey)
 	if affected, err := m.UpdateRow(rk); err != nil {
@@ -274,38 +274,38 @@ func (rest *REST) OnUpdate(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
-/* {{{ func (rest *REST) DidUpdate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) DidUpdate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) DidUpdate(i interface{}) (interface{}, error) {
+func (r *REST) DidUpdate(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostUpdate(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostUpdate(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostUpdate(i interface{}) (interface{}, error) {
-	//m := rest.SetModel(i.(Model))
+func (r *REST) PostUpdate(i interface{}) (interface{}, error) {
+	//m := r.SetModel(i.(Model))
 	return i.(Model).Filter()
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreDelete(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreDelete(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreDelete(i interface{}) (interface{}, error) {
+func (r *REST) PreDelete(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnDelete(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnDelete(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnDelete(i interface{}) (interface{}, error) {
+func (r *REST) OnDelete(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	c := rest.Context()
+	c := r.Context()
 	rk := c.Param(RowkeyKey)
 	if affected, err := m.DeleteRow(rk); err != nil {
 		return nil, err
@@ -318,42 +318,42 @@ func (rest *REST) OnDelete(i interface{}) (interface{}, error) {
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostDelete(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostDelete(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostDelete(i interface{}) (interface{}, error) {
+func (r *REST) PostDelete(i interface{}) (interface{}, error) {
 	return i, nil
 }
 
 /* }}} */
 
-/* {{{ func (rest *REST) PreCheck(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PreCheck(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PreCheck(i interface{}) (interface{}, error) {
+func (r *REST) PreCheck(i interface{}) (interface{}, error) {
 	m := i.(Model)
-	// 从restcontext里获取条件
-	if tr := rest.GetEnv(TimeRangeKey); tr != nil { //时间段参数
+	// 从rcontext里获取条件
+	if tr := r.GetEnv(TimeRangeKey); tr != nil { //时间段参数
 		m.SetConditions(NewCondition(CTYPE_IS, TAG_TIMERANGE, tr.(*TimeRange)))
 	}
-	m.SetConditions(rest.GetParamConds()...) // 获取参数条件
+	m.SetConditions(r.GetParamConds()...) // 获取参数条件
 	return i, nil
 }
 
 /* }}} */
-/* {{{ func (rest *REST) OnCheck(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) OnCheck(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) OnCheck(i interface{}) (interface{}, error) {
+func (r *REST) OnCheck(i interface{}) (interface{}, error) {
 	m := i.(Model)
 	return m.GetCount()
 }
 
 /* }}} */
-/* {{{ func (rest *REST) PostCheck(i interface{}) (interface{}, error)
+/* {{{ func (r *REST) PostCheck(i interface{}) (interface{}, error)
  *
  */
-func (rest *REST) PostCheck(i interface{}) (interface{}, error) {
+func (r *REST) PostCheck(i interface{}) (interface{}, error) {
 	return i, nil
 }
 

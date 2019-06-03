@@ -280,7 +280,7 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 				if err = os.MkdirAll(cacheDir, 0700); err != nil {
 					Error("cannot create -autocertCacheDir=%q: %s", cacheDir, err)
 				}
-				Info("autocert hosts: %s", s.cfg.Hosts)
+				Debug("autocert hosts: %s", s.cfg.Hosts)
 				manager := &autocert.Manager{
 					Prompt:     autocert.AcceptTOS,
 					HostPolicy: autocert.HostWhitelist(s.cfg.Hosts...),
@@ -303,7 +303,7 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 						Addr:         ":http", // 必须是80
 					}
 					go func() {
-						Info("Starting HTTP server on %s, for Encrypt callbacks", httpSrv.Addr)
+						Debug("Starting HTTP server on %s, for Encrypt callbacks", httpSrv.Addr)
 						err := httpSrv.ListenAndServe()
 						if err != nil {
 							Info("httpsSrv.ListenAndServe() failed with %s", err)
@@ -325,10 +325,10 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 
 	if s.tlsConfig != nil {
 		// https需要在普通listener上再包一层
-		Info("start %s(https:%d)", s.Name(), s.Port())
+		Info("Starting %s(https:%d)", s.Name(), s.Port())
 		return s.Engine().Start(tls.NewListener(s.listener, s.tlsConfig))
 	} else {
-		Info("start %s(tcp:%d)", s.Name(), s.Port())
+		Info("Starting %s(tcp:%d)", s.Name(), s.Port())
 		return s.Engine().Start(s.listener)
 	}
 }

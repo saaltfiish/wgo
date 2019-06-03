@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"wgo"
+	"wgo/utils"
 )
 
 // session
@@ -30,15 +31,13 @@ func cacheKey(key string) (ck string) {
 }
 
 // get session
-func (rest *REST) Session(opts ...string) (key string, value interface{}) {
+func (rest *REST) Session(opts ...interface{}) (key string, value interface{}) {
 	c := rest.Context()
 	if s, err := c.Cookie(scfg.Key); err == nil { // 优先从cookie中获取sessionid, 防止客户端的攻击
 		key = s.Value()
-	} else if len(opts) > 0 && opts[0] != "" { // 传入session key, 主动获取
-		key = opts[0]
-	} else {
+	} else if key = utils.PrimaryStringKey(opts); key == "" { // 传入session key, 主动获取
 		// 没有获取到key, return
-		c.Info("can't get any key about cookie")
+		c.Debug("[Session]can't get any key about cookie(%s), maybe inner request", scfg.Key)
 		return
 	}
 
@@ -62,7 +61,7 @@ func (rest *REST) Session(opts ...string) (key string, value interface{}) {
 			rest.Debug("[Session]ac response code: %d", resp.StatusCode())
 		}
 	} else {
-		c.Warn("not found auth by cookie(%s): %s", scfg.Key, err.Error())
+		c.Warn("[Session]not found auth by cookie(%s): %s", scfg.Key, err.Error())
 	}
 	return
 }
@@ -73,14 +72,14 @@ func (rest *REST) SaveSession(session interface{}) {
 }
 
 // set session
-func (rest *REST) SetSession(key string, opts ...interface{}) {
+func (rest *REST) SetSession(key string, value interface{}, opts ...interface{}) {
 	// save to cache
-	rest.Debug("set session, key: %s, opts: %+v", key, opts)
-	RedisSet(cacheKey(key), opts[0], scfg.Life)
+	// rest.Debug("set session, key: %s, opts: %+v", key, opts)
+	RedisSet(cacheKey(key), value, scfg.Life)
 	// expire
 	expire := time.Time{}
-	if len(opts) > 1 {
-		if remember, ok := opts[1].(bool); ok && remember {
+	if len(opts) > 0 {
+		if remember := utils.NewParams(opts).BoolByIndex(0, false); remember {
 			expire = time.Now().Add(time.Duration(scfg.Life) * time.Second)
 		}
 	}
@@ -90,14 +89,11 @@ func (rest *REST) SetSession(key string, opts ...interface{}) {
 }
 
 // del session
-func (rest *REST) DelSession(opts ...string) (key string) {
+func (rest *REST) DelSession(opts ...interface{}) (key string) {
 	c := rest.Context()
 	if s, err := c.Cookie(scfg.Key); err == nil { // 优先从cookie中获取sessionid
 		key = s.Value()
-	} else if len(opts) > 0 && opts[0] != "" { // 传入session key, 主动获取
-		key = opts[0]
-	} else {
-		// 没有获取到key, return
+	} else if key = utils.PrimaryStringKey(opts); key == "" { // 传入session key, 主动获取
 		return
 	}
 

@@ -20,6 +20,12 @@ func Init() wgo.MiddlewareFunc {
 			rest := GetREST(c)
 			defer rest.Release()
 
+			// Debug("[Init]endpoint: %s, basemodel: %+v", rest.Options(EndpointKey), rest.Options(BaseModelKey))
+			// 生成路由时把basemodel注入, 这里取出, 效率存在问题，将来可考虑pool
+			if base := rest.Options(BaseModelKey); base != nil {
+				rest.NewModel(base)
+			}
+
 			// action
 			switch m := c.Request().(whttp.Request).Method(); m {
 			case "POST", "PUT":
@@ -37,7 +43,8 @@ func Init() wgo.MiddlewareFunc {
 				}
 			}
 
-			// get user id
+			c.Info("[REST]-->%s<--", c.Query())
+			// set user id
 			rest.SetUserID()
 
 			// 处理起始时间

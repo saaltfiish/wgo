@@ -52,6 +52,7 @@ const (
 	ConditionsKey     = "_conditions_"
 	LogPrefixKey      = "_prefix_"
 	EndpointKey       = "_endpoint_"
+	BaseModelKey      = "_basemodel_"
 	RowkeyKey         = "_rk_"
 	RptKey            = "_rpt_"
 	SelectorKey       = "_selector_"
@@ -74,10 +75,11 @@ const (
 	DescKey           = "_desc_"
 
 	// db tag
-	DBTAG_PK    = "pk"
-	DBTAG_NA    = "na"
-	DBTAG_KEY   = "k"
-	DBTAG_LOGIC = "logic"
+	DBTAG_PK    = "pk"    // primary key
+	DBTAG_UK    = "uk"    // union key, 需要几个字段共同决定一行
+	DBTAG_NA    = "na"    // not auto increament
+	DBTAG_KEY   = "k"     // key, 单独能决定一行
+	DBTAG_LOGIC = "logic" //  逻辑位, `-1`代表逻辑删除
 
 	DBTAG           string = "db"
 	READTAG         string = "read"

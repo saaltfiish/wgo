@@ -1,11 +1,7 @@
 // Package whttp provides ...
 package whttp
 
-import (
-	"fmt"
-	"log"
-	"strings"
-)
+import "wgo/wlog"
 
 type (
 	// logger
@@ -24,23 +20,12 @@ func SetLogger(l Logger) {
 	logger = l
 }
 
-// native log
-func nlog(arg0 interface{}, args ...interface{}) {
-	switch first := arg0.(type) {
-	case string:
-		// Use the first string as a format string
-		log.Printf(first, args...)
-	default:
-		log.Printf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-	}
-}
-
 // Debug
 func Debug(arg0 interface{}, args ...interface{}) {
 	if logger != nil {
 		logger.Debug(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -49,7 +34,7 @@ func Info(arg0 interface{}, args ...interface{}) {
 	if logger != nil {
 		logger.Info(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -58,7 +43,7 @@ func Warn(arg0 interface{}, args ...interface{}) {
 	if logger != nil {
 		logger.Warn(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -67,6 +52,6 @@ func Error(arg0 interface{}, args ...interface{}) {
 	if logger != nil {
 		logger.Error(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }

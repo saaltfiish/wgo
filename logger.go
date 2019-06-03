@@ -2,8 +2,8 @@ package wgo
 
 import (
 	"fmt"
-	"log"
-	"strings"
+
+	"wgo/wlog"
 )
 
 type (
@@ -46,21 +46,6 @@ func (w *WGO) SetLogger(l logger) {
 
 /* }}} */
 
-/* {{{ func nlog(arg0 interface{}, args ...interface{})
- * native log
- */
-func nlog(arg0 interface{}, args ...interface{}) {
-	switch first := arg0.(type) {
-	case string:
-		// Use the first string as a format string
-		log.Printf(first, args...)
-	default:
-		log.Printf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-	}
-}
-
-/* }}} */
-
 // wgo logging
 /* {{{ func Debug()
  *
@@ -70,14 +55,14 @@ func (w *WGO) Debug(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Debug(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 func (w *WGO) Printf(format string, args ...interface{}) {
 	if w != nil {
 		w.Logger().Debug(format, args...)
 	} else {
-		nlog(format, args...)
+		wlog.Output(format, args...)
 	}
 }
 
@@ -91,7 +76,7 @@ func (w *WGO) Info(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Info(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -105,7 +90,7 @@ func (w *WGO) Warn(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Warn(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -119,7 +104,7 @@ func (w *WGO) Error(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Error(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -132,7 +117,7 @@ func (w *WGO) Log(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Log(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 
@@ -146,7 +131,7 @@ func (w *WGO) Fatal(arg0 interface{}, args ...interface{}) {
 	if w != nil {
 		w.Logger().Fatal(arg0, args...)
 	} else {
-		nlog(arg0, args...)
+		wlog.Output(arg0, args...)
 	}
 }
 

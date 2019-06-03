@@ -11,8 +11,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
 	"wgo"
 	"wgo/resty"
+	"wgo/server"
 	"wgo/utils"
 	"wgo/whttp"
 )
@@ -69,6 +71,7 @@ func NewInnerClient(service string) (*Client, error) {
 func (client *Client) SetJson(data interface{}) *Client {
 	jb, _ := json.Marshal(data)
 	client.req.SetBody(jb)
+	Debug("[rest.SetJson]body: %s", string(jb))
 	return client
 }
 
@@ -115,7 +118,7 @@ func (client *Client) sendAndRecv(cat string, opts ...interface{}) (resp *Respon
 		Response: restyResp,
 	}
 	resp.Parse()
-	wgo.Info("[sendAndRecv]code: %d, message: %s", resp.Code(), resp.Message())
+	// wgo.Info("[sendAndRecv]code: %d, message: %s", resp.Code(), resp.Message())
 
 	// renew req
 	client.req = resty.New().R()
@@ -161,6 +164,9 @@ func (resp *Response) Message() string {
 	}
 	return resp.message
 }
+func (resp *Response) Data() *utils.Json {
+	return resp.data
+}
 
 // base methods
 func (client *Client) Post(path string) (*Response, error) {
@@ -171,4 +177,31 @@ func (client *Client) Get(path string) (*Response, error) {
 }
 func (client *Client) Patch(path string) (*Response, error) {
 	return client.sendAndRecv("patch", path)
+}
+
+func RESTQuery(service, path, method string, opts ...interface{}) (*utils.Json, error) {
+	request, err := NewInnerClient(service)
+	if err != nil {
+		return nil, err
+	}
+	var resp *Response
+	var re error
+	if obj := utils.NewParams(opts).ItfByIndex(0); obj != nil {
+		request.SetJson(obj)
+	}
+	switch strings.ToLower(method) {
+	case "get":
+		resp, re = request.Get(path)
+	case "patch":
+		resp, re = request.Patch(path)
+	default:
+		resp, re = request.Post(path)
+	}
+	if re != nil {
+		return nil, re
+	}
+	if resp.Code() != 0 {
+		return nil, server.NewError(resp.Code(), resp.Message())
+	}
+	return resp.Data(), nil
 }

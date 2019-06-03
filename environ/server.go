@@ -90,8 +90,13 @@ func DefaultServers(cfg *Config) []server.Config {
 			// missing port part, add it
 			addr = addr + ":80"
 		}
+		// server name
+		serverName := defaultServerName
+		if sn := cfg.String(CFG_KEY_PROCNAME); sn != "" {
+			serverName = sn
+		}
 		sc := server.Config{
-			Name:   defaultServerName,
+			Name:   serverName,
 			Mode:   mode,
 			Engine: engine,
 			Addr:   addr,

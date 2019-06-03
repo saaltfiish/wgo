@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/http/httpguts"
+
 	wcache "wgo/cache"
 	"wgo/environ"
 	"wgo/server"
@@ -30,6 +32,11 @@ type (
 	}
 	netHTTPBody struct {
 		b []byte
+	}
+	// switchProtocolCopier exists so goroutines proxying data back and
+	// forth have nice names in stacks.
+	switchProtocolCopier struct {
+		user, backend io.ReadWriter
 	}
 )
 
@@ -205,6 +212,13 @@ func copyFastHeader(dst server.Header, src http.Header) {
 	}
 }
 
+func upgradeType(h http.Header) string {
+	if !httpguts.HeaderValuesContainsToken(h["Connection"], "Upgrade") {
+		return ""
+	}
+	return strings.ToLower(h.Get("Upgrade"))
+}
+
 // skip header
 var skipHeaders = []string{
 	"Date",           // date以本机为准
@@ -221,7 +235,7 @@ var hopHeaders = []string{
 	"Proxy-Authenticate",
 	"Proxy-Authorization",
 	"Te",      // canonicalized version of "TE"
-	"Trailer", // not Trailers per URL above; http://www.rfc-editor.org/errata_search.php?eid=4522
+	"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
 	"Transfer-Encoding",
 	"Upgrade",
 }
@@ -295,6 +309,8 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 	rp.Director(outreq)
 	outreq.Close = true
 
+	reqUpType := upgradeType(outreq.Header)
+
 	// We are modifying the same underlying map from req (shallow
 	// copied above) so we only copy it if necessary.
 	copiedHeaders := false
@@ -337,13 +353,19 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 			copiedHeaders = true
 		}
 		outreq.Header.Del(h)
-		outreq.Header.Del(h)
 	}
 
 	// add request-id and depth
 	if rid := c.RequestID(); rid != "" {
 		outreq.Header.Set(HeaderXRequestId, rid)
 		outreq.Header.Set(HeaderXDepth, fmt.Sprint(c.Depth()))
+	}
+
+	// After stripping all the hop-by-hop connection headers above, add back any
+	// necessary for protocol upgrades, such as for websockets.
+	if reqUpType != "" {
+		outreq.Header.Set("Connection", "Upgrade")
+		outreq.Header.Set("Upgrade", reqUpType)
 	}
 
 	// add x-forwarded-for
@@ -363,7 +385,8 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 
 	res, err := rp.Transport.RoundTrip(outreq)
 	if err != nil {
-		c.Error("RoundTrip error: %s", err)
+		// 这里可能是长连接的用户主动断开 or 超时
+		c.Info("RoundTrip error: %s", err)
 		return err
 	}
 	// del content-length
@@ -389,6 +412,18 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 		c.Response().(Response).WriteHeader(StatusOK)
 		copyFastHeader(c.Response().(Response).Header(), res.Header)
 		return nil
+	}
+
+	// Deal with 101 Switching Protocols responses: (WebSocket, h2c, etc)
+	if res.StatusCode == http.StatusSwitchingProtocols {
+		if rp.ModifyResponse != nil {
+			if err := rp.ModifyResponse(res); err != nil {
+				c.Response().(Response).WriteHeader(http.StatusBadGateway)
+				return err
+			}
+		}
+		c.Debug("[whttp.proxy]Deal with 101 Switching Protocols responses: %s", c.Request().(Request).URL().Path())
+		return rp.handleUpgradeResponse(c.Response().(Response), outreq, res)
 	}
 
 	// Remove hop-by-hop headers listed in the
@@ -480,7 +515,7 @@ func (rp *ReverseProxy) flushInterval(res *http.Response) time.Duration {
 	// For Server-Sent Events responses, flush immediately.
 	// The MIME type is defined in https://www.w3.org/TR/eventsource/#text-event-stream
 	if resCT == MIMEEventStream {
-		Debug("[flushInterval]Server-Sent Events responses: %s", resCT)
+		// Debug("[flushInterval]Server-Sent Events responses: %s", resCT)
 		return -1 // negative means immediately
 	}
 
@@ -493,7 +528,7 @@ func (rp *ReverseProxy) copyResponse(dst io.Writer, src io.Reader, flushInterval
 	if flushInterval != 0 {
 		Debug("[copyResponse]flushInterval: %d", flushInterval)
 		if wf, ok := dst.(writeFlusher); ok {
-			Debug("[copyResponse]got writeFlusher")
+			// Debug("[copyResponse]got writeFlusher")
 			mlw := &maxLatencyWriter{
 				dst:     wf,
 				latency: flushInterval,
@@ -608,4 +643,54 @@ func singleJoiningSlash(a, b string) string {
 		return a + "/" + b
 	}
 	return a + b
+}
+
+// websocket
+func (c switchProtocolCopier) copyFromBackend(errc chan<- error) {
+	_, err := io.Copy(c.user, c.backend)
+	errc <- err
+}
+
+func (c switchProtocolCopier) copyToBackend(errc chan<- error) {
+	_, err := io.Copy(c.backend, c.user)
+	errc <- err
+}
+func (rp *ReverseProxy) handleUpgradeResponse(resp Response, req *http.Request, res *http.Response) error {
+	rw := resp.(*standard.Response).ResponseWriter
+	reqUpType := upgradeType(req.Header)
+	resUpType := upgradeType(res.Header)
+	if reqUpType != resUpType {
+		return fmt.Errorf("backend tried to switch protocol %q when %q was requested", resUpType, reqUpType)
+	}
+
+	copyHeader(res.Header, rw.Header())
+
+	// hj, ok := rw.(http.Hijacker)
+	// if !ok {
+	// 	return fmt.Errorf("can't switch protocols using non-Hijacker ResponseWriter type %T", rw)
+	// }
+	backConn, ok := res.Body.(io.ReadWriteCloser)
+	if !ok {
+		return fmt.Errorf("internal error: 101 switching protocols response with non-writable body")
+	}
+	defer backConn.Close()
+	// conn, brw, err := hj.Hijack()
+	conn, brw, err := resp.Hijack() // 这里注意, fasthttp的Hijack还没实现
+	if err != nil {
+		return fmt.Errorf("Hijack failed on protocol switch: %v", err)
+	}
+	defer conn.Close()
+	res.Body = nil // so res.Write only writes the headers; we have res.Body in backConn above
+	if err := res.Write(brw); err != nil {
+		return fmt.Errorf("response write: %v", err)
+	}
+	if err := brw.Flush(); err != nil {
+		return fmt.Errorf("response flush: %v", err)
+	}
+	errc := make(chan error, 1)
+	spc := switchProtocolCopier{user: conn, backend: backConn}
+	go spc.copyToBackend(errc)
+	go spc.copyFromBackend(errc)
+	<-errc
+	return nil
 }

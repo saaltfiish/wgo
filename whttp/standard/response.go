@@ -20,6 +20,7 @@ type (
 		status    int
 		size      int64
 		committed bool
+		hijacked  bool
 		writer    io.Writer
 		buffer    *bytes.Buffer
 	}
@@ -127,7 +128,8 @@ func (r *Response) Committed() bool {
 // Commit implements `whttp.Response#Commit` function.
 // wgo允许多次写入(buffer), 因此需要一个commit统一提交
 func (r *Response) Commit() {
-	if r.committed {
+	if r.committed || r.hijacked {
+		// wlog.Output("[whttp/standard/response]%v, %v", r.committed, r.hijacked)
 		return
 	}
 	r.ResponseWriter.WriteHeader(r.status)
@@ -163,6 +165,7 @@ func (r *Response) Flush() {
 // take over the connection.
 // See https://golang.org/pkg/net/http/#Hijacker
 func (r *Response) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	r.hijacked = true
 	return r.ResponseWriter.(http.Hijacker).Hijack()
 }
 
@@ -182,6 +185,7 @@ func (r *Response) reset(w http.ResponseWriter, a *responseAdapter, h *Header) {
 	r.status = http.StatusOK
 	r.size = 0
 	r.committed = false
+	r.hijacked = false
 	//r.writer = w
 	r.buffer.Reset()
 	r.writer = r.buffer

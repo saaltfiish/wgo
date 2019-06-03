@@ -1,8 +1,10 @@
 package whttp
 
 import (
+	"bufio"
 	"io"
 	"mime/multipart"
+	"net"
 	"reflect"
 	"runtime"
 
@@ -116,6 +118,11 @@ type (
 
 		// Flush
 		Flush()
+
+		// Hijack implements the http.Hijacker interface to allow an HTTP handler to
+		// take over the connection.
+		// See https://golang.org/pkg/net/http/#Hijacker
+		Hijack() (net.Conn, *bufio.ReadWriter, error)
 
 		// Write returns the HTTP response writer.
 		Writer() io.Writer

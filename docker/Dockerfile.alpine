@@ -1,5 +1,5 @@
-FROM alpine:3.6
+FROM alpine:latest
 
 RUN apk add -U tzdata
-apk add -U --no-cache ca-certificates
+RUN apk add -U --no-cache ca-certificates
 ADD docker/mime.types /etc/mime.types

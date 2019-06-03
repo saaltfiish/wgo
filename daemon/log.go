@@ -1,10 +1,8 @@
 package daemon
 
 import (
-	"fmt"
-	"log"
 	"os"
-	"strings"
+	"wgo/wlog"
 )
 
 type (
@@ -38,7 +36,7 @@ func Log(arg0 interface{}, args ...interface{}) {
 		return
 	}
 	// not set logger
-	nlog(arg0, args...)
+	wlog.Output(arg0, args...)
 }
 func (d *Daemon) Log(arg0 interface{}, args ...interface{}) {
 	if d.logger != nil {
@@ -46,22 +44,7 @@ func (d *Daemon) Log(arg0 interface{}, args ...interface{}) {
 		return
 	}
 	// not set logger
-	nlog(arg0, args...)
-}
-
-/* }}} */
-
-/* {{{ func nlog(arg0 interface{}, args ...interface{})
- * native log
- */
-func nlog(arg0 interface{}, args ...interface{}) {
-	switch first := arg0.(type) {
-	case string:
-		// Use the first string as a format string
-		log.Printf(first, args...)
-	default:
-		log.Printf(fmt.Sprint(first)+strings.Repeat(" %v", len(args)), args...)
-	}
+	wlog.Output(arg0, args...)
 }
 
 /* }}} */

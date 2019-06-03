@@ -262,9 +262,9 @@ func (w *WGO) AddServer(sc server.Config) {
 	// 新建server
 	s := server.NewServer(sc)
 	// 装入
-	Debug("[AddServer]mode: %s, engine: %s", s.Mode(), s.EngineName())
+	// Debug("[AddServer]mode: %s, engine: %s", s.Mode(), s.EngineName())
 	w.push(Factory(s))
-	Info("Added server: %s(%s<%s>)", s.Name(), s.Mode(), s.EngineName())
+	Debug("Added server: %s(%s<%s>)", s.Name(), s.Mode(), s.EngineName())
 }
 
 /* }}} */
@@ -278,10 +278,10 @@ func (w *WGO) serve(ces ...server.Engine) {
 		for i, worker := range w.works {
 			if i == 0 {
 				// 注册第一个为默认
-				Info("start work(default): %s", worker.Name())
+				Debug("start work(default): %s", worker.Name())
 				worker.Start().Register()
 			} else {
-				Info("start work(%d): %s", i, worker.Name())
+				Debug("start work(%d): %s", i, worker.Name())
 				worker.Start()
 			}
 		}
