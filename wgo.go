@@ -309,7 +309,9 @@ func (w *WGO) serve(ces ...server.Engine) {
 			// prepare, build routes, etc...
 			s.Prepare()
 
-			s.ListenAndServe(w.Daemon)
+			if err := s.ListenAndServe(w.Daemon); err != nil {
+				panic(err)
+			}
 		}(s)
 	}
 

@@ -52,7 +52,7 @@ type Model interface {
 	Row(...interface{}) (Model, error)                 //获取单条记录
 	Rows(...interface{}) (interface{}, error)          //获取多条记录
 	List() (*List, error)                              // 获取多条记录并返回list
-	GetRecord(rk ...interface{}) Model                 // 获取一条记录, 可缓存
+	GetRecord(rk ...interface{}) interface{}           // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...string) Model                       //获取旧记录
@@ -1469,10 +1469,10 @@ func (r *REST) GetCountNSum() (cnt int64, sum float64) {
 
 /* }}} */
 
-/* {{{ func (r *REST) GetRecord(opts ...interface{}) Model
+/* {{{ func (r *REST) GetRecord(opts ...interface{}) interface{}
  * get record (cacheable), 注意返回不是指针
  */
-func (r *REST) GetRecord(opts ...interface{}) Model {
+func (r *REST) GetRecord(opts ...interface{}) interface{} {
 	m := r.Model()
 	if m == nil {
 		Warn("[GetRecord]: %s", ErrNoModel)
@@ -1519,15 +1519,17 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 		// find var in local cache
 		if cvi, err := LocalGet(ck); err == nil {
 			// found
-			// Debug("hit var in cache: %s, %+v", ck, cvi)
-			if cvm, ok := cvi.(Model); ok {
-				return reflect.ValueOf(reflect.ValueOf(&cvm).Interface()).Addr().Interface().(Model)
+			// Debug("hit var in cache: %s, %+v, %s", ck, cvi, utils.ToType(cvi).String())
+			if _, ok := cvi.(Model); ok {
+				nm := reflect.New(utils.ToType(cvi))
+				reflect.Indirect(nm).Set(reflect.ValueOf(cvi))
+				return nm.Interface()
 			}
 		}
 		// find in db
 		if rec, err := m.Row(); err == nil {
 			// found it
-			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface().(Model)
+			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface()
 			LocalSet(ck, recv, CACHE_EXPIRE)
 			return rec
 		} else {
