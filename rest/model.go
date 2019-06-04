@@ -1232,8 +1232,8 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				// 以下不能SetModel, 会破坏之前的注入数据
-				return SetModel(resultsValue.Index(0).Interface().(Model)), nil
+				// 放指针
+				return SetModel(resultsValue.Index(0).Addr().Interface().(Model)), nil
 			}
 		}
 	}

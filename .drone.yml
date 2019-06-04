@@ -10,18 +10,32 @@ clone:
     depth: 50
 
 pipeline:
+  publish_latest:
+    image: plugins/docker
+    registry: ccr.ccs.tencentyun.com
+    repo: ccr.ccs.tencentyun.com/phyzi/wgo
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - latest
+    #auto_tag: true
+    dockerfile: docker/Dockerfile
+    when:
+      ref: [ refs/heads/master ]
+      event: [ push ]
+
   publish:
     image: plugins/docker
     registry: ccr.ccs.tencentyun.com
     repo: ccr.ccs.tencentyun.com/phyzi/wgo
     secrets: [ docker_username, docker_password ]
     tags:
+      - latest
+      - prod
       - modules
       - ${DRONE_TAG}
-    #auto_tag: true
     dockerfile: docker/Dockerfile
     when:
-      branch: [refs/tags/*]
+      branch: [ refs/tags/* ]
       event: [ tag ]
 
   slack:
