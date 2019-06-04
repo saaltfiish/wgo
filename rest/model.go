@@ -1521,7 +1521,7 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 			// found
 			// Debug("hit var in cache: %s, %+v", ck, cvi)
 			if cvm, ok := cvi.(Model); ok {
-				return reflect.ValueOf(reflect.Indirect(reflect.ValueOf(&cvm)).Interface()).Addr().Interface().(Model)
+				return reflect.ValueOf(reflect.ValueOf(&cvm).Interface()).Addr().Interface().(Model)
 			}
 		}
 		// find in db
