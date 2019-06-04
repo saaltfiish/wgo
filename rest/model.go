@@ -1520,8 +1520,8 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 		if cvi, err := LocalGet(ck); err == nil {
 			// found
 			// Debug("hit var in cache: %s, %+v", ck, cvi)
-			if _, ok := cvi.(Model); ok {
-				return reflect.Indirect(reflect.ValueOf(cvi)).Addr().Interface().(Model)
+			if cvm, ok := cvi.(Model); ok {
+				return reflect.ValueOf(cvm).Addr().Interface().(Model)
 			}
 		}
 		// find in db
