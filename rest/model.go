@@ -1232,8 +1232,7 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				// 放指针
-				return SetModel(resultsValue.Index(0).Addr().Interface().(Model)), nil
+				return SetModel(resultsValue.Index(0).Interface().(Model)), nil
 			}
 		}
 	}
@@ -1477,7 +1476,7 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 	m := r.Model()
 	if m == nil {
 		Warn("[GetRecord]: %s", ErrNoModel)
-		return m
+		return nil
 	}
 	ck := ""
 	params := utils.NewParams(opts)
@@ -1522,7 +1521,7 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 			// found
 			// Debug("hit var in cache: %s, %+v", ck, cvi)
 			if _, ok := cvi.(Model); ok {
-				return cvi.(Model)
+				return reflect.ValueOf(cvi).Addr().Interface().(Model)
 			}
 		}
 		// find in db
@@ -1530,7 +1529,7 @@ func (r *REST) GetRecord(opts ...interface{}) Model {
 			// found it
 			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface().(Model)
 			LocalSet(ck, recv, CACHE_EXPIRE)
-			return recv
+			return rec
 		} else {
 			Debug("[GetRecord]find %s in db failed: %s", ck, err)
 		}
