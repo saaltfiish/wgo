@@ -501,30 +501,6 @@ func typeStructColumns(t reflect.Type, underscore bool, tags ...string) (cols []
 
 /* }}} */
 
-/* {{{ func ToType(i interface{}) reflect.Type
- * 如果是指针, 则调用Elem()至Type为止, 如果Type不是struct, 报错
- */
-func ToType(i interface{}) reflect.Type {
-	var t reflect.Type
-	if tt, ok := i.(reflect.Type); ok {
-		t = tt
-	} else {
-		t = reflect.TypeOf(i)
-	}
-
-	// If a Pointer to a type, follow
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	//if t.Kind() != reflect.Struct {
-	//	return nil, fmt.Errorf("utils: Cannot SELECT into this type: %v", reflect.TypeOf(i))
-	//}
-	return t
-}
-
-/* }}} */
-
 /* {{{ Underscore
  * 小程序, 把驼峰式转化为匈牙利式
  */

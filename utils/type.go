@@ -9,8 +9,30 @@ package utils
 
 import (
 	"encoding/json"
+	"reflect"
 	"strconv"
 )
+
+/* {{{ func ToType(i interface{}) reflect.Type
+ * 如果是指针, 则调用Elem()至Type为止, 如果Type不是struct, 报错
+ */
+func ToType(i interface{}) reflect.Type {
+	var t reflect.Type
+	if tt, ok := i.(reflect.Type); ok {
+		t = tt
+	} else {
+		t = reflect.TypeOf(i)
+	}
+
+	// If a Pointer to a type, follow
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	return t
+}
+
+/* }}} */
 
 func MustString(vi interface{}) string {
 	if vi != nil {
@@ -174,4 +196,15 @@ func StringPointer(i interface{}) *string {
 	rt := new(string)
 	*rt = MustString(i)
 	return rt
+}
+
+// return a pointer with value
+func Pointer(i interface{}) interface{} {
+	if t := reflect.TypeOf(i); t.Kind() == reflect.Ptr {
+		return i
+	} else {
+		np := reflect.New(ToType(t))
+		reflect.Indirect(np).Set(reflect.ValueOf(i))
+		return np.Interface()
+	}
 }

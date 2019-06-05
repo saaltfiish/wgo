@@ -1514,21 +1514,20 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 			}
 		}
 	}
-	Debug("[GetRecord]cachekey: %s", ck)
 	if ck != "" {
 		// find var in local cache
 		if cvi, err := LocalGet(ck); err == nil {
 			// found
 			// Debug("hit var in cache: %s, %+v, %s", ck, cvi, utils.ToType(cvi).String())
+			Debug("[GetRecord]hit cache: %s", ck)
 			if _, ok := cvi.(Model); ok {
-				nm := reflect.New(utils.ToType(cvi))
-				reflect.Indirect(nm).Set(reflect.ValueOf(cvi))
-				return nm.Interface()
+				return utils.Pointer(cvi)
 			}
 		}
 		// find in db
 		if rec, err := m.Row(); err == nil {
 			// found it
+			Debug("[GetRecord]found %s in db and save to cache", ck)
 			recv := reflect.Indirect(reflect.ValueOf(rec)).Interface()
 			LocalSet(ck, recv, CACHE_EXPIRE)
 			return rec
@@ -1536,6 +1535,7 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 			Debug("[GetRecord]find %s in db failed: %s", ck, err)
 		}
 	}
+	Debug("[GetRecord]cachekey empty")
 	return nil
 }
 
