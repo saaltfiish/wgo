@@ -54,7 +54,7 @@ func RegisterConfig(tags ...interface{}) {
 		if li := os.Getenv(AECK_LOGS_INDEX); li != "" {
 			es[RCK_LOGS_INDEX] = li
 		}
-		Debug("es addr: %s, user: %s, password: %s, indexes: %s, %s", es[RCK_ES_ADDR], es[RCK_ES_USER], es[RCK_ES_PWD], es[RCK_REPORTING_INDEX], es[RCK_LOGS_INDEX])
+		Info("es addr: %s, user: %s, password: %s, indexes: %s, %s", es[RCK_ES_ADDR], es[RCK_ES_USER], es[RCK_ES_PWD], es[RCK_REPORTING_INDEX], es[RCK_LOGS_INDEX])
 		if _, ok := es[RCK_REPORTING_INDEX]; !ok {
 			es[RCK_REPORTING_INDEX] = "reporting"
 		}

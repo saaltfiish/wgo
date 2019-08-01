@@ -86,6 +86,22 @@ func PrimaryStringKey(ps []interface{}) string {
 	return NewParams(ps).PrimaryStringKey()
 }
 
+// 参数长度
+func (p *Params) Len() int {
+	if p.origin != nil {
+		return len(p.origin)
+	}
+	return 0
+}
+
+// shift, 移除第一个参数
+func (p *Params) Shift() *Params {
+	if p.Len() > 0 {
+		return NewParams(p.origin[1:])
+	}
+	return p
+}
+
 func (p *Params) PrimaryStringKey() string {
 	return p.primaryStringKey
 }

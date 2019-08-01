@@ -1,0 +1,8 @@
+FROM alpine:latest AS build
+RUN apk --no-cache add tzdata ca-certificates
+
+FROM scratch
+MAINTAINER "(Odin) <odinmanlee@gmail.com>"
+COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+ADD docker/mime.types /etc/mime.types
