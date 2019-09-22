@@ -60,14 +60,14 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
 		if _, ok := val.(SelfConverter); ok {
-			Debug("selfconvert todb, %+v", reflect.TypeOf(t))
+			// Debug("selfconvert todb, %+v", reflect.TypeOf(t))
 			return val.(SelfConverter).ToDb()
 		} else if reflect.ValueOf(val).IsValid() {
-			if _, ok := reflect.Indirect(reflect.ValueOf(val)).Interface().(SelfConverter); ok { //如果采用了指针, 则到这里
-				Debug("prt selfconvert todb, %+v", reflect.TypeOf(t))
+			if _, ok := reflect.Indirect(reflect.ValueOf(val)).Interface().(SelfConverter); ok { // 如果采用了指针
+				// Debug("prt selfconvert todb, %+v", reflect.TypeOf(t))
 				return val.(SelfConverter).ToDb()
 			} else {
-				Debug("not selfconvert todb, %+v", reflect.TypeOf(t))
+				// Debug("not selfconvert todb, %+v", reflect.TypeOf(t))
 			}
 		} else {
 			//Trace("zero value")
