@@ -3,7 +3,6 @@ package rest
 
 import (
 	"database/sql"
-	"encoding/json"
 	"math/bits"
 	"strconv"
 )
@@ -11,28 +10,28 @@ import (
 // JSON, 库里为字符串, struct 里为变量
 type Array []interface{}
 
-func (a *Array) ToDb() (interface{}, error) {
-	ab, err := json.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-	return string(ab), err
-}
-
-func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, interface{}) error) {
-	binder := func(holder, target interface{}) error {
-		var js string
-		if holder.(*sql.NullString).Valid {
-			js = holder.(*sql.NullString).String
-		}
-		na := new(Array)
-		if err := json.Unmarshal([]byte(js), na); err == nil {
-			*(target.(**Array)) = na
-		}
-		return nil
-	}
-	return new(sql.NullString), binder
-}
+// func (a *Array) ToDb() (interface{}, error) {
+// 	ab, err := json.Marshal(a)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return string(ab), err
+// }
+//
+// func (a *Array) FromDb(target interface{}) (interface{}, func(interface{}, interface{}) error) {
+// 	binder := func(holder, target interface{}) error {
+// 		var js string
+// 		if holder.(*sql.NullString).Valid {
+// 			js = holder.(*sql.NullString).String
+// 		}
+// 		na := new(Array)
+// 		if err := json.Unmarshal([]byte(js), na); err == nil {
+// 			*(target.(**Array)) = na
+// 		}
+// 		return nil
+// 	}
+// 	return new(sql.NullString), binder
+// }
 
 // checklist, 按位记录状态
 type Checklist map[string]bool

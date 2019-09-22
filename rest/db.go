@@ -48,7 +48,7 @@ func OpenDB(tag, dns string) (err error) {
  */
 func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 	switch t := val.(type) {
-	case *[]string, []string, *[]int, []int, map[string]string, *map[string]string, map[string]interface{}, *map[string]interface{}, map[interface{}]interface{}, []interface{}: //转为字符串
+	case *[]string, []string, *[]int, []int, map[string]string, *map[string]string, map[string]interface{}, *map[string]interface{}, map[interface{}]interface{}, []interface{}, *Array, Array: //转为字符串
 		c, _ := json.Marshal(t)
 		return string(c), nil
 	case bool: // 转为数字
@@ -60,14 +60,14 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
 		if _, ok := val.(SelfConverter); ok {
-			//Trace("selfconvert todb")
+			Debug("selfconvert todb, %+v", reflect.TypeOf(t))
 			return val.(SelfConverter).ToDb()
 		} else if reflect.ValueOf(val).IsValid() {
 			if _, ok := reflect.Indirect(reflect.ValueOf(val)).Interface().(SelfConverter); ok { //如果采用了指针, 则到这里
-				//Trace("prt selfconvert todb")
+				Debug("prt selfconvert todb, %+v", reflect.TypeOf(t))
 				return val.(SelfConverter).ToDb()
 			} else {
-				//Trace("not selfconvert todb")
+				Debug("not selfconvert todb, %+v", reflect.TypeOf(t))
 			}
 		} else {
 			//Trace("zero value")
@@ -168,6 +168,53 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 						st = []string{str}
 					}
 					*(target.(*[]string)) = st
+				}
+			}
+			return nil
+		}
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
+	case *[]interface{}:
+		binder := func(holder, target interface{}) error {
+			if holder.(*sql.NullString).Valid {
+				var st []interface{}
+				if str := holder.(*sql.NullString).String; str != "" {
+					if err := json.Unmarshal([]byte(str), &st); err != nil {
+						// unmarshal失败, 直接使用字符串
+						st = []interface{}{str}
+					}
+					*(target.(*[]interface{})) = st
+				}
+			}
+			return nil
+		}
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
+	case **Array:
+		binder := func(holder, target interface{}) error {
+			if holder.(*sql.NullString).Valid {
+				var st Array
+				if str := holder.(*sql.NullString).String; str != "" {
+					//Debug("str: %s", str)
+					if err := json.Unmarshal([]byte(str), &st); err != nil {
+						//return err
+						// unmarshal失败, 直接使用字符串
+						st = Array{str}
+					}
+					*(target.(**Array)) = &st
+				}
+			}
+			return nil
+		}
+		return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
+	case *Array:
+		binder := func(holder, target interface{}) error {
+			if holder.(*sql.NullString).Valid {
+				var st Array
+				if str := holder.(*sql.NullString).String; str != "" {
+					if err := json.Unmarshal([]byte(str), &st); err != nil {
+						// unmarshal失败, 直接使用字符串
+						st = Array{str}
+					}
+					*(target.(*Array)) = st
 				}
 			}
 			return nil
