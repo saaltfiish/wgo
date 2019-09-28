@@ -21,9 +21,9 @@ import (
 
 // for inner request
 type Client struct {
-	host string
-	path string
-	app  string
+	baseUrl string
+	path    string
+	app     string
 
 	req *resty.Request
 }
@@ -39,16 +39,16 @@ type Response struct {
 
 // new client, can pass appid
 func NewClient(service string, opts ...interface{}) *Client {
-	host := ""
+	baseUrl := ""
 	if len(service) > 5 && strings.ToLower(service[0:4]) == "http" {
 		// 兼容旧版本, 旧版直接传入服务地址
-		host = service
+		baseUrl = service
 	} else {
-		host = GetService(service)
+		baseUrl = GetService(service)
 	}
 	client := &Client{
-		host: host,
-		req:  resty.New().R(),
+		baseUrl: baseUrl,
+		req:     resty.New().R(),
 	}
 	if len(opts) > 0 {
 		if app, ok := opts[0].(string); ok {
@@ -62,8 +62,10 @@ func NewClient(service string, opts ...interface{}) *Client {
 // new inner client
 func NewInnerClient(service string) (*Client, error) {
 	// todo: not hardcore inner appid
-	if host := GetService(service); host != "" {
-		return NewClient(host, "gxfstpp"), nil
+	if len(service) > 5 && strings.ToLower(service[0:4]) == "http" {
+		return NewClient(service, "gxfstpp"), nil
+	} else if baseUrl := GetService(service); baseUrl != "" {
+		return NewClient(baseUrl, "gxfstpp"), nil
 	}
 	return nil, fmt.Errorf("Unknown service: %s", service)
 }
@@ -96,17 +98,17 @@ func (client *Client) sendAndRecv(cat string, opts ...interface{}) (resp *Respon
 			client.path = path
 		}
 	}
-	url := client.host + client.path
-	switch strings.ToLower(cat) {
-	case "get":
+	url := client.baseUrl + client.path
+	switch strings.ToUpper(cat) {
+	case "GET":
 		restyResp, err = client.req.Get(url)
-	case "patch":
+	case "PATCH":
 		restyResp, err = client.req.Patch(url)
-	case "head":
+	case "HEAD":
 		restyResp, err = client.req.Head(url)
-	case "put":
+	case "PUT":
 		restyResp, err = client.req.Put(url)
-	case "options":
+	case "OPTIONS":
 		restyResp, err = client.req.Options(url)
 	default:
 		restyResp, err = client.req.Post(url)
@@ -170,29 +172,42 @@ func (resp *Response) Data() *utils.Json {
 
 // base methods
 func (client *Client) Post(path string) (*Response, error) {
-	return client.sendAndRecv("post", path)
+	return client.sendAndRecv("POST", path)
 }
 func (client *Client) Get(path string) (*Response, error) {
-	return client.sendAndRecv("get", path)
+	return client.sendAndRecv("GET", path)
 }
 func (client *Client) Patch(path string) (*Response, error) {
-	return client.sendAndRecv("patch", path)
+	return client.sendAndRecv("PATCH", path)
 }
 
-func RESTQuery(service, path, method string, opts ...interface{}) (*utils.Json, error) {
+// rest query by service
+func RESTQuery(service string, opts ...interface{}) (*utils.Json, error) {
 	request, err := NewInnerClient(service)
 	if err != nil {
 		return nil, err
 	}
 	var resp *Response
 	var re error
-	if obj := utils.NewParams(opts).ItfByIndex(0); obj != nil {
+	ps := utils.NewParams(opts)
+	// path
+	path := ""
+	if p := ps.StringByIndex(0); p != "" {
+		path = p
+	}
+	// method
+	method := "GET"
+	if m := ps.StringByIndex(1); m != "" {
+		method = m
+	}
+	// object for body(json)
+	if obj := utils.NewParams(opts).ItfByIndex(2); obj != nil {
 		request.SetJson(obj)
 	}
-	switch strings.ToLower(method) {
-	case "get":
+	switch strings.ToUpper(method) {
+	case "GET":
 		resp, re = request.Get(path)
-	case "patch":
+	case "PATCH":
 		resp, re = request.Patch(path)
 	default:
 		resp, re = request.Post(path)
