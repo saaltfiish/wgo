@@ -7,6 +7,8 @@
 
 package wgo
 
+import "wgo/environ"
+
 // The main version number that is being run at the moment.
 const WGO_VERSION = "0.9.5"
 
@@ -22,12 +24,12 @@ var (
 	AppVersion string
 	GitCommit  string
 	BuildTime  string
-	AppLevel   string = "dev" // 产品环境 [dev, testing, production]
+	AppLevel   string = environ.LVL_DEV // 产品环境 [dev, testing, production]
 )
 
 func init() {
 	VERSION = Version()
-	Debug("level: %s, version: %s, built at: %s", AppLevel, VERSION, BuildTime)
+	Info("Level: %s, Version: %s, Built at: %s", AppLevel, VERSION, BuildTime)
 }
 
 // 获取版本号
@@ -47,4 +49,9 @@ func Version() (ver string) {
 // 获取环境级别
 func Level() string {
 	return AppLevel
+}
+
+// 是否生产环境
+func IsProduction() bool {
+	return AppLevel == environ.LVL_PRODUCTION
 }
