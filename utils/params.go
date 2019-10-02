@@ -200,9 +200,25 @@ func (p *Params) Int64ByIndex(offset int) int64 {
 	return MustInt64(p.ItfByIndex(offset))
 }
 
+// 通过下标获取int64指针(适用于传入多个参数的情况), 0-based
+func (p *Params) Int64PointerByIndex(offset int) *int64 {
+	if i := p.ItfByIndex(offset); i != nil {
+		return Int64Pointer(i)
+	}
+	return nil
+}
+
 // 通过下标获取int(适用于传入多个参数的情况), 0-based
 func (p *Params) IntByIndex(offset int) int {
 	return MustInt(p.ItfByIndex(offset))
+}
+
+// 通过下标获取int指针(适用于传入多个参数的情况), 0-based
+func (p *Params) IntPointerByIndex(offset int) *int {
+	if i := p.ItfByIndex(offset); i != nil {
+		return IntPointer(i)
+	}
+	return nil
 }
 
 func (p *Params) BoolByIndex(offset int, opts ...bool) bool {
