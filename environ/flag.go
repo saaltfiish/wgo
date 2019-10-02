@@ -20,6 +20,7 @@ const (
 	FLAG_KEY_CONFIGFILE = "config_file"
 	FLAG_KEY_CONFIGTYPE = "config_type"
 	FLAG_KEY_CMDTAG     = "cmd_tag"
+	FLAG_KEY_DEBUG      = "debug"
 
 	FLAG_CMD_STATUS = "status"
 	FLAG_CMD_STOP   = "stop"
@@ -30,16 +31,21 @@ var (
 	flagset *goflags.FlagSet
 	flags   = Flags{ // 这里定义flag
 		FLAG_KEY_CONFIGFILE: &flag{
-			ns: []string{"config_file", "config", "c"},
+			ns: []string{FLAG_KEY_CONFIGFILE, "config", "c"},
 			u:  "configuration file",
 		},
 		FLAG_KEY_CONFIGTYPE: &flag{
-			ns: []string{"config_type", "ct"},
+			ns: []string{FLAG_KEY_CONFIGTYPE, "ct"},
 			d:  "json",
 			u:  "configuration type",
 		},
 		FLAG_KEY_CMDTAG: &flag{
 			u: "command tag",
+		},
+		FLAG_KEY_DEBUG: &flag{
+			ns: []string{FLAG_KEY_DEBUG},
+			d:  false,
+			u:  "debug mode",
 		},
 	}
 )
@@ -135,7 +141,7 @@ func CommandTag() string { return flags.String(FLAG_KEY_CMDTAG) }
 func BoolFlag(name string) bool { return flags.Bool(name) }
 func (fs Flags) Bool(name string) bool {
 	if f := fs.get(name); f.v != nil {
-		return f.v.(bool)
+		return *f.v.(*bool)
 	} else {
 		return false
 	}

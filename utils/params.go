@@ -200,6 +200,11 @@ func (p *Params) Int64ByIndex(offset int) int64 {
 	return MustInt64(p.ItfByIndex(offset))
 }
 
+// 通过下标获取int(适用于传入多个参数的情况), 0-based
+func (p *Params) IntByIndex(offset int) int {
+	return MustInt(p.ItfByIndex(offset))
+}
+
 func (p *Params) BoolByIndex(offset int, opts ...bool) bool {
 	def := false
 	switch len(opts) {

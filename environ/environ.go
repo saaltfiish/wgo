@@ -156,9 +156,11 @@ func (env *Environ) WithConfig() *Environ {
 	if ec := cfg.Bool(CFG_KEY_ENABLECACHE); ec == true {
 		env.EnableCache = ec
 	}
-	if dbg := cfg.Bool(CFG_KEY_DEBUG); dbg == true && level != LVL_PRODUCTION {
+	if dbg := BoolFlag(FLAG_KEY_DEBUG); dbg == true {
+		env.DebugMode = true
+	} else if dbg := cfg.Bool(CFG_KEY_DEBUG); dbg == true && level != LVL_PRODUCTION {
 		//  production环境永远不输入debug级别的日志
-		env.DebugMode = dbg
+		env.DebugMode = true
 	} else {
 		env.DebugMode = false
 	}
