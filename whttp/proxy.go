@@ -21,6 +21,7 @@ import (
 	wcache "wgo/cache"
 	"wgo/environ"
 	"wgo/server"
+	"wgo/utils"
 	"wgo/whttp/fasthttp"
 	"wgo/whttp/standard"
 )
@@ -84,9 +85,20 @@ func Proxy() MiddlewareFunc {
 		},
 	}
 	cache := wcache.NewCache()
+	var cfg map[string](map[string]interface{})
+	if err := environ.Cfg().UnmarshalKey(CFG_KEY_PROXY, &cfg); err != nil {
+		Info("[Proxy]not found proxy config")
+	}
+	// 支持定义多个host, 逗号分隔
 	var config map[string](map[string]interface{})
-	if err := environ.Cfg().UnmarshalKey(CFG_KEY_PROXY, &config); err != nil {
-		Info("not found proxy config")
+	if cfg != nil && len(cfg) > 0 {
+		config = make(map[string](map[string]interface{}))
+		for h, c := range cfg {
+			hs := strings.Split(h, ",")
+			for _, host := range hs {
+				config[strings.TrimSpace(host)] = c
+			}
+		}
 	}
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c Context) (err error) {
@@ -118,14 +130,14 @@ func Proxy() MiddlewareFunc {
 			}
 
 			var proxyUrl *url.URL
-			var cacheOpts Options
+			var opts Options
 			if addrs, ok := proxyCfg.([]interface{}); ok && len(addrs) > 0 { // 旧配置, 只配置地址
 				// random select
 				proxyUrl, _ = randomAddr(addrs)
 			} else if cc, ok := proxyCfg.(map[string]interface{}); ok { // 新配置, 可配置缓存
 				if addrs, ok := cc["addrs"].([]interface{}); ok && len(addrs) > 0 {
 					proxyUrl, _ = randomAddr(addrs)
-					cacheOpts = cc
+					opts = cc
 				}
 			} else {
 				c.Error("config wrong, host: %s, cfg: %q, path: %s", c.Host(), proxyCfg, path)
@@ -139,12 +151,13 @@ func Proxy() MiddlewareFunc {
 
 			ttl := 0
 			key := ""
-			if cacheOpts != nil { // 缓存!
-				if ttlf := cacheOpts["ttl"].(float64); ttlf > 0 {
-					ttl = int(ttlf)
+			enableCache := utils.MustBool(opts["enable_cache"])
+			if enableCache { // 缓存!
+				if ttlf, ok := opts["ttl"]; ok {
+					ttl = utils.MustInt(ttlf)
 				}
 				paramString := ""
-				if params, ok := cacheOpts["params"].([]interface{}); ok && len(params) > 0 { // 需要缓存的query参数
+				if params, ok := opts["params"].([]interface{}); ok && len(params) > 0 { // 需要缓存的query参数
 					ps := bytes.Buffer{}
 					for _, n := range params {
 						ps.WriteString(c.QueryParam(n.(string)) + ",")
@@ -152,7 +165,7 @@ func Proxy() MiddlewareFunc {
 					paramString = ps.String()
 				}
 				headerString := ""
-				if headers, ok := cacheOpts["headers"].([]interface{}); ok && len(headers) > 0 { // 需要缓存的header参数
+				if headers, ok := opts["headers"].([]interface{}); ok && len(headers) > 0 { // 需要缓存的header参数
 					hs := bytes.Buffer{}
 					for _, n := range headers {
 						hs.WriteString(c.Request().(Request).Header().Get(n.(string)))
@@ -165,7 +178,7 @@ func Proxy() MiddlewareFunc {
 					res.(Response).CopyTo(c.Response())
 					return nil
 				} else {
-					c.Error("get key(%s) failed: %s", key, err.Error())
+					c.Info("[proxy]get key(%s) failed: %s", key, err.Error())
 				}
 			}
 
@@ -173,8 +186,14 @@ func Proxy() MiddlewareFunc {
 			defer pool.Put(proxy)
 			proxy.reset(proxyUrl)
 
-			err = proxy.doProxy(c)
-			if err == nil && cacheOpts != nil {
+			// extra headers
+			ehs, ok := opts["extra_headers"].(map[string]interface{})
+			if ok {
+				c.Debug("[Proxy]extra headers: %+v", ehs)
+			}
+
+			err = proxy.doProxy(c, ehs)
+			if err == nil && enableCache {
 				// success, cache response
 				nr := c.Mux().(*Mux).NewResponse()
 				c.Response().(Response).CopyTo(nr)
@@ -241,7 +260,7 @@ var hopHeaders = []string{
 }
 
 // proxy handler
-func (rp *ReverseProxy) doProxy(c Context) error {
+func (rp *ReverseProxy) doProxy(c Context, opts ...interface{}) error {
 
 	//var std bool
 	var req *http.Request
@@ -353,6 +372,14 @@ func (rp *ReverseProxy) doProxy(c Context) error {
 			copiedHeaders = true
 		}
 		outreq.Header.Del(h)
+	}
+
+	// add extra headers
+	if ehs := utils.NewParams(opts).StringMapByIndex(0); len(ehs) > 0 {
+		for h, v := range ehs {
+			// c.Debug("[doProxy]h: %s, v: %+v", h, v)
+			outreq.Header.Set(h, utils.MustString(v))
+		}
 	}
 
 	// add request-id and depth
