@@ -470,11 +470,12 @@ func (rs Routes) Free() Routes {
 }
 
 // inner
+// 限制routes只能通过内部访问
 func (rs Routes) Inner() Routes {
 	return rs.SetOptions(INNERAUTH_KEY, true)
 }
 
-// 限制记录access, 毕竟总不能把密码明文记下来吧
+// 限制记录access, 总不能把密码明文记下来吧...
 func (rs Routes) LimitAccess() Routes {
 	return rs.SetOptions(LimitAccessKey, true)
 }

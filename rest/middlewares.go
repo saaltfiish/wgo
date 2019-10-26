@@ -44,7 +44,7 @@ func Init() wgo.MiddlewareFunc {
 			}
 
 			c.Info("[REST]-->%s<--", c.Query())
-			// set user id
+			// set user id, 默认使用cookie传来的
 			rest.SetUserID()
 
 			// 处理起始时间

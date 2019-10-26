@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"wgo"
+	"wgo/utils"
 )
 
 //时间段
@@ -186,48 +187,30 @@ func (r *REST) setTimeRangeFromDate(p []string) {
 /* }}} */
 
 /* {{{ func (r *REST) SetUserID(opts ...interface{})
- * 获取header中的userid(如果有), 放到env中
+ * 设置UserID, 可以覆盖默认cookie中的user id
  */
 func (r *REST) SetUserID(opts ...interface{}) {
-	ui := ""
-	if len(opts) > 0 {
-		if id, ok := opts[0].(string); ok && id != "" {
-			ui = id
-		} else if idp, ok := opts[0].(*string); ok && idp != nil {
-			ui = *idp
-		}
-	}
-	if ui != "" {
-		r.SetEnv(USERID_KEY, ui)
-	} else {
-		c := r.Context()
-		if uid := c.UserID(); uid != "" {
-			// 目前只支持数字类型的userid
-			r.SetEnv(USERID_KEY, uid)
-		}
+	if uid := utils.PrimaryStringKey(opts); uid != "" {
+		r.SetEnv(USERID_KEY, uid)
+	} else if uid = r.Context().UserID(); uid != "" {
+		r.SetEnv(USERID_KEY, uid)
 	}
 }
 
 /* }}} */
 
-// get get user id
+/* {{{ func (r *REST) GetUserID() string
+ * 获取user id
+ */
 func (r *REST) GetUserID() string {
-	ui := r.GetEnv(USERID_KEY)
-	if ui == nil {
-		if id := r.Context().UserID(); id != "" {
-			return id
-		}
-	}
-	if _, ok := ui.(string); !ok {
-		if id := r.Context().UserID(); id != "" {
-			return id
-		}
-	}
-	if id, ok := ui.(string); ok && id != "" {
+	// 从session中获取
+	if id, _ := r.GetEnv(USERID_KEY).(string); id != "" {
 		return id
 	}
 	return "0"
 }
+
+/* }}} */
 
 /* {{{ func (r *REST) setTimeRangeFromStartEnd() {
  * 时间段信息

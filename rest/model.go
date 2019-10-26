@@ -1036,7 +1036,7 @@ func (r *REST) Valid(fields ...string) (Model, error) {
 				c.Info(err.Error())
 				return nil, err
 			}
-			switch col.ExtTag { //根据tag, 会对数据进行预处理
+			switch strings.ToLower(col.ExtTag) { //根据tag, 会对数据进行预处理
 			case "sha1":
 				if fv.IsValid() && !utils.IsEmptyValue(fv) { //不能为空
 					switch fv.Type().String() {
@@ -1054,39 +1054,10 @@ func (r *REST) Valid(fields ...string) (Model, error) {
 				}
 			case "userid": //替换为userid,如果指定了数值
 				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
-					var userid string
-					if uid := r.GetEnv(USERID_KEY); uid == nil {
-						// 如果没找到userid, 大可能性是inner请求, 采用传入数值
-						if !fv.IsValid() || utils.IsEmptyValue(fv) {
-							userid = "0"
-						}
-					} else {
-						userid = uid.(string)
-						//c.Debug("userid: %s", userid)
-					}
+					userid := r.GetUserID()
 					if err := utils.SetWithProperType(userid, fv); err != nil {
 						return nil, fmt.Errorf("field(%s-%s) set value failed: %s", col.Tag, fv.Kind().String(), err)
 					}
-					// switch fv.Type().String() {
-					// case "*string":
-					// 	fv.Set(reflect.ValueOf(&userid))
-					// case "string":
-					// 	fv.Set(reflect.ValueOf(userid))
-					// case "int":
-					// 	ui, _ := strconv.Atoi(userid)
-					// 	fv.Set(reflect.ValueOf(ui))
-					// case "*int":
-					// 	ui, _ := strconv.Atoi(userid)
-					// 	fv.Set(reflect.ValueOf(&ui))
-					// case "int64":
-					// 	ui64, _ := strconv.ParseInt(userid, 10, 64)
-					// 	fv.Set(reflect.ValueOf(ui64))
-					// case "*int64":
-					// 	ui64, _ := strconv.ParseInt(userid, 10, 64)
-					// 	fv.Set(reflect.ValueOf(&ui64))
-					// default:
-					// 	return nil, fmt.Errorf("field(%s) must be string/int(64), not %s", col.Tag, fv.Kind().String())
-					// }
 				}
 			case "time": //如果没有传值, 就是当前时间
 				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空

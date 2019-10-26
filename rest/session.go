@@ -37,7 +37,7 @@ func (rest *REST) Session(opts ...interface{}) (key string, value interface{}) {
 		key = s.Value()
 	} else if key = utils.PrimaryStringKey(opts); key == "" { // 传入session key, 主动获取
 		// 没有获取到key, return
-		c.Debug("[Session]can't get any key about cookie(%s), maybe inner request", scfg.Key)
+		c.Debug("[Session]got nothing from cookie(by key %s)", scfg.Key)
 		return
 	}
 
