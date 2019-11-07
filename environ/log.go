@@ -67,15 +67,14 @@ func (l *logger) Init(cfg *Config) {
 		panic("[PANIC] start logger failed!")
 	}
 	// forbid debug
-	if !environ.DebugMode {
-		l.Remove(wlog.DEBUG)
-	} else {
+	if environ.DebugMode {
 		l.Add(wlog.DEBUG)
-	}
-	// for app level
-	if level == LVL_PRODUCTION {
-		// 如果是生产环境, 则只放出error以上的日志
-		l.Limit(wlog.ERROR)
+	} else {
+		l.Remove(wlog.DEBUG)
+		// 不是debug mode的情况下, 生产环境只放出error以上的日志
+		if level == LVL_PRODUCTION {
+			l.Limit(wlog.ERROR)
+		}
 	}
 }
 
