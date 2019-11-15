@@ -99,6 +99,14 @@ func ConfigStringMapString(key string) map[string]string {
 	return nil
 }
 
+// string slice
+func ConfigStringSlice(key string) []string {
+	if config != nil {
+		return config.StringSlice(key)
+	}
+	return nil
+}
+
 // StringMapStringSlice
 func ConfigStringMapStringSlice(key string) map[string][]string {
 	if config != nil {
