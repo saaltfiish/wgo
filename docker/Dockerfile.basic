@@ -7,7 +7,7 @@ WORKDIR /basic
 
 #ADD . .
 COPY go.mod .
-COPY go.sum .
+#COPY go.sum .
 COPY vendor ./vendor
 
 RUN go mod download

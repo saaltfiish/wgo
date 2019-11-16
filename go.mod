@@ -26,8 +26,8 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/stripe/stripe-go v53.1.0+incompatible
 	github.com/valyala/fasthttp v0.0.0-00010101000000-000000000000
-	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c
-	golang.org/x/net v0.0.0-20190328230028-74de082e2cca
+	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/net/lex/httplex v0.0.0-00010101000000-000000000000 // indirect
 	google.golang.org/grpc v1.19.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
