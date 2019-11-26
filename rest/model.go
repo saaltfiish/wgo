@@ -1185,7 +1185,7 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 	pf, pv, _ := m.PKey()
 	if pv != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, pv))
-	} else if rk := params.PrimaryStringKey(); rk != "" {
+	} else if rk := params.PrimaryString(); rk != "" {
 		m.SetConditions(NewCondition(CTYPE_IS, pf, rk))
 	} else {
 		params.Bind(m)
@@ -1252,7 +1252,7 @@ func (r *REST) Saved() bool {
 func (r *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 	if m := r.Model(); m != nil {
 		if len(opts) > 0 {
-			if id := utils.PrimaryStringKey(opts); id != "" {
+			if id := utils.PrimaryString(opts); id != "" {
 				if err = utils.ImportValue(m, map[string]string{DBTAG_PK: id}); err != nil {
 					return
 				}
@@ -1451,7 +1451,7 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 	}
 	ck := ""
 	params := utils.NewParams(opts)
-	pk := params.PrimaryStringKey()
+	pk := params.PrimaryString()
 	if pk != "" {
 		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
 			return nil
@@ -1521,7 +1521,7 @@ func (r *REST) UpdateRecord(opts ...interface{}) error {
 		return ErrNoModel
 	}
 	ck := ""
-	pk := utils.PrimaryStringKey(opts)
+	pk := utils.PrimaryString(opts)
 	if pk != "" {
 		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
 			return err
@@ -1567,7 +1567,7 @@ func (r *REST) Write(opts ...interface{}) (Model, error) {
 	pf, pk, ai := m.PKey()
 	if pf != "" { // 具有primary key
 		if pk == "" {
-			pk = utils.PrimaryStringKey(opts)
+			pk = utils.PrimaryString(opts)
 		}
 		if pk == "" && !ai { // 具有primary key, 同时不是auto increasement, 并且没找到primary key value, 则返回没找到
 			return nil, ErrNoRecord

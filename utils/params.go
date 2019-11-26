@@ -15,11 +15,8 @@ import (
 )
 
 type Params struct {
-	origin           []interface{}
-	params           map[string]interface{}
-	primaryStringKey string
-	primaryInt64Key  int64
-	primaryIntKey    int
+	origin []interface{}
+	params map[string]interface{}
 }
 
 func NewParams(p []interface{}) *Params {
@@ -28,10 +25,11 @@ func NewParams(p []interface{}) *Params {
 }
 
 func (p *Params) Parse() *Params {
-	if p.origin != nil && len(p.origin) == 1 {
-		// 只分析第一个参数
+	if p.origin != nil && len(p.origin) >= 1 && len(p.origin)%2 == 0 {
+		// 分析第一个参数
 		primary := p.origin[0]
 		if pv, ok := primary.(map[string]interface{}); ok {
+			// 第一个参数以`map[string]interface{}`传入
 			for k, v := range pv {
 				switch rv := reflect.ValueOf(v); rv.Kind() {
 				case reflect.Ptr, reflect.Slice, reflect.Chan, reflect.Interface, reflect.Func, reflect.Map:
@@ -43,12 +41,7 @@ func (p *Params) Parse() *Params {
 					p.params[strings.ToLower(k)] = v
 				}
 			}
-		} else {
-			p.primaryStringKey = MustString(primary)
-			p.primaryInt64Key = MustInt64(primary)
-			p.primaryIntKey = MustInt(primary)
 		}
-	} else if p.origin != nil && len(p.origin) > 1 && len(p.origin)%2 == 0 {
 		// even number params, odd is name, even is value
 		for i := 0; i < len(p.origin); i += 2 {
 			if name, ok := p.origin[i].(string); ok && name != "" {
@@ -66,24 +59,86 @@ func (p *Params) Parse() *Params {
 	return p
 }
 
-func PrimaryInt64Key(ps []interface{}) int64 {
-	return NewParams(ps).PrimaryInt64Key()
+// primary, 只有仅传入一个参数时有效, 如果想找第一个参数可以用`*ByIndex()`系列
+func PrimaryInt64(ps []interface{}) int64 {
+	return NewParams(ps).PrimaryInt64()
+}
+func (p *Params) PrimaryInt64() int64 {
+	if pl := p.Len(); pl == 1 {
+		return p.Int64ByIndex(0)
+	}
+	return 0
 }
 
-func (p *Params) PrimaryInt64Key() int64 {
-	return p.primaryInt64Key
+func PrimaryInt(ps []interface{}) int {
+	return NewParams(ps).PrimaryInt()
+}
+func (p *Params) PrimaryInt() int {
+	if pl := p.Len(); pl == 1 {
+		return p.IntByIndex(0)
+	}
+	return 0
 }
 
-func PrimaryIntKey(ps []interface{}) int {
-	return NewParams(ps).PrimaryIntKey()
+func PrimaryString(ps []interface{}) string {
+	return NewParams(ps).PrimaryString()
+}
+func (p *Params) PrimaryString() string {
+	if pl := p.Len(); pl == 1 {
+		return p.StringByIndex(0)
+	}
+	return ""
 }
 
-func (p *Params) PrimaryIntKey() int {
-	return p.primaryIntKey
+func PrimaryInterface(ps []interface{}) interface{} {
+	return NewParams(ps).PrimaryInterface()
+}
+func (p *Params) PrimaryInterface() interface{} {
+	if pl := p.Len(); pl == 1 {
+		return p.ItfByIndex(0)
+	}
+	return nil
 }
 
-func PrimaryStringKey(ps []interface{}) string {
-	return NewParams(ps).PrimaryStringKey()
+// last param, opts len must bigger than 1
+func LastInt64(ps []interface{}) int64 {
+	return NewParams(ps).LastInt64()
+}
+func (p *Params) LastInt64() int64 {
+	if pl := p.Len(); pl > 1 {
+		return p.Int64ByIndex(pl - 1)
+	}
+	return 0
+}
+
+func LastInt(ps []interface{}) int {
+	return NewParams(ps).LastInt()
+}
+func (p *Params) LastInt() int {
+	if pl := p.Len(); pl > 1 {
+		return p.IntByIndex(pl - 1)
+	}
+	return 0
+}
+
+func LastString(ps []interface{}) string {
+	return NewParams(ps).LastString()
+}
+func (p *Params) LastString() string {
+	if pl := p.Len(); pl > 1 {
+		return p.StringByIndex(pl - 1)
+	}
+	return ""
+}
+
+func LastInterface(ps []interface{}) interface{} {
+	return NewParams(ps).LastInterface()
+}
+func (p *Params) LastInterface() interface{} {
+	if pl := p.Len(); pl > 1 {
+		return p.ItfByIndex(pl - 1)
+	}
+	return nil
 }
 
 // 参数长度
@@ -100,10 +155,6 @@ func (p *Params) Shift() *Params {
 		return NewParams(p.origin[1:])
 	}
 	return p
-}
-
-func (p *Params) PrimaryStringKey() string {
-	return p.primaryStringKey
 }
 
 func (p *Params) Bind(ptr interface{}) error {

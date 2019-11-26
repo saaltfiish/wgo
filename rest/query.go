@@ -190,7 +190,7 @@ func (r *REST) setTimeRangeFromDate(p []string) {
  * 设置UserID, 可以覆盖默认cookie中的user id
  */
 func (r *REST) SetUserID(opts ...interface{}) {
-	if uid := utils.PrimaryStringKey(opts); uid != "" {
+	if uid := utils.PrimaryString(opts); uid != "" {
 		r.SetEnv(USERID_KEY, uid)
 	} else if uid = r.Context().UserID(); uid != "" {
 		r.SetEnv(USERID_KEY, uid)

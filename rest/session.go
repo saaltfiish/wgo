@@ -35,7 +35,7 @@ func (rest *REST) Session(opts ...interface{}) (key string, value interface{}) {
 	c := rest.Context()
 	if s, err := c.Cookie(scfg.Key); err == nil { // 优先从cookie中获取sessionid, 防止客户端的攻击
 		key = s.Value()
-	} else if key = utils.PrimaryStringKey(opts); key == "" { // 传入session key, 主动获取
+	} else if key = utils.PrimaryString(opts); key == "" { // 传入session key, 主动获取
 		// 没有获取到key, return
 		c.Debug("[Session]got nothing from cookie(by key %s)", scfg.Key)
 		return
@@ -93,7 +93,7 @@ func (rest *REST) DelSession(opts ...interface{}) (key string) {
 	c := rest.Context()
 	if s, err := c.Cookie(scfg.Key); err == nil { // 优先从cookie中获取sessionid
 		key = s.Value()
-	} else if key = utils.PrimaryStringKey(opts); key == "" { // 传入session key, 主动获取
+	} else if key = utils.PrimaryString(opts); key == "" { // 传入session key, 主动获取
 		return
 	}
 
