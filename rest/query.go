@@ -89,7 +89,7 @@ func (r *REST) GetParamConds() []*Condition {
  * 设置参数条件
  */
 func (r *REST) SetParamConds(con *Condition) {
-	// r.Debug("[SetParamConds][key: %s]%v", con.Field, con)
+	r.Debug("[SetParamConds][key: %s]%v", con.Field, con)
 	var conds []*Condition
 	csI := r.GetEnv(ConditionsKey)
 	if csI != nil {

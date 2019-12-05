@@ -52,7 +52,7 @@ type Model interface {
 	Row(...interface{}) (Model, error)                 //获取单条记录
 	Rows(...interface{}) (interface{}, error)          //获取多条记录
 	List() (*List, error)                              // 获取多条记录并返回list
-	GetRecord(rk ...interface{}) interface{}           // 获取一条记录, 可缓存
+	GetRecord(opts ...interface{}) interface{}         // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...string) Model                       //获取旧记录
@@ -191,6 +191,7 @@ func buildWhereRaw(b *gorp.Builder, tableAlias, field string, con interface{}) {
 	if con == nil {
 		return
 	}
+	// wgo.Debug("[buildWhereRaw]tableAlias: %s, field: %s, con: %+v", tableAlias, field, con)
 	switch vt := con.(type) {
 	case *string:
 		b.Where(fmt.Sprintf("%s.`%s` = ?", tableAlias, field), *vt)
@@ -1452,6 +1453,7 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 	ck := ""
 	params := utils.NewParams(opts)
 	pk := params.PrimaryString()
+	fuzzy := params.LastBool(true) // fuzzy代表是否使用条件来确定一条记录, 默认为true
 	if pk != "" {
 		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
 			return nil
@@ -1469,7 +1471,7 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 			for f, v := range uks {
 				ck += fmt.Sprintf(":%s:%s", f, v)
 			}
-		} else {
+		} else if fuzzy {
 			// 最后再找所有可能的conditional字段
 			cols := utils.ReadStructColumns(m, true)
 			for _, col := range cols {
@@ -1578,7 +1580,7 @@ func (r *REST) Write(opts ...interface{}) (Model, error) {
 		return nil, ErrNoRecord
 	}
 	// check if record exists
-	if m.GetRecord(pk) != nil {
+	if m.GetRecord(pk, false) != nil { // 禁用fuzzy查询
 		// update
 		Debug("[model.Write]record exists, update it")
 		if err := m.UpdateRecord(pk); err != nil {
@@ -1754,7 +1756,6 @@ func (r *REST) ReadPrepare(opts ...interface{}) (*gorp.Builder, error) {
 				//Debug("or condition: %s", orKey)
 				switch ot := oc.Is.(type) {
 				case string:
-					//Debug("or condition: %s, field: %s", orKey, v.Field)
 					orCons[orKey] = append(orCons[orKey], fmt.Sprintf("T.`%s` = '%s'", v.Field, ot))
 				case []string:
 					vs := bytes.Buffer{}

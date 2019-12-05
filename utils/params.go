@@ -141,6 +141,16 @@ func (p *Params) LastInterface() interface{} {
 	return nil
 }
 
+func LastBool(ps []interface{}, def bool) bool {
+	return NewParams(ps).LastBool(def)
+}
+func (p *Params) LastBool(def bool) bool {
+	if pl := p.Len(); pl > 1 {
+		return p.BoolByIndex(pl-1, def)
+	}
+	return def
+}
+
 // 参数长度
 func (p *Params) Len() int {
 	if p.origin != nil {
