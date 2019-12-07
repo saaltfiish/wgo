@@ -55,6 +55,12 @@ func MustString(vi interface{}) string {
 			}
 		case int64:
 			return strconv.FormatInt(v, 10)
+		case float64:
+			return strconv.FormatFloat(v, 'f', 2, 64)
+		case *float64:
+			if v != nil {
+				return strconv.FormatFloat(*v, 'f', 2, 64)
+			}
 		default:
 			vb, _ := json.Marshal(vi)
 			return string(vb)
@@ -86,6 +92,12 @@ func MustInt64(vi interface{}) int64 {
 			if v != nil {
 				return *v
 			}
+		case float64:
+			return int64(v)
+		case *float64:
+			if v != nil {
+				return int64(*v)
+			}
 		}
 	}
 	return 0
@@ -114,6 +126,46 @@ func MustInt(vi interface{}) int {
 			}
 		case int64:
 			return int(v)
+		case float64:
+			return int(v)
+		case *float64:
+			if v != nil {
+				return int(*v)
+			}
+		}
+	}
+	return 0
+}
+
+func MustFloat64(vi interface{}) float64 {
+	if vi != nil {
+		switch v := vi.(type) {
+		case string:
+			v64, _ := strconv.ParseFloat(v, 64)
+			return v64
+		case *string:
+			if v != nil {
+				v64, _ := strconv.ParseFloat(*v, 64)
+				return v64
+			}
+		case *int:
+			if v != nil {
+				return float64(*v)
+			}
+		case int:
+			return float64(v)
+		case *int64:
+			if v != nil {
+				return float64(*v)
+			}
+		case int64:
+			return float64(v)
+		case float64:
+			return v
+		case *float64:
+			if v != nil {
+				return *v
+			}
 		}
 	}
 	return 0
