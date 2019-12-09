@@ -61,6 +61,8 @@ func MustString(vi interface{}) string {
 			if v != nil {
 				return strconv.FormatFloat(*v, 'f', 2, 64)
 			}
+		case json.Number:
+			return v.String()
 		default:
 			vb, _ := json.Marshal(vi)
 			return string(vb)
@@ -98,6 +100,9 @@ func MustInt64(vi interface{}) int64 {
 			if v != nil {
 				return int64(*v)
 			}
+		case json.Number:
+			v64, _ := v.Int64()
+			return v64
 		}
 	}
 	return 0
@@ -132,6 +137,9 @@ func MustInt(vi interface{}) int {
 			if v != nil {
 				return int(*v)
 			}
+		case json.Number:
+			v64, _ := v.Int64()
+			return int(v64)
 		}
 	}
 	return 0
@@ -166,6 +174,9 @@ func MustFloat64(vi interface{}) float64 {
 			if v != nil {
 				return *v
 			}
+		case json.Number:
+			v64, _ := v.Float64()
+			return v64
 		}
 	}
 	return 0

@@ -83,6 +83,14 @@ func ConfigString(key string) string {
 	return ""
 }
 
+// bool
+func ConfigBool(key string) bool {
+	if config != nil {
+		return config.Bool(key)
+	}
+	return false
+}
+
 // float64
 func ConfigFloat(key string) float64 {
 	if config != nil {
