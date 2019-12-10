@@ -13,6 +13,7 @@ type Conn struct {
 
 func (c *Conn) Close() (err error) {
 	defer func() {
+		// log.Println("[Odin]conn close!!")
 		c.wg.Done()
 		if r := recover(); r != nil {
 			switch t := r.(type) {

@@ -1,6 +1,7 @@
 package listener
 
 import (
+	"log"
 	"net"
 	"os"
 	"sync"
@@ -43,6 +44,10 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 		return nil, err
 	}
 
+	// wait group
+	// log.Println("[Odin]listener accept!!")
+	l.wg.Add(1)
+
 	err = tc.SetKeepAlive(true)
 	if err != nil {
 		return nil, err
@@ -51,9 +56,6 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// wait group
-	l.wg.Add(1)
 
 	return &Conn{Conn: tc, wg: l.wg}, nil
 }
@@ -71,5 +73,6 @@ func (l *Listener) File() *os.File {
 }
 
 func (l *Listener) Wait() {
+	log.Println("[Odin]listen waiting!!")
 	l.wg.Wait()
 }
