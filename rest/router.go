@@ -454,6 +454,25 @@ func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
 	}
 }
 
+func (rest *REST) MethodGet(path string, opts ...interface{}) Routes {
+	return rest.Add("GET", path, opts...)
+}
+func (rest *REST) MethodPost(path string, opts ...interface{}) Routes {
+	return rest.Add("POST", path, opts...)
+}
+func (rest *REST) MethodDelete(path string, opts ...interface{}) Routes {
+	return rest.Add("DELETE", path, opts...)
+}
+func (rest *REST) MethodPatch(path string, opts ...interface{}) Routes {
+	return rest.Add("PATCH", path, opts...)
+}
+func (rest *REST) MethodPut(path string, opts ...interface{}) Routes {
+	return rest.Add("PUT", path, opts...)
+}
+func (rest *REST) MethodHead(path string, opts ...interface{}) Routes {
+	return rest.Add("HEAD", path, opts...)
+}
+
 func optionKey(key string) string {
 	return fmt.Sprintf("%s:%s", RESTKey, key)
 }
