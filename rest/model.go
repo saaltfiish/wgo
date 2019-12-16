@@ -56,7 +56,7 @@ type Model interface {
 	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...string) Model                       //获取旧记录
-	GetSum(...string) (*List, error)                   //获取多条记录
+	GetSum(...string) (interface{}, error)             //获取多条记录
 	GetCount() (int64, error)                          //获取多条记录
 	GetCountNSum() (int64, float64)                    //获取count and sum
 	CreateRow() (Model, error)                         //创建单条记录
@@ -1345,11 +1345,13 @@ func (r *REST) List() (l *List, err error) {
 		builder, _ := r.ReadPrepare()
 		// builder := bi.(*gorp.Builder)
 		count, _ := builder.Count() //结果数
+		l.Info.Total = count
+		l.Info.Page = utils.IntPointer(1)
+		l.Info.PerPage = utils.IntPointer(count)
 		ms := r.NewList()
 		if p := r.Pagination(); p != nil {
 			l.Info.Page = &p.Page
 			l.Info.PerPage = &p.PerPage
-			l.Info.Total = count
 			err = builder.Select(GetDbFields(m, true)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 			//c.Debug("[offset: %d][per_page: %d]", p.Offset, p.PerPage)
 		} else {
@@ -1364,7 +1366,7 @@ func (r *REST) List() (l *List, err error) {
 			// 	return l, ErrNoRecord
 		}
 
-		l.List = ms
+		l.List = reflect.ValueOf(ms).Elem().Interface()
 
 		return l, nil
 	}
@@ -1373,44 +1375,48 @@ func (r *REST) List() (l *List, err error) {
 
 /* }}} */
 
-/* {{{ func (r *REST) GetSum(d ...string) (l *List, err error)
+/* {{{ func (r *REST) GetSum(d ...string) (l interface{}, err error)
  * 获取list, 通用函数
  */
-func (r *REST) GetSum(d ...string) (l *List, err error) {
+func (r *REST) GetSum(d ...string) (interface{}, error) {
 	if m := r.Model(); m != nil {
 		builder, _ := r.ReadPrepare(true)
 		// builder := bi.(*gorp.Builder)
 
-		l = new(List)
+		// l := new(List)
 
 		group := make([]string, 0)
-		ms := r.NewList()
-		if err := builder.Select(GetSumFields(m, group...)).Find(ms); err == nil {
-			sumValue := reflect.Indirect(reflect.ValueOf(ms))
-			if sumValue.Len() > 0 {
-				l.Info.Sum = sumValue.Index(0).Interface()
-			}
-		}
+		// ms := r.NewList()
+		// if err := builder.Select(GetSumFields(m, group...)).Find(ms); err == nil {
+		// 	sumValue := reflect.Indirect(reflect.ValueOf(ms))
+		// 	if sumValue.Len() > 0 {
+		// 		l.Info.Sum = sumValue.Index(0).Interface()
+		// 	}
+		// } else {
+		// 	wgo.Warn("[GetSum]sum failed: %s", err)
+		// }
 
 		if len(d) > 0 {
 			group = append(group, d...)
 		}
 		builder.Group(group)
 
-		ms = r.NewList()
+		ms := r.NewList()
 
-		if err = builder.Select(GetSumFields(m, group...)).Find(ms); err != nil {
-			return l, err
+		if err := builder.Select(GetSumFields(m, group...)).Find(ms); err != nil {
+			return nil, err
 		} else if ms == nil {
-			return l, ErrNoRecord
+			return nil, ErrNoRecord
 		}
+		return ms, nil
 
-		listValue := reflect.Indirect(reflect.ValueOf(ms))
-		l.Info.Total = int64(listValue.Len())
+		// listValue := reflect.Indirect(reflect.ValueOf(ms))
+		// l.Info.Total = int64(listValue.Len())
+		// l.Info.Summary = ms
 
-		l.List = ms
+		// l.List = ms
 
-		return
+		// return l, nil
 	}
 	return nil, ErrNoModel
 }
@@ -1948,17 +1954,23 @@ func GetSumFields(i interface{}, g ...string) (s string) {
 			if col.ExtOptions.Contains(TAG_CANGROUP) && !utils.InSlice(col.Tag, g) {
 				continue
 			}
-			if !first {
-				bs.WriteString(",")
-			}
 			if col.ExtOptions.Contains(TAG_SUM) {
+				if !first {
+					bs.WriteString(",")
+				}
 				bs.WriteString(fmt.Sprintf("SUM(T.`%s`) AS `%s`", col.Tag, col.Tag))
 				if col.ExtOptions.Contains(TAG_TSUM) {
 					bs.WriteString(fmt.Sprintf(",SUM(T.`%s`) AS `%s`", col.Tag, EXF_SUM))
 				}
 			} else if col.ExtOptions.Contains(TAG_COUNT) {
+				if !first {
+					bs.WriteString(",")
+				}
 				bs.WriteString(fmt.Sprintf("COUNT(T.`%s`) AS `%s`", col.Tag, EXF_COUNT))
-			} else {
+			} else if len(g) > 0 {
+				if !first {
+					bs.WriteString(",")
+				}
 				bs.WriteString("T.`" + col.Tag + "`")
 			}
 			first = false
