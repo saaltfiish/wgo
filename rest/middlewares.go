@@ -132,7 +132,7 @@ func Init() wgo.MiddlewareFunc {
 				}
 			}
 			//记录分页信息
-			rest.SetEnv(PaginationKey, NewPagination(p, pp))
+			rest.SetEnv(PaginationKey, NewPagination(pp, p))
 
 			restError := next(c)
 

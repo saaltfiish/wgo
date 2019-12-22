@@ -39,7 +39,7 @@ type Model interface {
 	Pagination() *Pagination
 	SetFields(...string) Model
 	Fields() []string
-	NewList() interface{} // 返回一个空结构列表
+	NewSlice() interface{} // 返回一个空结构列表
 	AddTable(...string) Model
 	ImportDic(string, ChecklistDic)
 	DBConn(string) *gorp.DbMap                         // 数据库连接
@@ -705,12 +705,12 @@ func (r *REST) Keeper() func(string) (interface{}, error) {
 
 /* }}} */
 
-/* {{{ func (r *REST) NewList() *[]Model
+/* {{{ func (r *REST) NewSlice() *[]Model
 *
  */
-func (r *REST) NewList() interface{} {
+func (r *REST) NewSlice() interface{} {
 	if m := r.Model(); m == nil {
-		Warn("[NewList]: %s", ErrNoModel)
+		Warn("[NewSlice]: %s", ErrNoModel)
 		return nil
 	} else {
 		return reflect.New(reflect.SliceOf(reflect.TypeOf(m))).Interface()
@@ -1197,7 +1197,7 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 		return nil, err
 	} else {
 		// builder := bi.(*gorp.Builder)
-		ms := m.NewList()
+		ms := m.NewSlice()
 		err := builder.Select(GetDbFields(m)).Limit("1").Find(ms)
 		if err != nil && err != sql.ErrNoRows {
 			//支持出错
@@ -1317,7 +1317,7 @@ func (r *REST) Rows(opts ...interface{}) (ms interface{}, err error) {
 		}
 		// builder := bi.(*gorp.Builder)
 
-		ms = r.NewList()
+		ms = r.NewSlice()
 		if p != nil {
 			err = builder.Select(GetDbFields(m, readTag)).Offset(p.Offset).Limit(p.PerPage).Find(ms)
 		} else {
@@ -1348,7 +1348,7 @@ func (r *REST) List() (l *List, err error) {
 		l.Info.Total = count
 		l.Info.Page = utils.IntPointer(1)
 		l.Info.PerPage = utils.IntPointer(count)
-		ms := r.NewList()
+		ms := r.NewSlice()
 		if p := r.Pagination(); p != nil {
 			l.Info.Page = &p.Page
 			l.Info.PerPage = &p.PerPage
@@ -1386,7 +1386,7 @@ func (r *REST) GetSum(d ...string) (interface{}, error) {
 		// l := new(List)
 
 		group := make([]string, 0)
-		// ms := r.NewList()
+		// ms := r.NewSlice()
 		// if err := builder.Select(GetSumFields(m, group...)).Find(ms); err == nil {
 		// 	sumValue := reflect.Indirect(reflect.ValueOf(ms))
 		// 	if sumValue.Len() > 0 {
@@ -1401,7 +1401,7 @@ func (r *REST) GetSum(d ...string) (interface{}, error) {
 		}
 		builder.Group(group)
 
-		ms := r.NewList()
+		ms := r.NewSlice()
 
 		if err := builder.Select(GetSumFields(m, group...)).Find(ms); err != nil {
 			return nil, err

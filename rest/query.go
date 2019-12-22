@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
@@ -39,33 +38,26 @@ func getCTypeByPrefix(p byte) int {
 }
 
 // 条件信息
-/* {{{ func NewPagation(page, perPage string) (p *Pagination)
+/* {{{ func NewPagation(opts ...interface{}) (p *Pagination)
  */
-func NewPagination(page, perPage string) (p *Pagination) {
-	var pageNum, offset, perNum int
-	if page == "" {
-		pageNum = _DEF_PAGE
-	} else {
-		pageNum, _ = strconv.Atoi(page)
-		if pageNum < 1 {
-			pageNum = _DEF_PAGE
-		}
+func NewPagination(opts ...interface{}) (p *Pagination) {
+	ps := utils.NewParams(opts)
+	perPage := ps.IntByIndex(0)
+	page := ps.IntByIndex(1)
+	if page <= 0 {
+		page = _DEF_PAGE
 	}
-	if perPage == "" {
-		perNum = _DEF_PER_PAGE
-	} else {
-		perNum, _ = strconv.Atoi(perPage)
-		if perNum > _MAX_PER_PAGE {
-			perNum = _MAX_PER_PAGE
-		}
+	if perPage <= 0 {
+		perPage = _DEF_PER_PAGE
+	} else if perPage > _MAX_PER_PAGE {
+		perPage = _MAX_PER_PAGE
 	}
-	offset = (pageNum - 1) * perNum
-	p = &Pagination{
-		Page:    pageNum,
-		PerPage: perNum,
+	offset := (page - 1) * perPage
+	return &Pagination{
+		Page:    page,
+		PerPage: perPage,
 		Offset:  offset,
 	}
-	return
 }
 
 /* }}} */
