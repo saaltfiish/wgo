@@ -44,10 +44,6 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 		return nil, err
 	}
 
-	// wait group
-	// log.Println("[Odin]listener accept!!")
-	l.wg.Add(1)
-
 	err = tc.SetKeepAlive(true)
 	if err != nil {
 		return nil, err
@@ -57,6 +53,9 @@ func (l *Listener) Accept() (c net.Conn, err error) {
 		return nil, err
 	}
 
+	// wait group
+	// log.Println("[Odin]listener accept!!")
+	// l.wg.Add(1)
 	return &Conn{Conn: tc, wg: l.wg}, nil
 }
 

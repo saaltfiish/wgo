@@ -267,7 +267,7 @@ func (s *Server) ListenAndServe(d *daemon.Daemon) (err error) {
 		} else {
 			//Info("Create listener and add to daemon pool, addr: %s", s.cfg.Addr)
 			s.listener = listener.WrapListener(nl)
-			d.AddListener(nl) // 把listener加入daemon, 以利用daemon的Reload
+			d.AddListener(s.listener) // 把listener加入daemon, 以利用daemon的Reload
 		}
 		// tls config
 		if s.Mode() == MODE_HTTPS {
