@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"wgo"
 	"wgo/gorp"
 	"wgo/utils"
 )
@@ -443,21 +442,20 @@ func (con *Condition) Merge(oc *Condition) {
 
 /* }}} */
 
-// new model from context
-func ModelFromContext(c *wgo.Context, i interface{}) Model {
-	return GetREST(c).NewModel(i)
+// 从rest创建一个全新的model, 不需要传参,因为类型已经知道
+// return a new instance of builtin model
+func (r *REST) New() Model {
+	if m := r.Model(); m != nil {
+		//return reflect.New(reflect.Indirect(reflect.ValueOf(m)).Type()).Interface().(Model)
+		return NewModel(m)
+	}
+	return nil
 }
 
 // 基于类型创建一个全新的model, i会被置为空
 func NewModel(i interface{}) Model {
 	r := new(REST)
 	return r.NewModel(i)
-}
-
-// 基于变量创建全新的model,  i的值保留
-func SetModel(i interface{}) Model {
-	r := new(REST)
-	return r.SetModel(i.(Model))
 }
 
 // 创建一个跟r有关的model
@@ -468,6 +466,12 @@ func (r *REST) NewModel(i interface{}) Model {
 }
 
 // SetModel
+// 基于变量创建全新的model,  i的值保留
+func SetModel(i interface{}) Model {
+	r := new(REST)
+	return r.SetModel(i.(Model))
+}
+
 func (r *REST) SetModel(m Model) Model {
 	r.model = m
 	// 注入m
@@ -488,29 +492,19 @@ func (r *REST) Modelize(m Model) Model {
 	return nr.SetModel(m)
 }
 
-// 从rest创建一个全新的model, 不需要传参,因为类型已经知道
-// return a new instance
-func (r *REST) New() Model {
-	if m := r.Model(); m != nil {
-		//return reflect.New(reflect.Indirect(reflect.ValueOf(m)).Type()).Interface().(Model)
-		return NewModel(m)
-	}
-	return nil
-}
-
 // 把rest注入i
-func (r *REST) importTo(i interface{}, fields ...string) {
+func (r *REST) importTo(i interface{}) {
 	field := "REST"
-	if len(fields) > 0 {
-		field = fields[0]
+	if err := utils.ImportByField(i, r, field); err != nil {
+		Warn("[importTo]import rest to %s failed: %s", field, err)
 	}
-	if fv := utils.FieldByName(i, field); fv.IsValid() {
-		if fv.Kind() == reflect.Ptr {
-			fv.Set(reflect.ValueOf(r))
-		} else {
-			fv.Set(reflect.ValueOf(r).Elem())
-		}
-	}
+	// if fv := utils.FieldByName(i, field); fv.IsValid() && fv.CanSet() {
+	// 	if fv.Kind() == reflect.Ptr {
+	// 		fv.Set(reflect.ValueOf(r))
+	// 	} else {
+	// 		fv.Set(reflect.ValueOf(r).Elem())
+	// 	}
+	// }
 }
 
 // Model
@@ -944,21 +938,21 @@ func (r *REST) KeeperFactory() func(string) (interface{}, error) {
  */
 func (r *REST) Filter() (Model, error) {
 	if m := r.Model(); m != nil {
-		r := r.NewModel(m)
-		rv := reflect.ValueOf(r)
+		nm := r.GenModel(m)
+		nmv := reflect.ValueOf(nm)
 		v := reflect.ValueOf(m)
 		if cols := utils.ReadStructColumns(m, true); cols != nil {
 			for _, col := range cols {
 				fv := utils.FieldByIndex(v, col.Index)
-				mv := utils.FieldByIndex(rv, col.Index)
+				nv := utils.FieldByIndex(nmv, col.Index)
 				//r.Debug("field:%s; name: %s, kind:%v; type:%s", col.Tag, col.Name, fv.Kind(), fv.Type().String())
 				if col.TagOptions.Contains(DBTAG_PK) || col.ExtOptions.Contains(TAG_RETURN) {
 					//pk以及定义了返回tag的赋值
-					mv.Set(fv)
+					nv.Set(fv)
 				}
 			}
 		}
-		return r, nil
+		return nm, nil
 	}
 	return nil, ErrNoModel
 }
@@ -980,9 +974,9 @@ func (r *REST) Fill(j []byte) error {
 		r.SetModel(m)
 		if reflect.ValueOf(m).Kind() == reflect.Ptr {
 			// Info("fill to new: %+v", reflect.Indirect(reflect.ValueOf(m)))
-			r.new = reflect.Indirect(reflect.ValueOf(m)).Interface()
+			r.newer = reflect.Indirect(reflect.ValueOf(m)).Interface()
 		} else {
-			r.new = m
+			r.newer = m
 		}
 		r.filled = true
 	}
@@ -1982,7 +1976,7 @@ func GetSumFields(i interface{}, g ...string) (s string) {
 
 /* }}} */
 
-// dig model
+// dig model, 找到匿名, 所以叫dig
 func digModel(m Model) Model {
 	rt := utils.RealType(m, reflect.TypeOf((*Model)(nil)).Elem())
 	//Info("mtype: %v, real type: %v", mt, rt)

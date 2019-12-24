@@ -4,6 +4,7 @@ package rest
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"wgo"
 	"wgo/whttp"
@@ -13,19 +14,21 @@ type REST struct {
 	Count int64   `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
 	Sum   float64 `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
 
-	endpoint    string                            `db:"-"`
-	model       Model                             `db:"-"`
-	transaction *Transaction                      `db:"-"`
+	endpoint  string        `db:"-"`
+	model     Model         `db:"-"`
+	defaultms []interface{} `db:"-"` // 默认的middlewares
+	pool      *sync.Pool    `db:"-"`
+
 	ctx         *wgo.Context                      `db:"-"`
+	transaction *Transaction                      `db:"-"`
 	keeper      func(string) (interface{}, error) `db:"-"`
 	conditions  []*Condition                      `db:"-"`
 	pagination  *Pagination                       `db:"-"`
 	fields      []string                          `db:"-"`
-	new         interface{}                       `db:"-"`
+	newer       interface{}                       `db:"-"`
 	older       Model                             `db:"-"`
 	filled      bool                              `db:"-"` //是否有内容
 	saved       bool                              `db:"-"` // 是否已存储
-	defaultms   []interface{}                     `db:"-"` // 默认的middlewares
 	// env        map[interface{}]interface{} `db:"-"`
 }
 
@@ -39,16 +42,6 @@ func init() {
 	RegisterConfig(wgo.Env().ProcName)
 }
 
-// new rest
-func NewREST(c *wgo.Context) *REST {
-	r := new(REST).setContext(c)
-	if base := r.Options(BaseModelKey); base != nil {
-		r.NewModel(base)
-	}
-	c.Set("__!rest!__", r)
-	return r
-}
-
 // get/build rest instance
 func GetREST(c *wgo.Context) *REST {
 	if r := c.Get("__!rest!__"); r != nil {
@@ -56,14 +49,49 @@ func GetREST(c *wgo.Context) *REST {
 			return rest
 		}
 	}
-	return NewREST(c)
+	var rest *REST
+	if pi := c.Options(optionKey(ModelPoolKey)); pi != nil {
+		// Debug("[GetREST]get rest from pool!!")
+		// get from pool
+		rest = pi.(*sync.Pool).Get().(*REST)
+		rest.reset()
+
+		// inject context
+		rest.setContext(c)
+		c.Set("__!rest!__", rest)
+		return rest
+	} else {
+		Error("[GetREST]not found pool")
+	}
+
+	return nil
 }
 
-// release
-func (r *REST) Release() {
+// pool
+func (r *REST) reset() {
+	r.ctx = nil
+	r.transaction = nil
+	r.keeper = nil
+	r.conditions = nil
+	r.fields = nil
+	r.newer = nil
+	r.older = nil
+	r.filled = false
+	r.saved = false
+}
+func (r *REST) release() {
 	if r.Context() != nil {
 		r.Context().Set("__!rest!__", nil)
 	}
+	if r.pool != nil {
+		r.pool.Put(r)
+	}
+}
+
+// properties
+func (r *REST) Endpoint() string {
+	// return utils.MustString(r.Options(EndpointKey))
+	return r.endpoint
 }
 
 // context

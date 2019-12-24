@@ -350,7 +350,38 @@ func FieldByName(i interface{}, field string) reflect.Value {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	return v.FieldByName(field)
+	if v.Kind() == reflect.Struct {
+		return v.FieldByName(field)
+	}
+	return reflect.Value{}
+}
+
+/* }}} */
+
+/* {{{ func ImportByField(target)
+ * 将值注入struct字段
+ */
+func ImportByField(i interface{}, v interface{}, field string) error {
+	if field == "" {
+		return errors.New("invalid field")
+	}
+	if fv := FieldByName(i, field); fv.IsValid() && fv.CanSet() {
+		ft := ToType(fv.Type())
+		vt := ToType(v)
+		if ft != vt {
+			return errors.New("type mismatch")
+		}
+		vv := reflect.ValueOf(v)
+		switch {
+		case fv.Kind() == vv.Kind():
+			fv.Set(vv)
+		case fv.Kind() == reflect.Ptr:
+			fv.Set(vv.Addr())
+		default:
+			fv.Set(vv.Elem())
+		}
+	}
+	return nil
 }
 
 /* }}} */

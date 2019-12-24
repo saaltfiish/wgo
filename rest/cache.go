@@ -8,7 +8,7 @@ import (
 	wcache "wgo/cache"
 )
 
-var cache *wcache.Cache
+var cache *wcache.Cache = wcache.NewCache()
 
 func LocalGet(key string) (value interface{}, err error) {
 	if key != "" {

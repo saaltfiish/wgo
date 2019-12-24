@@ -2,29 +2,20 @@
 package rest
 
 import (
-	"encoding/json"
 	"strings"
 
 	"wgo"
-	wcache "wgo/cache"
+	"wgo/utils"
 	"wgo/whttp"
 )
 
 // REST
 // 解析参数
 func Init() wgo.MiddlewareFunc {
-	cache = wcache.NewCache()
-	//wcache.SetLogger(wgo)
 	return func(next wgo.HandlerFunc) wgo.HandlerFunc {
 		return func(c *wgo.Context) (err error) {
 			rest := GetREST(c)
-			defer rest.Release()
-
-			// Debug("[Init]endpoint: %s, basemodel: %+v", rest.Options(EndpointKey), rest.Options(BaseModelKey))
-			// 生成路由时把basemodel注入, 这里取出, 效率存在问题，将来可考虑pool
-			if base := rest.Options(BaseModelKey); base != nil {
-				rest.NewModel(base)
-			}
+			defer rest.release()
 
 			// action
 			switch m := c.Request().(whttp.Request).Method(); m {
@@ -139,8 +130,8 @@ func Init() wgo.MiddlewareFunc {
 			// access info
 			if ac := c.Access(); ac != nil {
 				// endpoint
-				if ep := rest.Options(EndpointKey); ep != nil && ep.(string) != "" {
-					ac.Service.Endpoint = ep.(string)
+				if ep := rest.Endpoint(); ep != "" {
+					ac.Service.Endpoint = ep
 				} else {
 					Warn("not found endpoint")
 				}
@@ -155,18 +146,12 @@ func Init() wgo.MiddlewareFunc {
 				ac.Service.User.Id = rest.GetUserID()
 
 				// new & old
-				if la := rest.Options(LimitAccessKey); la == nil && rest.new != nil {
+				if la := rest.Options(LimitAccessKey); la == nil && rest.newer != nil {
 					// 如果设置了LimitAccess, 就不记录传入的body, 主要针对登录密码
-					if _, ok := rest.new.(string); ok {
-						ac.Service.New = rest.new.(string)
-					} else if nb, err := json.Marshal(rest.new); err == nil {
-						ac.Service.New = string(nb)
-					}
+					ac.Service.New = utils.MustString(rest.newer)
 				}
 				if rest.older != nil {
-					if ob, err := json.Marshal(rest.older); err == nil {
-						ac.Service.Old = string(ob)
-					}
+					ac.Service.Old = utils.MustString(rest.older)
 				}
 
 				// desc

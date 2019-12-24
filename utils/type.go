@@ -14,7 +14,7 @@ import (
 )
 
 /* {{{ func ToType(i interface{}) reflect.Type
- * 如果是指针, 则调用Elem()至Type为止, 如果Type不是struct, 报错
+ * 如果是指针, 则调用Elem()至Type为止
  */
 func ToType(i interface{}) reflect.Type {
 	var t reflect.Type
@@ -63,6 +63,8 @@ func MustString(vi interface{}) string {
 			}
 		case json.Number:
 			return v.String()
+		case []byte:
+			return string(v)
 		default:
 			vb, _ := json.Marshal(vi)
 			return string(vb)

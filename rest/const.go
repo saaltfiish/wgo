@@ -53,6 +53,7 @@ const (
 	LogPrefixKey      = "_prefix_"
 	EndpointKey       = "_endpoint_"
 	BaseModelKey      = "_basemodel_"
+	ModelPoolKey      = "_modelpool_"
 	RowkeyKey         = "_rk_"
 	RptKey            = "_rpt_"
 	SelectorKey       = "_selector_"

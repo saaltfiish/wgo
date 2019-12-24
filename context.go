@@ -33,7 +33,6 @@ type (
 		mode     string
 		access   *AccessLog
 		noCache  bool
-		// ext      interface{} // 额外信息
 	}
 )
 

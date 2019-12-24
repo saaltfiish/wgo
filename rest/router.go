@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"wgo"
 	"wgo/server"
@@ -79,6 +80,30 @@ func RESTDeny(c *wgo.Context) error {
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
+// 新建一个model的工厂程序, 闭包
+func modelFactory(i interface{}) func() interface{} {
+	m := i.(Model)
+	return func() interface{} {
+		// Info("[modelFactory]%+v", m)
+		return digModel(m)
+	}
+}
+
+// 新建一个REST的工厂, 闭包
+func restFactory(endpoint string, i interface{}, ms ...interface{}) func() interface{} {
+	mg := modelFactory(i)
+	return func() interface{} {
+		rest := &REST{
+			endpoint:  endpoint,
+			model:     mg().(Model),
+			defaultms: ms,
+			pool:      &sync.Pool{New: restFactory(endpoint, i, ms...)},
+		}
+		rest.importTo(rest.model)
+		return rest
+	}
+}
+
 // 注册路由
 // 注册之后可以自动获得rest提供的通用方法,这是rest的核心价值之一
 // 同时也可以自己写同名方法覆盖
@@ -90,12 +115,8 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	if _, ok := i.(Model); !ok {
 		panic("input not Model")
 	}
-	// 找到真实的m
-	m := digModel(i.(Model))
-	rest := new(REST)
-	rest.endpoint = endpoint
-	rest.model = m
-	rest.defaultms = ms
+	restGen := restFactory(endpoint, i, ms...)
+	rest := restGen().(*REST)
 
 	// default,deny
 	// wgo.HEAD("/"+endpoint, RESTDeny)
@@ -106,7 +127,8 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	// wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 	// wgo.PUT("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
 
-	rest.Builtin(flag).SetOptions(BaseModelKey, m).SetOptions(EndpointKey, endpoint)
+	// rest.Builtin(flag).SetOptions(BaseModelKey, m).SetOptions(EndpointKey, endpoint)
+	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.pool)
 	return rest
 }
 
@@ -187,10 +209,9 @@ func (r *REST) HandlerByMethod(method string) wgo.HandlerFunc {
 
 // Func
 func (r *REST) RESTGet() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error {
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -223,7 +244,6 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 }
 
 func (_ *REST) RESTSearch() wgo.HandlerFunc {
-	// model := r.New()
 	return func(c *wgo.Context) error {
 		rest := GetREST(c)
 		m := rest.Model()
@@ -258,10 +278,9 @@ func (_ *REST) RESTSearch() wgo.HandlerFunc {
 }
 
 func (r *REST) RESTPost() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error {
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -292,10 +311,9 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 
 }
 func (r *REST) RESTPatch() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error { //修改
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -328,10 +346,9 @@ func (r *REST) RESTPatch() wgo.HandlerFunc {
 	}
 }
 func (r *REST) RESTPut() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error { //修改
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -358,10 +375,9 @@ func (r *REST) RESTPut() wgo.HandlerFunc {
 	}
 }
 func (r *REST) RESTDelete() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error {
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -387,10 +403,9 @@ func (r *REST) RESTDelete() wgo.HandlerFunc {
 	}
 }
 func (r *REST) RESTHead() wgo.HandlerFunc {
-	model := r.New()
 	return func(c *wgo.Context) error { //检查字段
 		rest := GetREST(c)
-		m := rest.NewModel(model)
+		m := rest.Model()
 		action := m.(Action)
 		defer action.Defer(m)
 
@@ -438,19 +453,19 @@ func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
 	//Debug("method: %s, path: %s, model: %v", method, path, rest.Model())
 	switch strings.ToUpper(method) {
 	case "GET":
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	case "POST":
-		return Routes{wgo.POST(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.POST(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	case "DELETE":
-		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	case "PATCH":
-		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	case "PUT":
-		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	case "HEAD":
-		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	default:
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(BaseModelKey, rest.Model()).SetOptions(EndpointKey, rest.endpoint)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
 	}
 }
 
