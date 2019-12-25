@@ -29,9 +29,6 @@ pipeline:
     repo: ccr.ccs.tencentyun.com/phyzi/wgo
     secrets: [ docker_username, docker_password ]
     tags:
-      - latest
-      - prod
-      - modules
       - ${DRONE_TAG}
     dockerfile: docker/Dockerfile
     when:
