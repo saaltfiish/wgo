@@ -32,6 +32,9 @@ type Model interface {
 	Order(string, interface{}) Model
 	Raw(string, interface{}) Model
 
+	New() Model
+	NewModel(interface{}) Model
+
 	SetConditions(...*Condition) Model
 	Conditions() []*Condition
 	SetPagination(p *Pagination) Model
@@ -442,11 +445,50 @@ func (con *Condition) Merge(oc *Condition) {
 
 /* }}} */
 
+// add model to rest
+func AddModel(i interface{}) Model {
+	// check model
+	m, ok := i.(Model)
+	if !ok {
+		panic("input not Model")
+	}
+	// check router
+	// if _, ok := i.(Router); !ok {
+	// 	panic("input not Router")
+	// }
+
+	rest := addREST(m)
+
+	// add table
+	rest.AddTable()
+
+	// add builtin routes, endpoint是model名的复数形式
+	rest.Builtin(GM_ALL).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+	return rest.Model()
+}
+
+// 新建一个model的工厂程序, 闭包
+func modelFactory(i interface{}) func() Model {
+	m, ok := i.(Model)
+	if !ok {
+		return func() Model {
+			return nil
+		}
+	}
+	return func() Model {
+		return digModel(m)
+	}
+}
+
 // 从rest创建一个全新的model, 不需要传参,因为类型已经知道
 // return a new instance of builtin model
 func (r *REST) New() Model {
-	if m := r.Model(); m != nil {
-		//return reflect.New(reflect.Indirect(reflect.ValueOf(m)).Type()).Interface().(Model)
+	if r == nil {
+		return nil
+	}
+	if rest := r.newREST(); rest != nil {
+		return rest.Model()
+	} else if m := r.Model(); m != nil {
 		return NewModel(m)
 	}
 	return nil
@@ -454,49 +496,74 @@ func (r *REST) New() Model {
 
 // 基于类型创建一个全新的model, i会被置为空
 func NewModel(i interface{}) Model {
-	r := new(REST)
-	return r.NewModel(i)
+	// get model from pool
+	if rest := getREST(i); rest != nil {
+		return rest.Model()
+	}
+	// 没找到pool, 自己创造pool
+	return addREST(i.(Model)).Model()
 }
 
-// 创建一个跟r有关的model
+// 利用已存在的*REST创建一个model(与现有*REST的内置Model不同)
+// 好处是可以传递context, 如果有的话
+// 相同的Model请使用*REST.New()
 func (r *REST) NewModel(i interface{}) Model {
-	//m := reflect.New(reflect.Indirect(reflect.ValueOf(i)).Type()).Interface().(Model)
-	m := reflect.New(reflect.TypeOf(i).Elem()).Interface().(Model)
-	return r.SetModel(m)
+	if r == nil {
+		return nil
+	}
+	if c := r.Context(); c != nil {
+		if rest := getREST(i); rest != nil {
+			rest.setContext(c)
+			return rest.Model()
+		}
+	}
+	return NewModel(i)
 }
 
 // SetModel
-// 基于变量创建全新的model,  i的值保留
+// 基于变量创建全新的*REST, 注入i
 func SetModel(i interface{}) Model {
-	r := new(REST)
-	return r.SetModel(i.(Model))
+	rest := getREST(i)
+	if rest != nil {
+		rest.setModel(i.(Model))
+		return rest.Model()
+	}
+	return nil
 }
 
-func (r *REST) SetModel(m Model) Model {
+func (r *REST) setModel(m Model) Model {
+	if r == nil {
+		return nil
+	}
 	r.model = m
 	// 注入m
 	r.importTo(m)
 	return m
 }
 
-// 创造一个全新的model, 并传递context
-func (r *REST) GenModel(m Model) Model {
-	nr := new(REST)
-	nr.setContext(r.Context())
-	return nr.NewModel(m)
-}
-
+// new *REST, pass context
+// 注意这生成了新的*REST, 慎用
 func (r *REST) Modelize(m Model) Model {
-	nr := new(REST)
-	nr.setContext(r.Context())
-	return nr.SetModel(m)
+	if r == nil {
+		return nil
+	}
+	if c := r.Context(); c != nil {
+		if rest := getREST(m); rest != nil {
+			rest.setContext(c)
+			rest.setModel(m)
+			return rest.Model()
+		}
+	}
+	return SetModel(m)
 }
 
 // 把rest注入i
 func (r *REST) importTo(i interface{}) {
-	field := "REST"
-	if err := utils.ImportByField(i, r, field); err != nil {
-		Warn("[importTo]import rest to %s failed: %s", field, err)
+	if r != nil {
+		field := "REST"
+		if err := utils.ImportByField(i, r, field); err != nil {
+			Warn("[importTo]import rest to %s failed: %s", field, err)
+		}
 	}
 	// if fv := utils.FieldByName(i, field); fv.IsValid() && fv.CanSet() {
 	// 	if fv.Kind() == reflect.Ptr {
@@ -778,12 +845,20 @@ func (r *REST) TableName() (n string) { //默认, struct的名字就是表名, �
 /* {{{ func (r *REST) PKey() (string, string, bool)
 *  通过配置找到pk
  */
-func (r *REST) PKey() (f string, v string, ai bool) {
+func (r *REST) PKey() (string, string, bool) {
 	m := r.Model()
 	if m == nil {
-		Warn("[PKey]: %s", ErrNoModel)
 		return "", "", false
 	}
+	return primaryKey(m)
+}
+
+/* }}} */
+
+/* {{{ func primaryKey(i interface{}) (f string, v string, ai bool)
+ *
+ */
+func primaryKey(m Model) (f string, v string, ai bool) {
 	mv := reflect.ValueOf(m)
 	if cols := utils.ReadStructColumns(m, true); cols != nil {
 		for _, col := range cols {
@@ -938,7 +1013,7 @@ func (r *REST) KeeperFactory() func(string) (interface{}, error) {
  */
 func (r *REST) Filter() (Model, error) {
 	if m := r.Model(); m != nil {
-		nm := r.GenModel(m)
+		nm := r.New()
 		nmv := reflect.ValueOf(nm)
 		v := reflect.ValueOf(m)
 		if cols := utils.ReadStructColumns(m, true); cols != nil {
@@ -971,7 +1046,7 @@ func (r *REST) Fill(j []byte) error {
 	} else if err := json.Unmarshal(j, m); err != nil {
 		return err
 	} else {
-		r.SetModel(m)
+		// r.setModel(m)
 		if reflect.ValueOf(m).Kind() == reflect.Ptr {
 			// Info("fill to new: %+v", reflect.Indirect(reflect.ValueOf(m)))
 			r.newer = reflect.Indirect(reflect.ValueOf(m)).Interface()
@@ -1015,7 +1090,10 @@ func (r *REST) Valid(fields ...string) (Model, error) {
 			fv := utils.FieldByIndex(v, col.Index)
 			// server generate,忽略传入的信息
 			if fv.IsValid() && !utils.IsEmptyValue(fv) { //传入了内容
-				if col.ExtOptions.Contains(TAG_GENERATE) && !col.TagOptions.Contains(DBTAG_PK) { //服务器生成, 忽略传入
+				if col.TagOptions.Contains(DBTAG_READONLY) {
+					// 只读字段，忽略传入
+					fv.Set(reflect.Zero(fv.Type()))
+				} else if col.ExtOptions.Contains(TAG_GENERATE) && !col.TagOptions.Contains(DBTAG_PK) { //服务器生成, 忽略传入
 					fv.Set(reflect.Zero(fv.Type()))
 				} else if r.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
 					// 不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
@@ -1198,7 +1276,7 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				return SetModel(resultsValue.Index(0).Interface().(Model)), nil
+				return r.Modelize(resultsValue.Index(0).Interface().(Model)), nil
 			}
 		}
 	}
@@ -1233,7 +1311,7 @@ func (r *REST) CreateRow() (Model, error) {
  */
 func (r *REST) Save(m Model) Model {
 	r.saved = true
-	return r.SetModel(m)
+	return r.setModel(m)
 }
 func (r *REST) Saved() bool {
 	return r.saved
@@ -1979,6 +2057,6 @@ func GetSumFields(i interface{}, g ...string) (s string) {
 // dig model, 找到匿名, 所以叫dig
 func digModel(m Model) Model {
 	rt := utils.RealType(m, reflect.TypeOf((*Model)(nil)).Elem())
-	//Info("mtype: %v, real type: %v", mt, rt)
+	// Info("mtype: %v, real type: %v", reflect.TypeOf(m), rt)
 	return reflect.New(rt).Interface().(Model)
 }

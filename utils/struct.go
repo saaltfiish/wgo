@@ -387,16 +387,14 @@ func ImportByField(i interface{}, v interface{}, field string) error {
 /* }}} */
 
 /* {{{ func FieldByType(v reflect.Value, field string) reflect.Value
- * 找到实现了interface的真正类型(匿名字段)
+ * 找到实现了interface的真正类型(唯一匿名字段)
  */
 func RealType(i interface{}, typ reflect.Type) reflect.Type {
 	//v := reflect.ValueOf(i)
 	t := ToType(i)
 	if t.Kind() == reflect.Struct {
-		n := t.NumField()
-		for i := 0; i < n; i++ {
-			f := t.Field(i)
-			//if f.Anonymous && f.Type.Kind() == reflect.Struct && f.Type.Implements(typ) { //匿名struct , 也就是嵌套
+		if n := t.NumField(); n == 1 {
+			f := t.Field(0)
 			if f.Anonymous && (f.Type.Implements(typ) || reflect.PtrTo(f.Type).Implements(typ)) {
 				return f.Type
 			}

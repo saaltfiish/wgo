@@ -140,6 +140,7 @@ func Auth() wgo.MiddlewareFunc {
 	return func(next wgo.HandlerFunc) wgo.HandlerFunc {
 		return func(c *wgo.Context) (err error) {
 
+			c.Debug("[REST.Auth]-->%s<--", c.Query())
 			// cs用户端访问鉴权
 			if k, v := GetREST(c).Session(); k != "" && v != nil {
 				c.Authorize() // 授权

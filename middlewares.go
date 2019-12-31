@@ -69,6 +69,7 @@ func RecoverWithConfig(config RecoverConfig) MiddlewareFunc {
 
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c *Context) error {
+			c.Debug("[wgo.Recover]-->%s<--", c.Query())
 			defer func() {
 				if r := recover(); r != nil {
 					var err error
@@ -97,6 +98,7 @@ func RecoverWithConfig(config RecoverConfig) MiddlewareFunc {
 func Prepare() MiddlewareFunc {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c *Context) (err error) {
+			c.Debug("[wgo.Prepare]-->%s<--", c.Query())
 			// find request id
 			requestId := ""
 			if prid := c.PreRequestId(); prid != "" && c.Depth() > 0 {

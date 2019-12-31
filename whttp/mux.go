@@ -61,7 +61,7 @@ func NewMux(name string, gen func() interface{}, conv func(...interface{}) []*Mi
 		name:            name,
 		cgen:            gen,  // context 创建
 		mconv:           conv, // middleware 转换
-		notFoundHandler: NotFoundHandler,
+		notFoundHandler: MethodNotAllowedHandler,
 	}
 	m.router = NewRouter(m) // router内部需要保留一份mux的指针, 所以传进去
 

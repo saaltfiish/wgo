@@ -6,7 +6,6 @@ import (
 
 	"wgo"
 	"wgo/utils"
-	"wgo/whttp"
 )
 
 // REST
@@ -14,11 +13,12 @@ import (
 func Init() wgo.MiddlewareFunc {
 	return func(next wgo.HandlerFunc) wgo.HandlerFunc {
 		return func(c *wgo.Context) (err error) {
+			c.Info("[REST.Init]-->%s<--", c.Query())
 			rest := GetREST(c)
 			defer rest.release()
 
 			// action
-			switch m := c.Request().(whttp.Request).Method(); m {
+			switch m := c.Method(); m {
 			case "POST", "PUT":
 				rest.SetAction(ACTION_CREATE)
 			case "PATCH":
@@ -34,7 +34,6 @@ func Init() wgo.MiddlewareFunc {
 				}
 			}
 
-			c.Info("[REST]-->%s<--", c.Query())
 			// set user id, 默认使用cookie传来的
 			rest.SetUserID()
 

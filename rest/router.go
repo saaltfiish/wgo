@@ -5,24 +5,23 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"wgo"
 	"wgo/server"
 	"wgo/whttp"
 )
 
-type Router interface {
-	GET(*wgo.Context) error
-	LIST(*wgo.Context) error
-	POST(*wgo.Context) error
-	PUT(*wgo.Context) error
-	DELETE(*wgo.Context) error
-	PATCH(*wgo.Context) error
-	HEAD(*wgo.Context) error
-	OPTIONS(*wgo.Context) error
-	TRACE(*wgo.Context) error
-}
+// type Router interface {
+// 	GET(*wgo.Context) error
+// 	LIST(*wgo.Context) error
+// 	POST(*wgo.Context) error
+// 	PUT(*wgo.Context) error
+// 	DELETE(*wgo.Context) error
+// 	PATCH(*wgo.Context) error
+// 	HEAD(*wgo.Context) error
+// 	OPTIONS(*wgo.Context) error
+// 	TRACE(*wgo.Context) error
+// }
 
 type Options map[string]interface{}
 
@@ -30,181 +29,113 @@ type Routes struct {
 	whttp.Routes
 }
 
-// GET
-func (_ *REST) GET(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+// 默认的middleware, 所有rest路由都需要有这两个
+var defaultMiddlewares = []interface{}{
+	Init(),
+	Auth(),
 }
 
-// List
-func (_ *REST) LIST(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+func AddMiddleware(ms ...interface{}) {
+	defaultMiddlewares = append(defaultMiddlewares, ms...)
 }
 
-// POST
-func (_ *REST) POST(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-//PUT
-func (_ *REST) PUT(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-// DELETE
-func (_ *REST) DELETE(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-// PATCH
-func (_ *REST) PATCH(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-// HEAD
-func (_ *REST) HEAD(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-// OPTIONS
-func (_ *REST) OPTIONS(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-}
-
-// TRACE
-func (_ *REST) TRACE(c *wgo.Context) error {
-	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+// get router
+func GetRouter(i interface{}) *REST {
+	return getREST(i)
 }
 
 // deny
 func RESTDeny(c *wgo.Context) error {
+	rk := c.Param(RowkeyKey)
+	c.Info("[RESTDeny]rowkey: %s", rk)
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
-// 新建一个model的工厂程序, 闭包
-func modelFactory(i interface{}) func() interface{} {
-	m := i.(Model)
-	return func() interface{} {
-		// Info("[modelFactory]%+v", m)
-		return digModel(m)
-	}
-}
-
-// 新建一个REST的工厂, 闭包
-func restFactory(endpoint string, i interface{}, ms ...interface{}) func() interface{} {
-	mg := modelFactory(i)
-	return func() interface{} {
-		rest := &REST{
-			endpoint:  endpoint,
-			model:     mg().(Model),
-			defaultms: ms,
-			pool:      &sync.Pool{New: restFactory(endpoint, i, ms...)},
-		}
-		rest.importTo(rest.model)
-		return rest
-	}
-}
-
-// 注册路由
-// 注册之后可以自动获得rest提供的通用方法,这是rest的核心价值之一
-// 同时也可以自己写同名方法覆盖
+// 注册路由, 注意AddModel,NewModel已经默认注册了路由, 若果需要改变endpoint, 需要使用Register
 func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST {
-	if _, ok := i.(Router); !ok {
-		panic("input not Router")
+	m, ok := i.(Model)
+	if !ok {
+		panic("[Register]input not Model")
 	}
-	// rt := i.(Router)
-	if _, ok := i.(Model); !ok {
-		panic("input not Model")
+
+	if or := getREST(i); or != nil {
+		// Info("[Register]rest exists!!!%+v", i)
+		if or.Endpoint() != endpoint {
+			// endpoint不一致，把旧的builtin路由禁用
+			Debug("[Register]new endpoint: %s", endpoint)
+			or.Builtin(GM_NONE).SetOptions(ModelPoolKey, or.Pool())
+		}
 	}
-	restGen := restFactory(endpoint, i, ms...)
-	rest := restGen().(*REST)
 
-	// default,deny
-	// wgo.HEAD("/"+endpoint, RESTDeny)
-	// wgo.GET("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
-	// wgo.GET("/"+endpoint, RESTDeny)
-	// wgo.POST("/"+endpoint, RESTDeny)
-	// wgo.DELETE("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
-	// wgo.PATCH("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
-	// wgo.PUT("/"+endpoint+"/:"+RowkeyKey, RESTDeny)
+	// 生成新的pool覆盖
+	rest := addREST(m, endpoint)
+	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool())
 
-	// rest.Builtin(flag).SetOptions(BaseModelKey, m).SetOptions(EndpointKey, endpoint)
-	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.pool)
 	return rest
 }
 
 // 内置方法
 func (r *REST) Builtin(flag int, ms ...interface{}) Routes {
-	endpoint := r.endpoint
+	endpoint := r.Endpoint()
 
 	if r.defaultms != nil && len(r.defaultms) > 0 {
 		ms = append(r.defaultms, ms...)
 	}
 
 	routes := make([]*whttp.Route, 0)
-	if flag&GM_HEAD > 0 {
-		// HEAD /{endpoint}
-		routes = append(routes, wgo.HEAD("/"+endpoint, r.HandlerByMethod("HEAD"), ms...)...)
-	}
-	if flag&GM_GET > 0 {
-		// GET /{endpoint}/{id}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		// Debug("[Builtin]GET %s", path)
-		routes = append(routes, wgo.GET(path, r.HandlerByMethod("GET"), ms...)...)
-	}
-	if flag&GM_LIST > 0 {
-		// GET /{endpoint}
-		path := fmt.Sprintf("/%s", endpoint)
-		routes = append(routes, wgo.GET(path, r.RESTSearch(), ms...)...)
-	}
-	if flag&GM_POST > 0 {
-		// POST /{endpoint}
-		path := fmt.Sprintf("/%s", endpoint)
-		routes = append(routes, wgo.POST(path, r.HandlerByMethod("POST"), ms...).SetOptions(optionKey(DescKey), "Create")...)
-	}
-	if flag&GM_DELETE > 0 {
-		// DELETE /{endpoint}/{id}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.DELETE(path, r.HandlerByMethod("DELETE"), ms...).SetOptions(optionKey(DescKey), "Delete")...)
-	}
-	if flag&GM_PATCH > 0 {
-		// PATCH /{endpoint}/{id}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PATCH(path, r.HandlerByMethod("PATCH"), ms...).SetOptions(optionKey(DescKey), "Update")...)
-	}
-	if flag&GM_PUT > 0 {
-		// PUT /{endpoint}/{id}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
-		routes = append(routes, wgo.PUT(path, r.HandlerByMethod("PUT"), ms...).SetOptions(optionKey(DescKey), "Reset")...)
-	}
 
-	// reporting
-	if flag&GM_RPT > 0 {
-		// POST /{endpoint}/{rpt_tag}
-		path := fmt.Sprintf("/%s/:%s", endpoint, RptKey)
-		// Debug("[rest.Builtin] path: %s", path)
-		routes = append(routes, wgo.GET(path, r.RESTSearch(), ms...)...)
-	}
+	routes = append(routes, wgo.HEAD("/"+endpoint, r.handlerByMethod(GM_HEAD, flag), ms...)...)
+
+	// GET /{endpoint}/{id}
+	path := fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+	routes = append(routes, wgo.GET(path, r.handlerByMethod(GM_GET, flag), ms...)...)
+
+	// GET /{endpoint}
+	path = fmt.Sprintf("/%s", endpoint)
+	routes = append(routes, wgo.GET(path, r.handlerByMethod(GM_LIST, flag), ms...)...)
+
+	// POST /{endpoint}
+	path = fmt.Sprintf("/%s", endpoint)
+	routes = append(routes, wgo.POST(path, r.handlerByMethod(GM_POST, flag), ms...).SetOptions(optionKey(DescKey), "Create")...)
+
+	// DELETE /{endpoint}/{id}
+	path = fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+	routes = append(routes, wgo.DELETE(path, r.handlerByMethod(GM_DELETE, flag), ms...).SetOptions(optionKey(DescKey), "Delete")...)
+
+	// PATCH /{endpoint}/{id}
+	path = fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+	routes = append(routes, wgo.PATCH(path, r.handlerByMethod(GM_PATCH, flag), ms...).SetOptions(optionKey(DescKey), "Update")...)
+
+	// PUT /{endpoint}/{id}
+	path = fmt.Sprintf("/%s/:%s", endpoint, RowkeyKey)
+	routes = append(routes, wgo.PUT(path, r.handlerByMethod(GM_PUT, flag), ms...).SetOptions(optionKey(DescKey), "Reset")...)
+
 	return Routes{routes}
 }
 
 // return handler by method
-func (r *REST) HandlerByMethod(method string) wgo.HandlerFunc {
-	switch strings.ToUpper(method) {
-	case "GET":
-		return r.RESTGet()
-	case "POST":
-		return r.RESTPost()
-	case "DELETE":
-		return r.RESTDelete()
-	case "PATCH":
-		return r.RESTPatch()
-	case "PUT":
-		return r.RESTPut()
-	case "HEAD":
-		return r.RESTHead()
-	default:
-		return RESTDeny
+func (r *REST) handlerByMethod(method, flag int) wgo.HandlerFunc {
+	if flag&method > 0 {
+		switch method {
+		case GM_GET:
+			return r.RESTGet()
+		case GM_POST:
+			return r.RESTPost()
+		case GM_DELETE:
+			return r.RESTDelete()
+		case GM_PATCH:
+			return r.RESTPatch()
+		case GM_PUT:
+			return r.RESTPut()
+		case GM_HEAD:
+			return r.RESTHead()
+		case GM_LIST, GM_RPT:
+			return r.RESTSearch()
+		default:
+			return RESTDeny
+		}
 	}
+	return RESTDeny
 }
 
 // Func
@@ -213,31 +144,31 @@ func (r *REST) RESTGet() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreGet(m); err != nil {
+		if _, err := action.PreGet(); err != nil {
 			c.Warn("PreGet error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.WillGet(m); err != nil {
+		} else if _, err := action.WillGet(); err != nil {
 			c.Warn("WillGet error: %s", err)
 			return rest.BadRequest(err)
 		}
 
-		if ret, err := action.OnGet(m); err != nil {
+		if _, err := action.OnGet(); err != nil {
 			c.Warn("OnGet error: %s", err)
 			if err == ErrNoRecord {
 				return rest.NotFound(err)
 			} else {
 				return rest.InternalError(err)
 			}
-		} else if ret0, err := action.DidGet(ret); err != nil {
+		} else if _, err := action.DidGet(); err != nil {
 			c.Warn("DidGet error: %s", err)
 			return rest.NotOK(err)
-		} else if ret1, err := action.PostGet(ret0); err != nil {
+		} else if ret, err := action.PostGet(); err != nil {
 			c.Warn("PostGet error: %s", err)
 			return rest.NotOK(err)
 		} else {
-			return rest.OK(ret1)
+			return rest.OK(ret)
 		}
 
 	}
@@ -248,26 +179,26 @@ func (_ *REST) RESTSearch() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreSearch(m); err != nil { // presearch准备条件等
+		if _, err := action.PreSearch(); err != nil { // presearch准备条件等
 			c.Warn("PreSearch error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.WillSearch(m); err != nil {
+		} else if _, err := action.WillSearch(); err != nil {
 			c.Warn("WillSearch error: %s", err)
 			return rest.BadRequest(err)
 		}
 
-		if l, err := action.OnSearch(m); err != nil {
+		if _, err := action.OnSearch(); err != nil {
 			if err == ErrNoRecord {
 				return rest.NotFound(err)
 			} else {
 				return rest.InternalError(err)
 			}
-		} else if l0, err := action.DidSearch(l); err != nil {
+		} else if _, err := action.DidSearch(); err != nil {
 			c.Warn("DidSearch error: %s", err)
 			return rest.NotOK(err)
-		} else if rl, err := action.PostSearch(l0); err != nil {
+		} else if rl, err := action.PostSearch(); err != nil {
 			c.Warn("PostSearch error: %s", err)
 			return rest.NotOK(err)
 		} else {
@@ -282,30 +213,31 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreCreate(m); err != nil { // prepare
+		if _, err := action.PreCreate(); err != nil { // prepare
 			c.Error("PreCreate error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.WillCreate(m); err != nil {
+		} else if _, err := action.WillCreate(); err != nil {
 			c.Error("WillCreate error: %s", err)
 			return rest.BadRequest(err)
-		} else if r, err := action.OnCreate(m); err != nil {
+		} else if _, err := action.OnCreate(); err != nil {
 			c.Error("OnCreate error: %s", err)
 			return rest.NotOK(err)
-		} else if r, err := action.DidCreate(r); err != nil {
+		} else if _, err := action.DidCreate(); err != nil {
 			c.Error("DidCreate error: %s", err)
 			return rest.NotOK(err)
 		} else { // all done
 			// c.Debug("set rest new: %+v", m)
-			if r, err = action.Trigger(r.(Model)); err != nil {
+			if _, err := action.Trigger(); err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
-			if r, err = action.PostCreate(r); err != nil {
+			rt, err := action.PostCreate()
+			if err != nil {
 				// create ok, return
 				c.Warn("PostCreate error: %s", err)
 			}
-			return rest.OK(r)
+			return rest.OK(rt)
 		}
 	}
 
@@ -315,33 +247,34 @@ func (r *REST) RESTPatch() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreUpdate(m); err != nil {
+		if _, err := action.PreUpdate(); err != nil {
 			c.Warn("[RESTPatch]PreUpdate error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.WillUpdate(m); err != nil {
+		} else if _, err := action.WillUpdate(); err != nil {
 			c.Error("[RESTPatch]WillUpdate error: %s", err)
 			return rest.BadRequest(err)
-		} else if r, err := action.OnUpdate(m); err != nil {
+		} else if _, err := action.OnUpdate(); err != nil {
 			c.Warn("[RESTPatch]OnUpdate error: %s", err)
 			return rest.NotOK(err)
-		} else if r, err := action.DidUpdate(r); err != nil {
+		} else if _, err := action.DidUpdate(); err != nil {
 			c.Error("[RESTPatch]DidUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			// 触发器
-			_, err = action.Trigger(m)
+			_, err = action.Trigger()
 			if err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
 
 			// update ok
-			if r, err = action.PostUpdate(m); err != nil {
+			rt, err := action.PostUpdate()
+			if err != nil {
 				c.Warn("postCreate error: %s", err)
 			}
 
-			return rest.OK(r)
+			return rest.OK(rt)
 		}
 	}
 }
@@ -350,27 +283,28 @@ func (r *REST) RESTPut() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreUpdate(m); err != nil {
+		if _, err := action.PreUpdate(); err != nil {
 			c.Warn("PreUpdate error: %s", err)
 			return rest.BadRequest(err)
-		} else if r, err := action.OnUpdate(m); err != nil {
+		} else if _, err := action.OnUpdate(); err != nil {
 			c.Warn("[RESTPut]OnUpdate error: %s", err)
 			return rest.NotOK(err)
 		} else {
 			// 触发器
-			_, err = action.Trigger(m)
+			_, err = action.Trigger()
 			if err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
 
 			// update ok
-			if r, err = action.PostUpdate(m); err != nil {
-				c.Warn("postCreate error: %s", err)
+			rt, err := action.PostUpdate()
+			if err != nil {
+				c.Warn("[RESTPut]PostUpdate error: %s", err)
 			}
 
-			return rest.OK(r)
+			return rest.OK(rt)
 		}
 	}
 }
@@ -379,25 +313,25 @@ func (r *REST) RESTDelete() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreDelete(m); err != nil { // presearch准备条件等
+		if _, err := action.PreDelete(); err != nil { // presearch准备条件等
 			c.Warn("[RESTDelete]PreDelete error: %s", err)
 			return rest.BadRequest(err)
-		} else if r, err := action.OnDelete(m); err != nil {
+		} else if _, err := action.OnDelete(); err != nil {
 			c.Warn("[RESTDelete]OnDelete error: %s", err)
 			return rest.NotOK(err)
 		} else {
-			r, err = action.PostDelete(m)
+			rt, err := action.PostDelete()
 			if err != nil {
 				c.Warn("postCreate error: %s", err)
 			}
 			// 触发器
-			_, err = action.Trigger(m)
+			_, err = action.Trigger()
 			if err != nil {
 				c.Warn("Trigger error: %s", err)
 			}
-			return rest.OK(r)
+			return rest.OK(rt)
 		}
 
 	}
@@ -407,22 +341,24 @@ func (r *REST) RESTHead() wgo.HandlerFunc {
 		rest := GetREST(c)
 		m := rest.Model()
 		action := m.(Action)
-		defer action.Defer(m)
+		defer action.Defer()
 
-		if _, err := action.PreCheck(m); err != nil {
+		if _, err := action.PreCheck(); err != nil {
 			c.Warn("PreCheck error: %s", err)
 			return rest.BadRequest(err)
 		}
 
-		if cnt, err := action.OnCheck(m); err != nil {
+		if cnt, err := action.OnCheck(); err != nil {
 			c.Warn("OnCheck error: %s", err)
 			if err == ErrNoRecord {
 				return rest.NotFound(err)
 			} else {
 				return rest.InternalError(err)
 			}
+		} else if _, err := action.PostCheck(); err != nil {
+			return rest.InternalError(err)
 		} else {
-			if cnt, _ := action.PostCheck(cnt); cnt.(int64) > 0 {
+			if cnt.(int64) > 0 {
 				return rest.NotOK(nil)
 			} else {
 				return rest.OK(nil)
@@ -435,7 +371,7 @@ func (r *REST) RESTHead() wgo.HandlerFunc {
 // 其他路由
 // func (rest *REST) Add(method, path string, h wgo.HandlerFunc, ms ...interface{}) Routes {
 func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
-	h := rest.HandlerByMethod(method)
+	var h wgo.HandlerFunc
 	ms := rest.defaultms
 	if len(opts) > 0 {
 		if tmp, ok := opts[0].((func(*wgo.Context) error)); ok {
@@ -444,8 +380,8 @@ func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
 			h = tmp
 		}
 	}
-	if rest.endpoint != "" {
-		path = fmt.Sprint("/", rest.endpoint, path)
+	if ep := rest.Endpoint(); ep != "" {
+		path = fmt.Sprint("/", ep, path)
 	}
 	if rest.defaultms != nil && len(rest.defaultms) > 0 {
 		ms = append(rest.defaultms, ms...)
@@ -453,19 +389,19 @@ func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
 	//Debug("method: %s, path: %s, model: %v", method, path, rest.Model())
 	switch strings.ToUpper(method) {
 	case "GET":
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	case "POST":
-		return Routes{wgo.POST(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.POST(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	case "DELETE":
-		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.DELETE(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	case "PATCH":
-		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.PATCH(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	case "PUT":
-		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.PUT(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	case "HEAD":
-		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.HEAD(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	default:
-		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.pool)
+		return Routes{wgo.GET(path, h, ms...)}.SetOptions(ModelPoolKey, rest.Pool())
 	}
 }
 
