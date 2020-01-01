@@ -11,6 +11,7 @@ import (
 
 	"wgo"
 	"wgo/gorp"
+	"wgo/utils"
 )
 
 var (
@@ -60,17 +61,21 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
 		if _, ok := val.(SelfConverter); ok {
-			// Debug("selfconvert todb, %+v", reflect.TypeOf(t))
+			// Debug("custom ToDb, %s", reflect.TypeOf(t))
 			return val.(SelfConverter).ToDb()
 		} else if reflect.ValueOf(val).IsValid() {
 			if _, ok := reflect.Indirect(reflect.ValueOf(val)).Interface().(SelfConverter); ok { // 如果采用了指针
 				// Debug("prt selfconvert todb, %+v", reflect.TypeOf(t))
 				return val.(SelfConverter).ToDb()
-			} else {
-				// Debug("not selfconvert todb, %+v", reflect.TypeOf(t))
 			}
-		} else {
-			//Trace("zero value")
+		}
+		if m, ok := val.(Model); ok {
+			// model type
+			// Info("[ToDb]model value: %+v", m)
+			if f, v, _ := primaryKey(m); f != "" && v != "" {
+				Info("[ToDb]save primary key(%s: %s) to db", f, v)
+				return v, nil
+			}
 		}
 	}
 	return val, nil
@@ -358,8 +363,35 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			//Trace("ptr converter: %s", target)
 			holder, binder := t.FromDb(target)
 			return gorp.CustomScanner{Holder: holder, Target: target, Binder: binder}, true
-		} else {
-			//Trace("no converter: %s", target)
+		}
+		// check if model
+		if reflect.TypeOf(target).Implements(modelType) || reflect.TypeOf(target).Elem().Implements(modelType) {
+			// model type
+			Debug("[FromDb]found model: %+v, auto fetch primary key", reflect.TypeOf(target))
+			binder := func(holder, target interface{}) error {
+				var s string
+				if holder.(*sql.NullString).Valid {
+					s = holder.(*sql.NullString).String
+				}
+				if s != "" && s != "0" {
+					nm := digModel(target)
+					if err := utils.ImportValue(nm, map[string]string{DBTAG_PK: s}); err != nil {
+						Warn("[FromDb]import value failed: %s", err)
+					}
+					// Info("[FromDb]new model, primary key: %s, value: %+v", s, nm)
+					// if reflect.TypeOf(target).Elem().Implements(modelType) {
+					if reflect.TypeOf(target).Implements(modelType) {
+						// 非指针Model
+						reflect.Indirect(reflect.ValueOf(target)).Set(reflect.Indirect(reflect.ValueOf(nm)))
+						// reflect.Indirect(reflect.ValueOf(target)).Set(reflect.ValueOf(nm))
+					} else {
+						// 指针Model
+						reflect.Indirect(reflect.ValueOf(target)).Set(reflect.ValueOf(nm))
+					}
+				}
+				return nil
+			}
+			return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
 		}
 	}
 	return gorp.CustomScanner{}, false

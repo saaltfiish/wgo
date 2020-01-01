@@ -125,6 +125,8 @@ var (
 	ErrType          = errors.New("wrong type")
 	ErrNoRecord      = errors.New("no record")
 	ErrNoModel       = errors.New("no model")
+
+	modelType = reflect.TypeOf((*Model)(nil)).Elem()
 )
 
 type Condition struct {
@@ -2055,8 +2057,8 @@ func GetSumFields(i interface{}, g ...string) (s string) {
 /* }}} */
 
 // dig model, 找到匿名, 所以叫dig
-func digModel(m Model) Model {
-	rt := utils.RealType(m, reflect.TypeOf((*Model)(nil)).Elem())
+func digModel(i interface{}) Model {
+	rt := utils.RealType(i, modelType)
 	// Info("mtype: %v, real type: %v", reflect.TypeOf(m), rt)
 	return reflect.New(rt).Interface().(Model)
 }
