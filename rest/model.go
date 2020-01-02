@@ -51,19 +51,19 @@ type Model interface {
 	Key() (string, string, bool)                       // key字段 name&value
 	UnionKeys(...interface{}) map[string]string        // union keys, name&value
 	ReadPrepare(...interface{}) (*gorp.Builder, error) // 组条件
-	Row(...interface{}) (Model, error)                 //获取单条记录
-	Rows(...interface{}) (interface{}, error)          //获取多条记录
+	Row(...interface{}) (Model, error)                 // 获取单条记录
+	Rows(...interface{}) (interface{}, error)          // 获取多条记录
 	List() (*List, error)                              // 获取多条记录并返回list
 	GetRecord(opts ...interface{}) interface{}         // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
-	GetOlder(rk ...string) Model                       //获取旧记录
-	GetSum(...string) (interface{}, error)             //获取多条记录
-	GetCount() (int64, error)                          //获取多条记录
-	GetCountNSum() (int64, float64)                    //获取count and sum
-	CreateRow() (Model, error)                         //创建单条记录
-	UpdateRow(...interface{}) (int64, error)           //更新记录
-	DeleteRow(rk string) (int64, error)                //删除记录
+	GetOlder(rk ...string) Model                       // 获取旧记录
+	GetSum(...string) (interface{}, error)             // 获取多条记录
+	GetCount() (int64, error)                          // 获取多条记录
+	GetCountNSum() (int64, float64)                    // 获取count and sum
+	CreateRow() (Model, error)                         // 创建单条记录
+	UpdateRow(...interface{}) (int64, error)           // 更新记录
+	DeleteRow(rk string) (int64, error)                // 删除记录
 
 	Fill([]byte) error              //填充内容
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
@@ -832,14 +832,27 @@ func (r *REST) Transaction(opts ...interface{}) (*Transaction, error) {
 * 获取表名称, 默认为结构名
  */
 func (r *REST) TableName() (n string) { //默认, struct的名字就是表名, 如果不是请在各自的model里定义
-	if m := r.Model(); m == nil {
-		Info("[TableName]error: not found model")
-	} else {
-		reflectVal := reflect.ValueOf(m)
-		mt := reflect.Indirect(reflectVal).Type()
-		n = underscore(strings.TrimSuffix(mt.Name(), "Table"))
+	if n = r.Name(); n != "" {
+		return
+	} else if m := r.Model(); m != nil {
+		n = getTableName(m)
+		return
 	}
+	Info("[TableName]error: not found name")
 	return
+}
+
+/* }}} */
+
+/* {{{ func getTableName(m Model) string
+ *
+ */
+func getTableName(i interface{}) string {
+	mg := modelFactory(i)
+	if m := mg(); m != nil {
+		return underscore(strings.TrimSuffix(reflect.Indirect(reflect.ValueOf(m)).Type().Name(), "Table"))
+	}
+	return ""
 }
 
 /* }}} */
@@ -1530,6 +1543,15 @@ func (r *REST) GetRecord(opts ...interface{}) interface{} {
 		Warn("[GetRecord]: %s", ErrNoModel)
 		return nil
 	}
+	return GetRecord(m, opts...)
+}
+
+/* }}} */
+
+/* {{{ func GetRecord(m Model, opts ...interface{})
+ *
+ */
+func GetRecord(m Model, opts ...interface{}) interface{} {
 	ck := ""
 	params := utils.NewParams(opts)
 	pk := params.PrimaryString()

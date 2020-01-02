@@ -54,7 +54,7 @@ func init() {
 // 新建一个REST的工厂, 闭包
 func restFactory(endpoint string, i interface{}, ms ...interface{}) func() interface{} {
 	mg := modelFactory(i)
-	name := underscore(strings.TrimSuffix(reflect.Indirect(reflect.ValueOf(mg())).Type().Name(), "Table"))
+	name := getTableName(i)
 	if endpoint == "" {
 		endpoint = utils.Pluralize(name)
 	}
