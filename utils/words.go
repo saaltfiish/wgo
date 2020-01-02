@@ -216,11 +216,13 @@ func Pluralize(singular string) string {
 		}
 
 		// handle -sis
-		if string(singular[len(singular)-3:]) == "sis" {
-			root = string(singular[:len(singular)-3])
-			suffix = "ses"
-			plural = root + suffix
-			return plural
+		if len(singular) >= 3 {
+			if string(singular[len(singular)-3:]) == "sis" {
+				root = string(singular[:len(singular)-3])
+				suffix = "ses"
+				plural = root + suffix
+				return plural
+			}
 		}
 
 		// handle -z
