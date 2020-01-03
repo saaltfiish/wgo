@@ -1,5 +1,7 @@
 package rest
 
+import "reflect"
+
 type Action interface { // 把action定义为一个interface, 这样业务代码可以overwrite
 	PreGet() (interface{}, error)  //获取前
 	WillGet() (interface{}, error) //获取前hook
@@ -93,7 +95,11 @@ func (r *REST) OnGet() (interface{}, error) {
 	m := r.Model()
 	if row, err := m.Row(); err == nil {
 		// Info("[OnGet]row: %+v", row)
-		return r.setModel(row.(Model)), err
+		// return r.setModel(row.(Model)), err
+		// reflect方法给指针赋值，相当于 *x=y, // https://stackoverflow.com/questions/40060131/reflect-assign-a-pointer-struct-value
+		reflect.ValueOf(m).Elem().Set(reflect.ValueOf(row).Elem())
+		// 这里还需要setModel, 因为刚才的赋值导致m丢失了*REST
+		return r.setModel(m), nil
 	} else {
 		return nil, err
 	}

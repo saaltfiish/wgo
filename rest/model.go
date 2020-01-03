@@ -1291,7 +1291,7 @@ func (r *REST) Row(opts ...interface{}) (Model, error) {
 			return nil, err
 		} else if ms != nil {
 			if resultsValue := reflect.Indirect(reflect.ValueOf(ms)); resultsValue.Len() > 0 {
-				return r.Modelize(resultsValue.Index(0).Interface().(Model)), nil
+				return resultsValue.Index(0).Interface().(Model), nil
 			}
 		}
 	}
