@@ -82,11 +82,16 @@ func (cl Checklist) FromDb(target interface{}) (interface{}, func(interface{}, i
 }
 
 // translate
-func (cl Checklist) Translate(seq map[int]string) Checklist {
+func (cl Checklist) Translate(seq ChecklistDic) Checklist {
+	if cl == nil {
+		return cl
+	}
 	tcl := make(Checklist)
 	for offset, name := range seq {
-		if t, ok := cl[strconv.Itoa(offset)]; ok {
+		os := strconv.Itoa(offset)
+		if t, ok := cl[os]; ok {
 			tcl[name] = t
+			tcl[os] = t
 		} else if t, ok := cl[name]; ok {
 			tcl[strconv.Itoa(offset)] = t
 		} else {
