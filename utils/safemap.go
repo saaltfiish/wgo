@@ -72,3 +72,12 @@ func (m *SafeMap) Items() map[interface{}]interface{} {
 	defer m.lock.RUnlock()
 	return m.bm
 }
+
+// Clone returns a copied safemap
+func (m *SafeMap) Clone() *SafeMap {
+	nm := NewSafeMap()
+	for k, v := range m.Items() {
+		nm.Set(k, v)
+	}
+	return nm
+}

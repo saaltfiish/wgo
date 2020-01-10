@@ -192,8 +192,7 @@ func (r *REST) PostSearch() (interface{}, error) {
  */
 func (r *REST) PreCreate() (interface{}, error) {
 	m := r.Model()
-	var err error
-	if m, err = m.Valid(); err != nil {
+	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
 	return m, nil
@@ -244,8 +243,7 @@ func (r *REST) PostCreate() (interface{}, error) {
  */
 func (r *REST) PreUpdate() (interface{}, error) {
 	m := r.Model()
-	var err error
-	if m, err = m.Valid(); err != nil {
+	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
 

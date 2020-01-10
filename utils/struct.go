@@ -387,7 +387,7 @@ func ImportByField(i interface{}, v interface{}, field string) error {
 /* }}} */
 
 /* {{{ func FieldByType(v reflect.Value, field string) reflect.Value
- * 找到实现了interface的真正类型(唯一匿名字段)
+ * 找到实现了interface的真正类型(特指具有唯一匿名字段的情况)
  */
 func RealType(i interface{}, typ reflect.Type) reflect.Type {
 	//v := reflect.ValueOf(i)
@@ -570,7 +570,8 @@ func IsEmptyValue(v reflect.Value) bool {
 		}
 	case reflect.Struct:
 		// return true if all fields are empty. else return false.
-		return v.Interface() == reflect.Zero(v.Type()).Interface()
+		// return v.Interface() == reflect.Zero(v.Type()).Interface() // 如果struct包含slice或者map，这个会导致panic
+		return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
 		// for i, n := 0, v.NumField(); i < n; i++ {
 		// 	if !isEmptyValue(v.Field(i), deref) {
 		// 		return false

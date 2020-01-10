@@ -65,10 +65,27 @@ func MustString(vi interface{}) string {
 			return v.String()
 		case []byte:
 			return string(v)
+		case reflect.Value:
+			return valueToString(v)
 		default:
 			vb, _ := json.Marshal(vi)
 			return string(vb)
 		}
+	}
+	return ""
+}
+
+func valueToString(v reflect.Value) string {
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10)
+	case reflect.String:
+		return v.String()
+	case reflect.Float64, reflect.Float32:
+		return strconv.FormatFloat(v.Float(), 'f', 2, 64)
 	}
 	return ""
 }

@@ -20,25 +20,27 @@ type REST struct {
 	Count int64   `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
 	Sum   float64 `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
 
-	name      string        `db:"-"`
-	endpoint  string        `db:"-"`
-	model     Model         `db:"-"`
-	defaultms []interface{} `db:"-"` // 默认的middlewares
-	mg        func() Model  `db:"-"` // 生成新model的程序
-	pool      *sync.Pool    `db:"-"`
+	name      string               `db:"-"`
+	endpoint  string               `db:"-"`
+	model     Model                `db:"-"`
+	zoo       *utils.SafeMap       `db:"-"`
+	columns   []utils.StructColumn `db:"-"` // 缓存，不需要每次都ReadStructColumns
+	defaultms []interface{}        `db:"-"` // 默认的middlewares
+	mg        func() Model         `db:"-"` // 生成新model的程序, model generator
+	pool      *sync.Pool           `db:"-"`
 
-	ctx         *wgo.Context                      `db:"-"`
-	transaction *Transaction                      `db:"-"`
-	keeper      func(string) (interface{}, error) `db:"-"`
-	conditions  []*Condition                      `db:"-"`
-	pagination  *Pagination                       `db:"-"`
-	fields      []string                          `db:"-"`
-	result      interface{}                       `db:"-"`
-	newer       interface{}                       `db:"-"`
-	older       Model                             `db:"-"`
-	filled      bool                              `db:"-"` //是否有内容
-	saved       bool                              `db:"-"` // 是否已存储
-	// env        map[interface{}]interface{} `db:"-"`
+	ctx         *wgo.Context                   `db:"-"`
+	transaction *Transaction                   `db:"-"`
+	keeper      func(utils.StructColumn) error `db:"-"`
+	conditions  []*Condition                   `db:"-"`
+	pagination  *Pagination                    `db:"-"`
+	fields      []string                       `db:"-"`
+	result      interface{}                    `db:"-"`
+	newer       Model                          `db:"-"`
+	older       Model                          `db:"-"`
+	filled      bool                           `db:"-"` //是否有内容
+	saved       bool                           `db:"-"` // 是否已存储
+	guest       bool                           `db:"-"` // guest代表不是这个请求endpoint对应的Model
 }
 
 func init() {
@@ -60,9 +62,9 @@ func restFactory(endpoint string, i interface{}, ms ...interface{}) func() inter
 	}
 	return func() interface{} {
 		rest := &REST{
-			name:     name,
-			endpoint: endpoint,
-			// model:     mg(),
+			name:      name,
+			endpoint:  endpoint,
+			zoo:       zoo.Clone(),
 			defaultms: append(defaultMiddlewares, ms...),
 			pool:      &sync.Pool{New: restFactory(endpoint, i, ms...)},
 			mg:        mg,
@@ -131,6 +133,7 @@ func (r *REST) reset() *REST {
 	r.older = nil
 	r.filled = false
 	r.saved = false
+	r.guest = false
 	r.setModel(r.mg())
 
 	return r
@@ -186,6 +189,22 @@ func (r *REST) Pool() *sync.Pool {
 	return r.pool
 }
 
+// columns
+func (r *REST) Columns() []utils.StructColumn {
+	if r == nil {
+		return nil
+	}
+	return r.columns
+}
+
+// zoo
+func (r *REST) Zoo() *utils.SafeMap {
+	if r == nil {
+		return nil
+	}
+	return r.zoo
+}
+
 // context
 func (r *REST) Context() *wgo.Context {
 	if r == nil {
@@ -199,6 +218,12 @@ func (r *REST) setContext(c *wgo.Context) *REST {
 	}
 	r.ctx = c
 	return r
+}
+func (r *REST) setGuest() {
+	r.guest = true
+}
+func (r *REST) isGuest() bool {
+	return r.guest
 }
 
 // result
@@ -240,25 +265,57 @@ func (rest *REST) GetEnv(k string) interface{} {
 }
 
 // action
-func (rest *REST) SetAction(act string) {
-	rest.SetEnv("_action_", act)
-}
-func (rest *REST) Action() string {
-	acti := rest.GetEnv("_action_")
-	if act, ok := acti.(string); ok {
-		return act
-	}
-	return ""
-}
+// func (rest *REST) SetAction(act string) {
+// 	rest.SetEnv("_action_", act)
+// }
+// func (rest *REST) Action() string {
+// 	acti := rest.GetEnv("_action_")
+// 	if act, ok := acti.(string); ok {
+// 		return act
+// 	}
+// 	return ""
+// }
 
 // creating
 func (rest *REST) Creating() bool {
-	return rest.Action() == ACTION_CREATE
+	if m := rest.Model(); m != nil {
+		cc := CanCreate(m)
+		if !cc {
+			return cc
+		}
+		if ctx := rest.Context(); ctx != nil && !rest.isGuest() {
+			// 主REST, 判断method
+			switch m := ctx.Method(); m {
+			case "POST", "PUT":
+				return cc
+			default:
+				return false
+			}
+		}
+		return cc
+	}
+	return false
 }
 
 // updating
 func (rest *REST) Updating() bool {
-	return rest.Action() == ACTION_UPDATE
+	if m := rest.Model(); m != nil {
+		cu := CanUpdate(m)
+		if !cu {
+			return cu
+		}
+		if ctx := rest.Context(); ctx != nil && !rest.isGuest() {
+			// 主REST, 判断method
+			switch m := ctx.Method(); m {
+			case "PATCH", "POST", "PUT":
+				return cu
+			default:
+				return false
+			}
+		}
+		return cu
+	}
+	return false
 }
 
 // response

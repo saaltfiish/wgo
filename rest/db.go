@@ -73,8 +73,10 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 			// model type
 			// Info("[ToDb]model value: %+v", m)
 			if f, v, _ := primaryKey(m); f != "" && v != "" {
-				Info("[ToDb]save primary key(%s: %s) to db", f, v)
+				Debug("[ToDb]save primary key(%s: %s) to db", f, v)
 				return v, nil
+			} else {
+				Info("[ToDb]not found model primary key(%s: %s)", f, v)
 			}
 		}
 	}

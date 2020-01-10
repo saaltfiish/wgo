@@ -215,30 +215,37 @@ func (r *REST) RESTPost() wgo.HandlerFunc {
 		action := m.(Action)
 		defer action.Defer()
 
-		if _, err := action.PreCreate(); err != nil { // prepare
+		_, err := action.PreCreate()
+		if err != nil { // prepare
 			c.Error("PreCreate error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.WillCreate(); err != nil {
+		}
+		_, err = action.WillCreate()
+		if err != nil {
 			c.Error("WillCreate error: %s", err)
 			return rest.BadRequest(err)
-		} else if _, err := action.OnCreate(); err != nil {
+		}
+		_, err = action.OnCreate()
+		if err != nil {
 			c.Error("OnCreate error: %s", err)
 			return rest.NotOK(err)
-		} else if _, err := action.DidCreate(); err != nil {
+		}
+		_, err = action.DidCreate()
+		if err != nil {
 			c.Error("DidCreate error: %s", err)
 			return rest.NotOK(err)
-		} else { // all done
-			// c.Debug("set rest new: %+v", m)
-			if _, err := action.Trigger(); err != nil {
-				c.Warn("Trigger error: %s", err)
-			}
-			rt, err := action.PostCreate()
-			if err != nil {
-				// create ok, return
-				c.Warn("PostCreate error: %s", err)
-			}
-			return rest.OK(rt)
 		}
+		// all done
+		_, err = action.Trigger()
+		if err != nil {
+			c.Warn("Trigger error: %s", err)
+		}
+		rt, err := action.PostCreate()
+		if err != nil {
+			// create ok, return
+			c.Warn("PostCreate error: %s", err)
+		}
+		return rest.OK(rt)
 	}
 
 }
@@ -451,9 +458,9 @@ func (rs Routes) LimitAccess() Routes {
 }
 
 // 自定义act
-func (rs Routes) CustomAction(act string) Routes {
-	return rs.SetOptions(CustomActionKey, act)
-}
+// func (rs Routes) CustomAction(act string) Routes {
+// 	return rs.SetOptions(CustomActionKey, act)
+// }
 
 // desc string
 func (rs Routes) Desc(desc string) Routes {
