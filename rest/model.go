@@ -1191,9 +1191,12 @@ func Fill(m Model, j []byte) error {
 	if err != nil {
 		return err
 	}
-	if reflect.ValueOf(m).Kind() == reflect.Ptr {
-		// 存值，而非指针
-		r.newer = reflect.Indirect(reflect.ValueOf(m)).Interface().(Model)
+	mv := reflect.ValueOf(m)
+	if mv.Kind() == reflect.Ptr {
+		// copy, 不能用值的原因是如果定义了指针的method覆盖*REST的method，那么值会被认为不是Model
+		newer := reflect.New(mv.Type()).Elem()
+		newer.Set(reflect.Indirect(reflect.ValueOf(m)))
+		r.newer = newer.Interface().(Model)
 	} else {
 		r.newer = m
 	}
