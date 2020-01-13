@@ -4,7 +4,6 @@ package rest
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -54,19 +53,19 @@ func init() {
 }
 
 // 新建一个REST的工厂, 闭包
-func restFactory(endpoint string, i interface{}, ms ...interface{}) func() interface{} {
-	mg := modelFactory(i)
-	name := getTableName(i)
+func restFactory(endpoint string, m Model, ms ...interface{}) func() interface{} {
+	mg := modelFactory(m)
+	fn, n := fullName(mg())
 	if endpoint == "" {
-		endpoint = utils.Pluralize(name)
+		endpoint = utils.Pluralize(n)
 	}
 	return func() interface{} {
 		rest := &REST{
-			name:      name,
+			name:      fn,
 			endpoint:  endpoint,
 			zoo:       zoo.Clone(),
 			defaultms: append(defaultMiddlewares, ms...),
-			pool:      &sync.Pool{New: restFactory(endpoint, i, ms...)},
+			pool:      &sync.Pool{New: restFactory(endpoint, m, ms...)},
 			mg:        mg,
 		}
 		rest.setModel(rest.mg())
@@ -76,8 +75,10 @@ func restFactory(endpoint string, i interface{}, ms ...interface{}) func() inter
 
 // add rest
 func addREST(m Model, opts ...interface{}) *REST {
-	endpoint := utils.NewParams(opts).StringByIndex(0)
-	rest := restFactory(endpoint, m)().(*REST)
+	ps := utils.NewParams(opts)
+	endpoint := ps.StringByIndex(0)
+	ms := ps.ArrayByIndex(1)
+	rest := restFactory(endpoint, m, ms...)().(*REST)
 	Debug("[addREST]adding rest: %s, custom endpoint: %s", rest.Name(), endpoint)
 
 	// 生成rest pool并存储, 运行时rest,model的创建都依赖这个pool
@@ -89,13 +90,30 @@ func addREST(m Model, opts ...interface{}) *REST {
 // sence: 只知道i, 通过i的名字找到pool并生成新的*REST
 func getREST(i interface{}) *REST {
 	if m := modelFactory(i)(); m != nil {
-		name := underscore(strings.TrimSuffix(reflect.Indirect(reflect.ValueOf(m)).Type().Name(), "Table"))
-		if pool := restPool.Get(name); pool != nil {
-			Debug("[getREST]get %s's rest from pool!", name)
+		fn, _ := fullName(m)
+		if pool := restPool.Get(fn); pool != nil {
+			Debug("[getREST]get %s's rest from pool!", fn)
 			return pool.(*sync.Pool).Get().(*REST)
 		}
 	}
 	return nil
+}
+
+// get type full name
+func fullName(m Model) (string, string) {
+	typ := utils.ToType(m)
+	name := underscore(typ.Name())
+	fullName := name
+	if pp := typ.PkgPath(); pp != "" {
+		pps := strings.Split(pp, "/")
+		switch pl := len(pps); pl {
+		case 1:
+			fullName = pp + "." + name
+		default: // 倒数第二个
+			fullName = pps[pl-2] + "." + name
+		}
+	}
+	return fullName, name
 }
 
 // get/build rest instance

@@ -553,16 +553,12 @@ func (con *Condition) Merge(oc *Condition) {
 /* }}} */
 
 // add model to rest
-func AddModel(i interface{}) Model {
+func AddModel(i interface{}, opts ...interface{}) Model {
 	// check model
 	m, ok := i.(Model)
 	if !ok {
 		panic("input not Model")
 	}
-	// check router
-	// if _, ok := i.(Router); !ok {
-	// 	panic("input not Router")
-	// }
 
 	rest := addREST(m)
 
@@ -570,7 +566,9 @@ func AddModel(i interface{}) Model {
 	rest.AddTable()
 
 	// add builtin routes, endpoint是model名的复数形式
-	rest.Builtin(GM_ALL).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+	if enableBuiltinRoutes := utils.NewParams(opts).BoolByIndex(0, true); enableBuiltinRoutes {
+		rest.Builtin(GM_ALL).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+	}
 	return rest.Model()
 }
 
@@ -949,9 +947,7 @@ func (r *REST) Transaction(opts ...interface{}) (*Transaction, error) {
 * 获取表名称, 默认为结构名
  */
 func (r *REST) TableName() (n string) { //默认, struct的名字就是表名, 如果不是请在各自的model里定义
-	if n = r.Name(); n != "" {
-		return
-	} else if m := r.Model(); m != nil {
+	if m := r.Model(); m != nil {
 		n = getTableName(m)
 		return
 	}
@@ -967,7 +963,7 @@ func (r *REST) TableName() (n string) { //默认, struct的名字就是表名, �
 func getTableName(i interface{}) string {
 	mg := modelFactory(i)
 	if m := mg(); m != nil {
-		return underscore(strings.TrimSuffix(reflect.Indirect(reflect.ValueOf(m)).Type().Name(), "Table"))
+		return underscore(reflect.Indirect(reflect.ValueOf(m)).Type().Name())
 	}
 	return ""
 }
@@ -992,7 +988,7 @@ func (r *REST) PKey() (string, string, bool) {
  */
 func primaryKey(m Model) (f string, v string, ai bool) {
 	if cols := Columns(m); cols != nil {
-		Debug("[primaryKey]columns: %+q", cols)
+		// Debug("[primaryKey]columns: %+q", cols)
 		mv := reflect.ValueOf(m)
 		for _, col := range cols {
 			// check required field
@@ -2122,7 +2118,7 @@ func getSumFields(m Model, g ...string) (s string) {
 // dig model, 找到匿名, 所以叫dig
 func digModel(i interface{}) Model {
 	rt := utils.RealType(i, modelType)
-	// Info("mtype: %v, real type: %v", reflect.TypeOf(m), rt)
+	// Info("mtype: %v, real type: %v, pkg: %s", reflect.TypeOf(i), rt, rt.PkgPath())
 	return reflect.New(rt).Interface().(Model)
 }
 

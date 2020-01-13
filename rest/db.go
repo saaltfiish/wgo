@@ -69,15 +69,21 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 				return val.(SelfConverter).ToDb()
 			}
 		}
+		// rest.Model, auto find primary key
 		if m, ok := val.(Model); ok {
 			// model type
 			// Info("[ToDb]model value: %+v", m)
 			if f, v, _ := primaryKey(m); f != "" && v != "" {
-				Debug("[ToDb]save primary key(%s: %s) to db", f, v)
+				// Debug("[ToDb]save primary key(%s: %s) to db", f, v)
 				return v, nil
 			} else {
 				Info("[ToDb]not found model primary key(%s: %s)", f, v)
 			}
+		} else if typ := utils.ToType(val); typ.Kind() == reflect.Struct {
+			// struct尝试marshal
+			// Info("[ToDb]save struct(%s) to db", typ)
+			c, _ := json.Marshal(t)
+			return string(c), nil
 		}
 	}
 	return val, nil
@@ -369,7 +375,7 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 		// check if model
 		if reflect.TypeOf(target).Implements(modelType) || reflect.TypeOf(target).Elem().Implements(modelType) {
 			// model type
-			Debug("[FromDb]found model: %+v, auto fetch primary key", reflect.TypeOf(target))
+			// Debug("[FromDb]found model: %+v, auto fetch primary key", reflect.TypeOf(target))
 			binder := func(holder, target interface{}) error {
 				var s string
 				if holder.(*sql.NullString).Valid {
@@ -389,6 +395,27 @@ func (_ BaseConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 					} else {
 						// 指针Model
 						reflect.Indirect(reflect.ValueOf(target)).Set(reflect.ValueOf(nm))
+					}
+				}
+				return nil
+			}
+			return gorp.CustomScanner{Holder: new(sql.NullString), Target: target, Binder: binder}, true
+		} else if typ := utils.ToType(target); typ.Kind() == reflect.Struct {
+			binder := func(holder, target interface{}) error {
+				if holder.(*sql.NullString).Valid {
+					if str := holder.(*sql.NullString).String; str != "" {
+						// 再尝试object
+						st := reflect.New(typ).Interface()
+						if err := json.Unmarshal([]byte(str), st); err == nil {
+							if reflect.TypeOf(target).Elem().Kind() == reflect.Ptr {
+								// 指针型struct
+								reflect.Indirect(reflect.ValueOf(target)).Set(reflect.ValueOf(st))
+							} else {
+								reflect.Indirect(reflect.ValueOf(target)).Set(reflect.Indirect(reflect.ValueOf(st)))
+							}
+						} else {
+							Info("[FromDb]fetch struct(%s) from db failed: %s", typ, err)
+						}
 					}
 				}
 				return nil

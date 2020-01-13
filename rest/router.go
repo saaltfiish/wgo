@@ -51,7 +51,7 @@ func RESTDeny(c *wgo.Context) error {
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
-// 注册路由, 注意AddModel,NewModel已经默认注册了路由, 若果需要改变endpoint, 需要使用Register
+// 注册路由, 注意AddModel,NewModel已经默认注册了路由, 如果需要改变endpoint, 需要使用Register
 func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST {
 	m, ok := i.(Model)
 	if !ok {
@@ -68,7 +68,7 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	}
 
 	// 生成新的pool覆盖
-	rest := addREST(m, endpoint)
+	rest := addREST(m, endpoint, ms)
 	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool())
 
 	return rest

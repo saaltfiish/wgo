@@ -24,6 +24,14 @@ func NewParams(p []interface{}) *Params {
 	return params.Parse()
 }
 
+func (p *Params) Remains(off int) []interface{} {
+	// 代表第off个之后的所有参数
+	if p.Len() <= off+1 {
+		return nil
+	}
+	return p.origin[off+1:]
+}
+
 func (p *Params) Parse() *Params {
 	if p.origin != nil && len(p.origin) >= 1 && len(p.origin)%2 == 0 {
 		// 分析第一个参数
