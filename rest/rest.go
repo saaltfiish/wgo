@@ -283,57 +283,25 @@ func (rest *REST) GetEnv(k string) interface{} {
 }
 
 // action
-// func (rest *REST) SetAction(act string) {
-// 	rest.SetEnv("_action_", act)
-// }
-// func (rest *REST) Action() string {
-// 	acti := rest.GetEnv("_action_")
-// 	if act, ok := acti.(string); ok {
-// 		return act
-// 	}
-// 	return ""
-// }
+func (rest *REST) setAction(act string) {
+	rest.SetEnv("_action_", act)
+}
+func (rest *REST) action() string {
+	acti := rest.GetEnv("_action_")
+	if act, ok := acti.(string); ok {
+		return act
+	}
+	return ""
+}
 
 // creating
 func (rest *REST) Creating() bool {
-	if m := rest.Model(); m != nil {
-		cc := CanCreate(m)
-		if !cc {
-			return cc
-		}
-		if ctx := rest.Context(); ctx != nil && !rest.isGuest() {
-			// 主REST, 判断method
-			switch m := ctx.Method(); m {
-			case "POST", "PUT":
-				return cc
-			default:
-				return false
-			}
-		}
-		return cc
-	}
-	return false
+	return rest.action() == ACTION_CREATE
 }
 
 // updating
 func (rest *REST) Updating() bool {
-	if m := rest.Model(); m != nil {
-		cu := CanUpdate(m)
-		if !cu {
-			return cu
-		}
-		if ctx := rest.Context(); ctx != nil && !rest.isGuest() {
-			// 主REST, 判断method
-			switch m := ctx.Method(); m {
-			case "PATCH", "POST", "PUT":
-				return cu
-			default:
-				return false
-			}
-		}
-		return cu
-	}
-	return false
+	return rest.action() == ACTION_UPDATE
 }
 
 // response

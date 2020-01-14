@@ -19,11 +19,11 @@ const (
 	CACHE_EXPIRE = 30
 
 	// action
-	// ACTION_CREATE = "C"
-	// ACTION_READ   = "R"
-	// ACTION_UPDATE = "U"
-	// ACTION_DELETE = "D"
-	// ACTION_OTHER  = "O"
+	ACTION_CREATE = "C"
+	ACTION_READ   = "R"
+	ACTION_UPDATE = "U"
+	ACTION_DELETE = "D"
+	ACTION_OTHER  = "O"
 
 	// app env config key
 	AECK_REDIS_ADDR      = "session.redis.conn"

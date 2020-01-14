@@ -18,27 +18,26 @@ func Init() wgo.MiddlewareFunc {
 			rest := GetREST(c)
 			defer rest.release()
 
-			// action
-			// switch m := c.Method(); m {
-			// case "POST", "PUT":
-			// 	rest.SetAction(ACTION_CREATE)
-			// case "PATCH":
-			// 	rest.SetAction(ACTION_UPDATE)
-			// case "DELETE":
-			// 	rest.SetAction(ACTION_DELETE)
-			// default:
-			// 	rest.SetAction(ACTION_READ)
-			// }
-			// if ca := rest.Options(CustomActionKey); ca != nil {
-			// 	if cas, ok := ca.(string); ok {
-			// 		rest.SetAction(cas)
-			// 	}
-			// }
-
 			// fill model, 只要request body不为空就尝试fill
 			if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
 				if err := rest.fill(rb); err != nil {
 					c.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
+				}
+			}
+
+			// action
+			switch m := c.Method(); m {
+			case "POST", "PUT", "PATCH":
+				// 默认other
+				rest.setAction(ACTION_OTHER)
+			case "DELETE":
+				rest.setAction(ACTION_DELETE)
+			default:
+				rest.setAction(ACTION_READ)
+			}
+			if ca := rest.Options(CustomActionKey); ca != nil {
+				if cas, ok := ca.(string); ok {
+					rest.setAction(cas)
 				}
 			}
 

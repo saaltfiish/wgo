@@ -229,6 +229,7 @@ var (
 	ErrNoRecord      = errors.New("no record")
 	ErrNoModel       = errors.New("no model")
 	ErrEmptyModel    = errors.New("empty model")
+	ErrConflict      = errors.New("conflict")
 	ErrNotNeedUpdate = errors.New("nothing to update")
 
 	modelType = reflect.TypeOf((*Model)(nil)).Elem()
@@ -1232,7 +1233,9 @@ func Valid(m Model, fields ...string) (Model, error) {
 		r.Warn("[Valid]not need validate")
 		return m, nil
 	} else if r.Updating() && m.GetOlder() == nil {
-		return nil, fmt.Errorf("updating object is not exists")
+		return nil, ErrNoRecord
+	} else if r.Creating() && canUpdate(m) {
+		return nil, ErrConflict
 	}
 	// r.Debug("[Valid]updating: %v, creating: %v", r.Updating(), r.Creating())
 	// keeper := m.Keeper()
@@ -1251,7 +1254,7 @@ func Valid(m Model, fields ...string) (Model, error) {
 					fv.Set(reflect.Zero(fv.Type()))
 				} else if col.ExtOptions.Contains(TAG_GENERATE) && !col.TagOptions.Contains(DBTAG_PK) { //服务器生成, 忽略传入
 					fv.Set(reflect.Zero(fv.Type()))
-				} else if r.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段,要报错
+				} else if r.Updating() && col.ExtOptions.Contains(TAG_DENY) { //尝试编辑不可编辑的字段
 					// 不可编辑字段，数字类型最好是指针，否则数字zero破坏力可强...
 					r.Warn("%s is uneditable: %v", col.Tag, fv)
 					//return nil, fmt.Errorf("%s is uneditable", col.Tag) //尝试编辑不可编辑的字段,直接报错
@@ -2140,7 +2143,7 @@ func Columns(m Model) []utils.StructColumn {
 
 // can update
 // 如果一个model有primary key, 那么就是canUpate
-func CanUpdate(m Model) bool {
+func canUpdate(m Model) bool {
 	if f, k, _ := primaryKey(m); f != "" && k != "" {
 		return true
 	}
@@ -2149,6 +2152,6 @@ func CanUpdate(m Model) bool {
 
 // can create
 // 一个model没有primary key，这是can create
-func CanCreate(m Model) bool {
-	return !CanUpdate(m)
+func canCreate(m Model) bool {
+	return !canUpdate(m)
 }
