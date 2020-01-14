@@ -1260,12 +1260,14 @@ func Valid(m Model, fields ...string) (Model, error) {
 					// 处理字段, 不包括primary key
 					ufs = append(ufs, col.Tag)
 				}
+
+				// keeper check
+				if err := m.Keeper()(col); err != nil {
+					return nil, err
+				}
 			} else if col.ExtOptions.Contains(TAG_REQUIRED) && r.Creating() { // 创建时必须传入,但是为空
 				err := fmt.Errorf("field `%s` required, but empty", col.Tag)
 				r.Warn(err.Error())
-				return nil, err
-			}
-			if err := m.Keeper()(col); err != nil {
 				return nil, err
 			}
 		}
