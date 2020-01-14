@@ -160,7 +160,7 @@ type Model interface {
 	GetRecord(opts ...interface{}) interface{}         // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
-	GetOlder(rk ...string) Model                       // 获取旧记录
+	GetOlder(rk ...interface{}) Model                  // 获取旧记录
 	GetSum(...string) (interface{}, error)             // 获取多条记录
 	GetCount() (int64, error)                          // 获取多条记录
 	GetCountNSum() (int64, float64)                    // 获取count and sum
@@ -1598,7 +1598,7 @@ func GetRecord(m Model, opts ...interface{}) Model {
 	}
 	ck := ""
 	params := utils.NewParams(opts)
-	pk := params.PrimaryString()
+	pk := params.StringByIndex(0)
 	fuzzy := params.LastBool(true) // fuzzy代表是否使用条件来确定一条记录, 默认为true
 	if pk != "" {
 		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
@@ -1740,21 +1740,19 @@ func (r *REST) Write(opts ...interface{}) (Model, error) {
 
 /* }}} */
 
-/* {{{ func (r *REST) GetOlder(opts ...string) Model
+/* {{{ func (r *REST) GetOlder(opts ...interface{}) Model
  * get older record
  */
-func (r *REST) GetOlder(opts ...string) Model {
+func (r *REST) GetOlder(opts ...interface{}) Model {
 	if r.older == nil {
 		if m := r.Model(); m != nil {
-			rk := ""
-			if len(opts) > 0 && opts[0] != "" {
-				// check params
-				rk = opts[0]
+			rk := utils.NewParams(opts).PrimaryString()
+			if rk != "" {
+			} else if c := r.Context(); c != nil {
+				rk = c.Param(RowkeyKey)
 			} else if _, v, _ := m.PKey(); v != "" {
 				// check variable primary key
 				rk = v
-			} else if c := r.Context(); c != nil {
-				rk = c.Param(RowkeyKey)
 			}
 			// r.Debug("[GetOlder]rowkey: %s", rk)
 			if rk != "" {
