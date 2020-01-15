@@ -60,11 +60,14 @@ var zoo = utils.NewSafeMap(
 			f := col.Tag
 			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
 			if col.Type.Implements(modelType) {
-				r.Debug("[existence]check model: %s, %+v", col.Type, fv)
+				m := fv.Interface().(Model)
+				// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
 				// model类型, fv应该是primary key
-				if or := GetRecord(fv.Interface().(Model)); or == nil {
-					r.Warn("[keeper.existence]check %s failed: %s", f, ErrNoRecord)
-					return ErrNoRecord
+				if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
+					if or := GetRecord(m); or == nil {
+						r.Warn("[keeper.existence]check %s failed: %s", f, ErrNoRecord)
+						return ErrNoRecord
+					}
 				}
 			}
 			return nil
@@ -1132,10 +1135,13 @@ func (r *REST) UnionKeys(opts ...interface{}) (uks map[string]string) {
  */
 func (r *REST) KeeperFactory() func(utils.StructColumn) error {
 	return func(col utils.StructColumn) error {
-		extTag := col.ExtTag
-		if ki := r.Zoo().Get(extTag); ki != nil {
-			keeper := ki.(func(utils.StructColumn, *REST) error)
-			return keeper(col, r)
+		if extTag := col.ExtTag; extTag != "" {
+			if ki := r.Zoo().Get(extTag); ki != nil {
+				keeper := ki.(func(utils.StructColumn, *REST) error)
+				return keeper(col, r)
+			} else {
+				Info("[keeper]not found for %s", extTag)
+			}
 		}
 		return nil
 	}
