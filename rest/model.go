@@ -1604,7 +1604,7 @@ func GetRecord(m Model, opts ...interface{}) Model {
 	}
 	ck := ""
 	params := utils.NewParams(opts)
-	pk := params.StringByIndex(0)
+	pk := params.PrimaryString()
 	fuzzy := params.LastBool(true) // fuzzy代表是否使用条件来确定一条记录, 默认为true
 	if pk != "" {
 		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
