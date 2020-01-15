@@ -48,10 +48,14 @@ var zoo = utils.NewSafeMap(
 			f := col.Tag
 			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
 			if col.Type.Implements(modelType) {
+				m := fv.Interface().(Model)
+				// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
 				// model类型, fv应该是primary key
-				if or := GetRecord(fv.Interface().(Model)); or == nil {
-					r.Warn("[keeper.existence]check %s failed: %s", f, ErrNoRecord)
-					return ErrNoRecord
+				if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
+					if or := GetRecord(m); or == nil {
+						r.Warn("[keeper.existense]check %s failed: %s", f, ErrNoRecord)
+						return ErrNoRecord
+					}
 				}
 			}
 			return nil
@@ -65,7 +69,7 @@ var zoo = utils.NewSafeMap(
 				// model类型, fv应该是primary key
 				if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
 					if or := GetRecord(m); or == nil {
-						r.Warn("[keeper.existence]check %s failed: %s", f, ErrNoRecord)
+						r.Warn("[keeper.existence]check %s with %s failed: %s", f, pk, ErrNoRecord)
 						return ErrNoRecord
 					}
 				}

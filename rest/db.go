@@ -57,6 +57,8 @@ func (_ BaseConverter) ToDb(val interface{}) (interface{}, error) {
 			return 1, nil
 		}
 		return 0, nil
+	case time.Time, *time.Time:
+		// nothing
 	default:
 		// 自定义的类型,如果实现了SelfConverter接口,则这里自动执行
 		// Info("not known val: %v, %v", reflect.TypeOf(t), val)
