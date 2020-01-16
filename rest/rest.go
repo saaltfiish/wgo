@@ -53,19 +53,14 @@ func init() {
 }
 
 // 新建一个REST的工厂, 闭包
-func restFactory(endpoint string, m Model, ms ...interface{}) func() interface{} {
-	mg := modelFactory(m)
-	fn, n := fullName(mg())
-	if endpoint == "" {
-		endpoint = utils.Pluralize(n)
-	}
+func restFactory(fn, endpoint string, mg func() Model, nz *utils.SafeMap, ms ...interface{}) func() interface{} {
 	return func() interface{} {
 		rest := &REST{
 			name:      fn,
 			endpoint:  endpoint,
-			zoo:       zoo.Clone(),
+			zoo:       nz,
 			defaultms: append(defaultMiddlewares, ms...),
-			pool:      &sync.Pool{New: restFactory(endpoint, m, ms...)},
+			pool:      &sync.Pool{New: restFactory(fn, endpoint, mg, nz, ms...)},
 			mg:        mg,
 		}
 		rest.setModel(rest.mg())
@@ -78,7 +73,14 @@ func addREST(m Model, opts ...interface{}) *REST {
 	ps := utils.NewParams(opts)
 	endpoint := ps.StringByIndex(0)
 	ms := ps.ArrayByIndex(1)
-	rest := restFactory(endpoint, m, ms...)().(*REST)
+	mg := modelFactory(m)
+	fn, n := fullName(mg())
+	if endpoint == "" {
+		endpoint = utils.Pluralize(n)
+	}
+	nz := zoo.Clone()
+	// Info("[addREST]zoo: %+v, %p", nz, nz)
+	rest := restFactory(fn, endpoint, mg, nz, ms...)().(*REST)
 	Debug("[addREST]adding rest: %s, custom endpoint: %s", rest.Name(), endpoint)
 
 	// 生成rest pool并存储, 运行时rest,model的创建都依赖这个pool

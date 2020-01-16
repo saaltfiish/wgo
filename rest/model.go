@@ -17,8 +17,6 @@ import (
 )
 
 // 各种字段，很像动物园里的动物, 处理字段的函数是管理员。因此，处理字段的map是个zoo, 很合理...
-type Keeper func(utils.StructColumn, *REST) error
-
 var zoo = utils.NewSafeMap(
 	map[interface{}]interface{}{
 		"sha1": func(col utils.StructColumn, r *REST) error {
@@ -117,7 +115,7 @@ var zoo = utils.NewSafeMap(
 	})
 
 // add animal to zoo
-func (r *REST) AddKeeper(tag string, kp Keeper) {
+func (r *REST) AddKeeper(tag string, kp func(col utils.StructColumn, r *REST) error) {
 	r.Zoo().Set(tag, kp)
 }
 
@@ -131,6 +129,7 @@ type Model interface {
 	Columns() []utils.StructColumn
 
 	Keeper() func(utils.StructColumn) error // 各种检查, 闭包缓存
+	AddKeeper(string, func(col utils.StructColumn, r *REST) error)
 	// KeeperFactory() func(utils.StructColumn) error
 
 	// sql sugar
@@ -1140,6 +1139,7 @@ func (r *REST) UnionKeys(opts ...interface{}) (uks map[string]string) {
 func (r *REST) KeeperFactory() func(utils.StructColumn) error {
 	return func(col utils.StructColumn) error {
 		if extTag := col.ExtTag; extTag != "" {
+			// r.Info("[keeper]zoo: %+v, %p", r.Zoo(), r.Zoo())
 			if ki := r.Zoo().Get(extTag); ki != nil {
 				keeper := ki.(func(utils.StructColumn, *REST) error)
 				return keeper(col, r)
