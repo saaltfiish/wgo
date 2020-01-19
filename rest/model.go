@@ -16,107 +16,128 @@ import (
 	"wgo/utils"
 )
 
-// 各种字段，很像动物园里的动物, 处理字段的函数是管理员。因此，处理字段的map是个zoo, 很合理...
-var zoo = utils.NewSafeMap(
-	map[interface{}]interface{}{
-		"sha1": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if fv.IsValid() && !utils.IsEmptyValue(fv) { //不能为空
-				h := utils.HashSha1(utils.MustString(fv))
-				if err := utils.SetWithProperType(h, fv); err != nil {
-					return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
-				}
-			}
-			return nil
-		},
-		"userid": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
-				userid := r.GetUserID()
-				r.Debug("[userid]%s", userid)
-				if err := utils.SetWithProperType(userid, fv); err != nil {
-					return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
-				}
-			}
-			return nil
-		},
-		"existense": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if col.Type.Implements(modelType) {
-				m := fv.Interface().(Model)
-				// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
-				// model类型, fv应该是primary key
-				if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
-					if or := GetRecord(m); or == nil {
-						r.Warn("[keeper.existense]check %s failed: %s", f, ErrNoRecord)
-						return ErrNoRecord
+var zoo *utils.SafeMap
+
+func init() {
+	// 各种字段，很像动物园里的动物, 处理字段的函数是管理员。因此，处理字段的map是个zoo, 很合理...
+	zoo = utils.NewSafeMap(
+		map[interface{}]interface{}{
+			"sha1": func(m Model, opts ...interface{}) error {
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if fv.IsValid() && !utils.IsEmptyValue(fv) { //不能为空
+					h := utils.HashSha1(utils.MustString(fv))
+					if err := utils.SetWithProperType(h, fv); err != nil {
+						return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
 					}
 				}
-			}
-			return nil
-		},
-		"existence": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if col.Type.Implements(modelType) {
-				m := fv.Interface().(Model)
-				// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
-				// model类型, fv应该是primary key
-				if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
-					if or := GetRecord(m); or == nil {
-						r.Warn("[keeper.existence]check %s with %s failed: %s", f, pk, ErrNoRecord)
-						return ErrNoRecord
+				return nil
+			},
+			"userid": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) {
+					userid := r.GetUserID()
+					r.Debug("[userid]%s", userid)
+					if err := utils.SetWithProperType(userid, fv); err != nil {
+						return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
 					}
 				}
-			}
-			return nil
-		},
-		"time": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
-				now := time.Now()
-				switch fv.Type().String() {
-				case "*time.Time":
-					fv.Set(reflect.ValueOf(&now))
-				case "time.Time":
-					fv.Set(reflect.ValueOf(now))
-				default:
-					return fmt.Errorf("%s must be time.Time, not %s", f, fv.Kind().String())
+				return nil
+			},
+			"existense": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if col.Type.Implements(modelType) {
+					m := fv.Interface().(Model)
+					// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
+					// model类型, fv应该是primary key
+					if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
+						if or := GetRecord(m); or == nil {
+							r.Warn("[keeper.existense]check %s failed: %s", f, ErrNoRecord)
+							return ErrNoRecord
+						}
+					}
 				}
-			}
-			return nil
-		},
-		"uuid": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
-				h := utils.NewShortUUID()
-				if err := utils.SetWithProperType(h, fv); err != nil {
-					return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
+				return nil
+			},
+			"existence": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if col.Type.Implements(modelType) {
+					m := fv.Interface().(Model)
+					// r.Debug("[existence]check model: %s, %+v", col.Type, fv)
+					// model类型, fv应该是primary key
+					if _, pk, _ := primaryKey(m); pk != "" { // 只有当传入primary key才检查存在
+						if or := GetRecord(m); or == nil {
+							r.Warn("[keeper.existence]check %s with %s failed: %s", f, pk, ErrNoRecord)
+							return ErrNoRecord
+						}
+					}
 				}
-			}
-			return nil
-		},
-		"luuid": func(col utils.StructColumn, r *REST) error {
-			f := col.Tag
-			fv := utils.FieldByIndex(reflect.ValueOf(r.Model()), col.Index)
-			if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
-				h := utils.NewUUID()
-				if err := utils.SetWithProperType(h, fv); err != nil {
-					return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
+				return nil
+			},
+			"time": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
+					now := time.Now()
+					switch fv.Type().String() {
+					case "*time.Time":
+						fv.Set(reflect.ValueOf(&now))
+					case "time.Time":
+						fv.Set(reflect.ValueOf(now))
+					default:
+						return fmt.Errorf("%s must be time.Time, not %s", f, fv.Kind().String())
+					}
 				}
-			}
-			return nil
-		},
-	})
+				return nil
+			},
+			"uuid": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
+					h := utils.NewShortUUID()
+					if err := utils.SetWithProperType(h, fv); err != nil {
+						return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
+					}
+				}
+				return nil
+			},
+			"luuid": func(m Model, opts ...interface{}) error {
+				r := m.GetREST()
+				col := opts[0].(utils.StructColumn)
+				f := col.Tag
+				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
+					h := utils.NewUUID()
+					if err := utils.SetWithProperType(h, fv); err != nil {
+						return fmt.Errorf("%s(%s) set value failed: %s", f, fv.Kind(), err)
+					}
+				}
+				return nil
+			},
+		})
+}
 
 // add animal to zoo
-func (r *REST) AddKeeper(tag string, kp func(col utils.StructColumn, r *REST) error) {
-	r.Zoo().Set(tag, kp)
+// 外层使用只需要Model
+func (r *REST) AddKeeper(tag string, kp func(Model) error) {
+	fn := func(m Model, opts ...interface{}) error {
+		return kp(m)
+	}
+	r.Zoo().Set(tag, fn)
 }
 
 type Model interface {
@@ -129,7 +150,7 @@ type Model interface {
 	Columns() []utils.StructColumn
 
 	Keeper() func(utils.StructColumn) error // 各种检查, 闭包缓存
-	AddKeeper(string, func(col utils.StructColumn, r *REST) error)
+	AddKeeper(string, func(Model) error)
 	// KeeperFactory() func(utils.StructColumn) error
 
 	// sql sugar
@@ -178,6 +199,12 @@ type Model interface {
 	Valid(...string) (Model, error) //数据验证, 如果传入opts, 则只验证opts指定的字段
 	Filter() (Model, error)         //数据过滤(创建,更新后)
 	Protect() (Model, error)        //数据保护(获取数据时过滤字段)
+
+	// logging
+	Debug(interface{}, ...interface{})
+	Info(interface{}, ...interface{})
+	Warn(interface{}, ...interface{})
+	Error(interface{}, ...interface{})
 }
 
 type List struct {
@@ -583,6 +610,7 @@ func AddModel(i interface{}, opts ...interface{}) Model {
 func modelFactory(i interface{}) func() Model {
 	m, ok := i.(Model)
 	if !ok {
+		Warn("[modelFactory]input not model: %s", reflect.TypeOf(i))
 		return func() Model {
 			return nil
 		}
@@ -789,7 +817,7 @@ func (r *REST) SetConditions(cs ...*Condition) Model {
 			if col.ExtOptions.Contains(TAG_TIMERANGE) {
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Range != nil || condition.Is != nil) {
 					// 直接对字段查询
-					Debug("[rest.SetConditions]timerange: %+v, %+v, %+v", col.Tag, condition.Is, condition.Range)
+					// Debug("[rest.SetConditions]timerange: %+v, %+v, %+v", col.Tag, condition.Is, condition.Range)
 					if condition.Range != nil {
 						r.conditions = append(r.conditions, condition)
 					} else if condition.Is != nil {
@@ -817,7 +845,7 @@ func (r *REST) SetConditions(cs ...*Condition) Model {
 			}
 			if col.TagOptions.Contains(DBTAG_PK) || col.TagOptions.Contains(DBTAG_UK) || col.TagOptions.Contains(DBTAG_KEY) || col.ExtOptions.Contains(TAG_CONDITION) { //primary key or union key or conditional
 				if condition, e := GetCondition(cs, col.Tag); e == nil && (condition.Is != nil || condition.Not != nil || condition.Gt != nil || condition.Lt != nil || condition.Like != nil || condition.Join != nil || condition.Or != nil) {
-					Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
+					// Debug("[SetConditions][tag: %s][type: %s]%v", col.Tag, col.Type.String(), condition)
 					r.conditions = append(r.conditions, ParseCondition(col.Type.String(), condition))
 				}
 			}
@@ -1141,8 +1169,8 @@ func (r *REST) KeeperFactory() func(utils.StructColumn) error {
 		if extTag := col.ExtTag; extTag != "" {
 			// r.Info("[keeper]zoo: %+v, %p", r.Zoo(), r.Zoo())
 			if ki := r.Zoo().Get(extTag); ki != nil {
-				keeper := ki.(func(utils.StructColumn, *REST) error)
-				return keeper(col, r)
+				keeper := ki.(func(Model, ...interface{}) error)
+				return keeper(r.Model(), col)
 			} else {
 				Info("[keeper]not found for %s", extTag)
 			}

@@ -4,6 +4,7 @@ package rest
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -85,11 +86,12 @@ func addREST(m Model, opts ...interface{}) *REST {
 
 	// 生成rest pool并存储, 运行时rest,model的创建都依赖这个pool
 	restPool.Set(rest.Name(), rest.Pool())
+
 	return rest
 }
 
 // 获取跟i相关的REST
-// sence: 只知道i, 通过i的名字找到pool并生成新的*REST
+// senece: 只知道i, 通过i的名字找到pool并生成新的*REST
 func getREST(i interface{}) *REST {
 	if m := modelFactory(i)(); m != nil {
 		fn, _ := fullName(m)
@@ -98,6 +100,7 @@ func getREST(i interface{}) *REST {
 			return pool.(*sync.Pool).Get().(*REST)
 		}
 	}
+	Warn("[getREST]can not get %s's *REST, maybe it is not rest.Model or not been added", reflect.TypeOf(i))
 	return nil
 }
 

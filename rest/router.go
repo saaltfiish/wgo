@@ -30,9 +30,13 @@ type Routes struct {
 }
 
 // 默认的middleware, 所有rest路由都需要有这两个
-var defaultMiddlewares = []interface{}{
-	Init(),
-	Auth(),
+var defaultMiddlewares []interface{}
+
+func init() {
+	defaultMiddlewares = []interface{}{
+		Init(),
+		Auth(),
+	}
 }
 
 func AddMiddleware(ms ...interface{}) {
@@ -40,8 +44,16 @@ func AddMiddleware(ms ...interface{}) {
 }
 
 // get router
-func GetRouter(i interface{}) *REST {
-	return getREST(i)
+// 获取默认路由(model名的复数形式)用这个方法, 否则用Register
+func GetRouter(i interface{}, opts ...interface{}) *REST {
+	r := getREST(i)
+	if r == nil {
+		// 说明models没有AddModel(i), 这里自动加上
+		if m := AddModel(i); m != nil {
+			return m.GetREST()
+		}
+	}
+	return r
 }
 
 // deny
@@ -51,7 +63,7 @@ func RESTDeny(c *wgo.Context) error {
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
-// 注册路由, 注意AddModel,NewModel已经默认注册了路由, 如果需要改变endpoint, 需要使用Register
+// 注册路由, 注意AddModel会默认注册了路由, 如果需要改变endpoint, 需要使用Register
 func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST {
 	m, ok := i.(Model)
 	if !ok {
