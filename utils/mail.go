@@ -23,10 +23,18 @@ func SendMail(smtp string, port int, account, password, from, to, subject, body 
 	return d.DialAndSend(m)
 }
 
-func SendMails(smtp string, port int, account, password, from, subject, body string, tos []string) error {
+func SendMails(smtp string, port int, account, password, from, subject, body string, addrs ...[]string) error {
+	ccs := []string{}
+	tos := addrs[0]
+	if len(addrs) > 1 {
+		ccs = addrs[1]
+	}
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
 	m.SetHeader("To", tos...)
+	if len(ccs) > 0 {
+		m.SetHeader("Cc", ccs...)
+	}
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
 
