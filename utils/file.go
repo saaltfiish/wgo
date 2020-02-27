@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 // SelfPath gets compiled executable file absolute path
@@ -23,12 +25,18 @@ func SelfDir() string {
 
 // FileExists reports whether the named file or directory exists.
 func FileExists(name string) bool {
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
+	_, err := os.Stat(name)
+	return err == nil || os.IsExist(err)
+}
+
+// ReadInArray 把整个文件读入一个数组中,每行作为一个元素.
+func ReadFileInArray(fpath string) ([]string, error) {
+	data, err := ioutil.ReadFile(fpath)
+	if err != nil {
+		return nil, err
 	}
-	return true
+
+	return strings.Split(string(data), "\n"), nil
 }
 
 // Search a file in paths.

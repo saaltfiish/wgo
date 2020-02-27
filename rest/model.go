@@ -709,9 +709,17 @@ func (r *REST) Modelize(m Model) Model {
 		if rest := getREST(m); rest != nil {
 			rest.setContext(c)
 			rest.setGuest() // 作为客Model
-			rest.setModel(m)
+			if m != nil && !reflect.ValueOf(m).IsNil() {
+				r.Info("[Modelize]set not nil model: %s", m)
+				rest.setModel(m)
+			}
+			r.Info("[Modelize]return model: %+v", m, rest.Model())
 			return rest.Model()
+		} else {
+			r.Info("[Modelize]not get rest")
 		}
+	} else {
+		r.Info("[Modelize]not found context")
 	}
 	return SetModel(m)
 }
