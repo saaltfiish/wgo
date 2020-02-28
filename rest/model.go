@@ -1269,16 +1269,18 @@ func (r *REST) Valid(fields ...string) (Model, error) {
 	return Valid(m, fields...)
 }
 func Valid(m Model, fields ...string) (Model, error) {
+	// Info("[Valid]fields: %s", fields)
 	// check *REST
 	r := m.GetREST()
 	if r == nil {
 		wgo.Warn("[GetRecord]not found *REST for %s", reflect.TypeOf(m))
 		r = SetModel(m).GetREST()
 	}
-	if !r.Updating() && !r.Creating() {
-		r.Warn("[Valid]not need validate")
-		return m, nil
-	} else if r.Updating() && m.GetOlder() == nil {
+	// if !r.Updating() && !r.Creating() {
+	// 	r.Warn("[Valid]not need validate")
+	// 	return m, nil
+	// } else if r.Updating() && m.GetOlder() == nil {
+	if r.Updating() && m.GetOlder() == nil {
 		return nil, ErrNoRecord
 	} else if r.Creating() && canUpdate(m) {
 		return nil, ErrConflict
