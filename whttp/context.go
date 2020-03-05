@@ -128,7 +128,7 @@ type (
 		String(code int, s string) error
 
 		// JSON sends a JSON response with status code.
-		JSON(code int, i interface{}) error
+		JSON(code int, i interface{}, opts ...interface{}) error
 
 		// JSONPretty sends a pretty-print JSON with status code.
 		JSONPretty(code int, i interface{}, indent string) error

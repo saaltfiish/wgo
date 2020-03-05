@@ -52,6 +52,10 @@ func Init() wgo.MiddlewareFunc {
 			var p, pp string
 			params := c.QueryParams()
 			for k, v := range params {
+				if k == PARAM_PRETTY {
+					Info("[Init]pretty")
+					rest.SetEnv(PrettyKey, true)
+				}
 				v = parseParams(v)
 				if len(v) <= 0 {
 					continue

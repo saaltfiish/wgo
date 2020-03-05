@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"wgo"
 	"wgo/server"
@@ -41,6 +42,16 @@ func init() {
 
 func AddMiddleware(ms ...interface{}) {
 	defaultMiddlewares = append(defaultMiddlewares, ms...)
+	// 检查是否已经有注册rest
+	if rp := restPool.Items(); len(rp) > 0 {
+		for n, pi := range rp {
+			Info("[AddMiddleware]%s already registered", n)
+			r := pi.(*sync.Pool).Get().(*REST)
+			// 生成新的pool覆盖
+			rest := addREST(r.mg(), r.endpoint, nil, r.flag)
+			rest.Builtin(r.flag).SetOptions(ModelPoolKey, rest.Pool())
+		}
+	}
 }
 
 // get router
@@ -58,8 +69,8 @@ func GetRouter(i interface{}, opts ...interface{}) *REST {
 
 // deny
 func RESTDeny(c *wgo.Context) error {
-	rk := c.Param(RowkeyKey)
-	c.Info("[RESTDeny]rowkey: %s", rk)
+	// rk := c.Param(RowkeyKey)
+	// c.Info("[RESTDeny]rowkey: %s", rk)
 	return server.NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 }
 
@@ -80,7 +91,7 @@ func Register(endpoint string, i interface{}, flag int, ms ...interface{}) *REST
 	}
 
 	// 生成新的pool覆盖
-	rest := addREST(m, endpoint, ms)
+	rest := addREST(m, endpoint, ms, flag)
 	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool())
 
 	return rest

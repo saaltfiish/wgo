@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"wgo"
 
+	"wgo"
 	"wgo/gorp"
 	"wgo/utils"
 )
@@ -151,7 +151,7 @@ type Model interface {
 
 	Keeper() func(utils.StructColumn) error // 各种检查, 闭包缓存
 	AddKeeper(string, func(Model) error)
-	// KeeperFactory() func(utils.StructColumn) error
+	// AddMiddlewares(ms ...interface{})
 
 	// sql sugar
 	Is(string, ...interface{}) Model
@@ -593,16 +593,19 @@ func AddModel(i interface{}, opts ...interface{}) Model {
 	if !ok {
 		panic("input not Model")
 	}
+	flag := GM_ALL
+	if enableBuiltinRoutes := utils.NewParams(opts).BoolByIndex(0, true); !enableBuiltinRoutes {
+		flag = GM_NONE
+	}
 
-	rest := addREST(m)
+	rest := addREST(m, nil, nil, flag)
 
 	// add table
 	rest.AddTable()
 
 	// add builtin routes, endpoint是model名的复数形式
-	if enableBuiltinRoutes := utils.NewParams(opts).BoolByIndex(0, true); enableBuiltinRoutes {
-		rest.Builtin(GM_ALL).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
-	}
+	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+
 	return rest.Model()
 }
 
@@ -713,7 +716,6 @@ func (r *REST) Modelize(m Model) Model {
 				r.Info("[Modelize]set not nil model: %s", m)
 				rest.setModel(m)
 			}
-			r.Info("[Modelize]return model: %+v", m, rest.Model())
 			return rest.Model()
 		} else {
 			r.Info("[Modelize]not get rest")

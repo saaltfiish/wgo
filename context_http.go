@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"wgo/server"
+	"wgo/utils"
 	"wgo/whttp"
 )
 
@@ -177,8 +178,8 @@ func (c *Context) String(code int, s string) (err error) {
 	return c.Blob(code, whttp.MIMETextPlainCharsetUTF8, []byte(s))
 }
 
-func (c *Context) JSON(code int, i interface{}) (err error) {
-	if debug {
+func (c *Context) JSON(code int, i interface{}, opts ...interface{}) (err error) {
+	if debug || utils.NewParams(opts).BoolByIndex(0) {
 		return c.JSONPretty(code, i, "  ")
 	}
 	b, err := json.Marshal(i)

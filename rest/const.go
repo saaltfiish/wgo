@@ -47,6 +47,7 @@ const (
 	NoLogKey          = "_nl_"
 	PaginationKey     = "_pagination_"
 	FieldsKey         = "_fields_"
+	PrettyKey         = "_pretty_"
 	TimeRangeKey      = "_tr_"
 	OrderByKey        = "_ob_"
 	ConditionsKey     = "_conditions_"
@@ -128,6 +129,7 @@ const (
 	_MYSQL_FORM = "2006-01-02 15:04:05"
 
 	//固定参数名称
+	PARAM_PRETTY  = "pretty"
 	PARAM_FIELDS  = "fields"
 	PARAM_PAGE    = "page"
 	PARAM_PERPAGE = "per_page"

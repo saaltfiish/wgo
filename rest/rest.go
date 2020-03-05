@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"wgo"
+	"wgo/server"
 	"wgo/utils"
 	"wgo/whttp"
 )
@@ -20,6 +21,7 @@ type REST struct {
 	Count int64   `json:"count,omitempty" db:"-" filter:",H,G,D"` // 计数
 	Sum   float64 `json:"sum,omitempty" db:"-" filter:",H,G,D"`   // 求和
 
+	flag      int                  `db:"-"` // 路由flag
 	name      string               `db:"-"`
 	endpoint  string               `db:"-"`
 	model     Model                `db:"-"`
@@ -54,14 +56,15 @@ func init() {
 }
 
 // 新建一个REST的工厂, 闭包
-func restFactory(fn, endpoint string, mg func() Model, nz *utils.SafeMap, ms ...interface{}) func() interface{} {
+func restFactory(fn, endpoint string, flag int, mg func() Model, nz *utils.SafeMap, ms ...interface{}) func() interface{} {
 	return func() interface{} {
 		rest := &REST{
+			flag:      flag,
 			name:      fn,
 			endpoint:  endpoint,
 			zoo:       nz,
 			defaultms: append(defaultMiddlewares, ms...),
-			pool:      &sync.Pool{New: restFactory(fn, endpoint, mg, nz, ms...)},
+			pool:      &sync.Pool{New: restFactory(fn, endpoint, flag, mg, nz, ms...)},
 			mg:        mg,
 		}
 		rest.setModel(rest.mg())
@@ -74,6 +77,7 @@ func addREST(m Model, opts ...interface{}) *REST {
 	ps := utils.NewParams(opts)
 	endpoint := ps.StringByIndex(0)
 	ms := ps.ArrayByIndex(1)
+	flag := ps.IntByIndex(2)
 	mg := modelFactory(m)
 	fn, n := fullName(mg())
 	if endpoint == "" {
@@ -81,7 +85,7 @@ func addREST(m Model, opts ...interface{}) *REST {
 	}
 	nz := zoo.Clone()
 	// Info("[addREST]zoo: %+v, %p", nz, nz)
-	rest := restFactory(fn, endpoint, mg, nz, ms...)().(*REST)
+	rest := restFactory(fn, endpoint, flag, mg, nz, ms...)().(*REST)
 	Debug("[addREST]adding rest: %s, custom endpoint: %s", rest.Name(), endpoint)
 
 	// 生成rest pool并存储, 运行时rest,model的创建都依赖这个pool
@@ -313,59 +317,72 @@ func (rest *REST) Updating() bool {
 // ok
 func (rest *REST) OK(data interface{}) (err error) {
 	c := rest.Context()
-	return c.JSON(getCode(true, c.Request().(whttp.Request).Method()), data)
+	pretty := false
+	if rest.GetEnv(PrettyKey) != nil {
+		pretty = true
+	}
+	return c.JSON(getCode(true, c.Request().(whttp.Request).Method()), data, pretty)
 }
 
 // not ok
 func (rest *REST) NotOK(m interface{}) (err error) {
-	c := rest.Context()
-	code := getCode(false, c.Request().(whttp.Request).Method())
-	code *= 1000
-	msg := "have errors!"
-	if _, ok := m.(error); ok {
-		msg = m.(error).Error()
-	} else if _, ok := m.(string); ok {
-		msg = m.(string)
-	}
-	return c.NewError(code, msg)
+	// c := rest.Context()
+	// code := getCode(false, c.Request().(whttp.Request).Method())
+	// code *= 1000
+	// msg := "have errors!"
+	// switch err := m.(type) {
+	// case *server.ServerError:
+	// 	return err
+	// case server.ServerError:
+	// 	return &err
+	// case error:
+	// 	msg = m.(error).Error()
+	// case string:
+	// 	msg = m.(string)
+	// }
+	// return c.NewError(code, msg)
+	return rest.returnError(m)
 }
 
 // bad request
 func (rest *REST) BadRequest(m interface{}) (err error) {
-	c := rest.Context()
-	code := whttp.StatusBadRequest * 1000
-	msg := "bad request"
-	if _, ok := m.(error); ok {
-		msg = m.(error).Error()
-	} else if _, ok := m.(string); ok {
-		msg = m.(string)
-	}
-	return c.NewError(code, msg)
+	// c := rest.Context()
+	// code := whttp.StatusBadRequest * 1000
+	// msg := "bad request!"
+	// if _, ok := m.(error); ok {
+	// 	msg = m.(error).Error()
+	// } else if _, ok := m.(string); ok {
+	// 	msg = m.(string)
+	// }
+	// return c.NewError(code, msg)
+	return rest.returnError(m, whttp.StatusBadRequest*1000, "Bad request!")
 }
 
 // not found
 func (rest *REST) NotFound(m interface{}) (err error) {
-	c := rest.Context()
-	code := whttp.StatusNotFound * 1000
-	msg := "not found"
-	if _, ok := m.(error); ok {
-		msg = m.(error).Error()
-	} else if _, ok := m.(string); ok {
-		msg = m.(string)
-	}
-	return c.NewError(code, msg)
+	// c := rest.Context()
+	// code := whttp.StatusNotFound * 1000
+	// msg := "not found"
+	// if _, ok := m.(error); ok {
+	// 	msg = m.(error).Error()
+	// } else if _, ok := m.(string); ok {
+	// 	msg = m.(string)
+	// }
+	// return c.NewError(code, msg)
+	return rest.returnError(m, whttp.StatusNotFound*1000, "Not found!")
 }
 
 // internal error
 func (rest *REST) InternalError(m interface{}) (err error) {
-	code := whttp.StatusInternalServerError * 1000
-	msg := "internal errors!"
-	if _, ok := m.(error); ok {
-		msg = m.(error).Error()
-	} else if _, ok := m.(string); ok {
-		msg = m.(string)
-	}
-	return rest.Context().NewError(code, msg)
+	// code := whttp.StatusInternalServerError * 1000
+	// msg := "internal errors!"
+	// if _, ok := m.(error); ok {
+	// 	msg = m.(error).Error()
+	// } else if _, ok := m.(string); ok {
+	// 	msg = m.(string)
+	// }
+	// return rest.Context().NewError(code, msg)
+	return rest.returnError(m, whttp.StatusInternalServerError*1000, "Internal errors!")
 }
 
 // 获取返回码
@@ -411,4 +428,29 @@ func getCode(ifSuc bool, m string) (s int) {
 			return whttp.StatusBadRequest
 		}
 	}
+}
+
+// returnErr
+func (rest *REST) returnError(i interface{}, opts ...interface{}) error {
+	ps := utils.NewParams(opts)
+	c := rest.Context()
+	code := ps.IntByIndex(0) // input code
+	if code == 0 {
+		code = getCode(false, c.Request().(whttp.Request).Method()) * 1000
+	}
+	msg := ps.StringByIndex(1)
+	if msg == "" {
+		msg = "error!"
+	}
+	switch e := i.(type) {
+	case *server.ServerError:
+		return e
+	case server.ServerError:
+		return &e
+	case error:
+		msg = e.Error()
+	case string:
+		msg = e
+	}
+	return c.NewError(code, msg)
 }
