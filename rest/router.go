@@ -45,7 +45,7 @@ func AddMiddleware(ms ...interface{}) {
 	// 检查是否已经有注册rest
 	if rp := restPool.Items(); len(rp) > 0 {
 		for n, pi := range rp {
-			Info("[AddMiddleware]%s already registered", n)
+			Debug("[AddMiddleware]%s already registered", n)
 			r := pi.(*sync.Pool).Get().(*REST)
 			// 生成新的pool覆盖
 			rest := addREST(r.mg(), r.endpoint, nil, r.flag)
