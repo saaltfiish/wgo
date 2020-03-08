@@ -10,7 +10,7 @@ package wgo
 import "wgo/environ"
 
 // The main version number that is being run at the moment.
-const WGO_VERSION = "0.9.5"
+const WGO_VERSION = "v0.10.0"
 
 // A pre-release marker for the version. If this is "" (empty string)
 // then it means that it is a final release. Otherwise, this is a pre-release
@@ -21,6 +21,7 @@ var VersionPrerelease = ""
 var (
 	VERSION string
 
+	Package    string // 利用wgo的包名, 由于在main下很难get到自己的包名, 所以需要编译时指定
 	AppVersion string
 	GitCommit  string
 	BuildTime  string
@@ -29,7 +30,7 @@ var (
 
 func init() {
 	VERSION = Version()
-	Info("Level: %s, Version: %s, Built at: %s", AppLevel, VERSION, BuildTime)
+	Info("Package: %s, Level: %s, Version: %s, Built at: %s", Package, AppLevel, VERSION, BuildTime)
 }
 
 // 获取版本号

@@ -48,6 +48,7 @@ var (
 			u:  "debug mode",
 		},
 	}
+	Test string = "hi"
 )
 
 func init() {

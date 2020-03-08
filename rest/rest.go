@@ -102,7 +102,7 @@ func getREST(i interface{}) *REST {
 			Debug("[getREST]get %s's rest from pool!", fn)
 			return pool.(*sync.Pool).Get().(*REST)
 		}
-		Debug("[getREST]can not get %s's *REST, maybe it is not rest.Model or not been added", fn)
+		Info("[getREST]can not get %s's *REST, maybe it is not rest.Model or not been added", fn)
 	}
 	// Debug("[getREST]can not get %s's *REST, maybe it is not rest.Model or not been added", reflect.TypeOf(i))
 	return nil

@@ -290,3 +290,14 @@ func Pointer(i interface{}) interface{} {
 		return np.Interface()
 	}
 }
+
+// is numberic
+// 数字或者字面是数字都返回true
+func Numberic(i interface{}) bool {
+	if n := MustInt64(i); n > 0 {
+		return true
+	} else if s, ok := i.(string); ok && s == "0" {
+		return true
+	}
+	return false
+}

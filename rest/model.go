@@ -600,11 +600,16 @@ func AddModel(i interface{}, opts ...interface{}) Model {
 
 	rest := addREST(m, nil, nil, flag)
 
-	// add table
-	rest.AddTable()
-
-	// add builtin routes, endpoint是model名的复数形式
-	rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+	// Info("[AddModel]name: %s, package: %s", rest.Name(), wgo.Package)
+	if wgo.Package == "" || strings.Split(rest.Name(), ".")[0] == wgo.Package {
+		// package为空或者当前rest与当前package匹配, 增加table与路由
+		// add table
+		rest.AddTable()
+		// add builtin routes, endpoint是model名的复数形式
+		rest.Builtin(flag).SetOptions(ModelPoolKey, rest.Pool()) // pool也存储到路由节点
+	} else {
+		Debug("[AddModel]rest %s isn't in current package, skip table and built-in routes", rest.Name())
+	}
 
 	return rest.Model()
 }
