@@ -107,6 +107,7 @@ func init() {
 				col := opts[0].(utils.StructColumn)
 				f := col.Tag
 				fv := utils.FieldByIndex(reflect.ValueOf(m), col.Index)
+				// wgo.Info("[uuid]field: %s", f)
 				if r.Creating() && (!fv.IsValid() || utils.IsEmptyValue(fv)) { //创建同时为空
 					h := utils.NewShortUUID()
 					if err := utils.SetWithProperType(h, fv); err != nil {
@@ -1319,13 +1320,13 @@ func Valid(m Model, fields ...string) (Model, error) {
 					ufs = append(ufs, col.Tag)
 				}
 
-				// keeper check
-				if err := m.Keeper()(col); err != nil {
-					return nil, err
-				}
 			} else if col.ExtOptions.Contains(TAG_REQUIRED) && r.Creating() { // 创建时必须传入,但是为空
 				err := fmt.Errorf("field `%s` required, but empty", col.Tag)
 				r.Warn(err.Error())
+				return nil, err
+			}
+			// keeper check
+			if err := m.Keeper()(col); err != nil {
 				return nil, err
 			}
 		}

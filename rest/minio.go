@@ -105,7 +105,7 @@ func (o *ObjectStorage) SetBucketRead(bucketName, objectPrefix string) error {
 func PutObject(bucketName, objectName, contentType string, reader io.Reader, objectSize int64) (string, error) {
 	objectStorage, _ := NewObjectStorage(mio["endpoint"].(string), mio["access_key"].(string), mio["secret_key"].(string), mio["secure"].(bool))
 	_, err := objectStorage.PutObject(bucketName, objectName, contentType, reader, objectSize)
-	url := fmt.Sprintf("%s/%s/%s", mio["cdn"].(string), mio["bucket"].(string), objectName)
+	url := fmt.Sprintf("%s/%s/%s", mio["cdn"].(string), bucketName, objectName)
 	return url, err
 }
 func (o *ObjectStorage) PutObject(bucketName, objectName, contentType string, reader io.Reader, objectSize int64) (int64, error) {
