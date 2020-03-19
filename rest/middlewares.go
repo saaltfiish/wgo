@@ -2,7 +2,6 @@
 package rest
 
 import (
-	"io/ioutil"
 	"strings"
 
 	"wgo"
@@ -18,12 +17,12 @@ func Init() wgo.MiddlewareFunc {
 			rest := GetREST(c)
 			defer rest.release()
 
-			// fill model, 只要request body不为空就尝试fill
-			if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
-				if err := rest.fill(rb); err != nil {
-					c.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
-				}
-			}
+			// // fill model, 只要request body不为空就尝试fill
+			// if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+			// 	if err := rest.fill(rb); err != nil {
+			// 		c.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
+			// 	}
+			// }
 
 			// action
 			switch m := c.Method(); m {

@@ -1,6 +1,9 @@
 package rest
 
-import "reflect"
+import (
+	"io/ioutil"
+	"reflect"
+)
 
 type Action interface { // 把action定义为一个interface, 这样业务代码可以overwrite
 	PreGet() (interface{}, error)  //获取前
@@ -193,6 +196,13 @@ func (r *REST) PostSearch() (interface{}, error) {
 func (r *REST) PreCreate() (interface{}, error) {
 	m := r.Model()
 	r.setAction(ACTION_CREATE)
+	// fill model
+	c := r.Context()
+	if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+		if err := r.fill(rb); err != nil {
+			r.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
+		}
+	}
 	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
@@ -245,6 +255,13 @@ func (r *REST) PostCreate() (interface{}, error) {
 func (r *REST) PreUpdate() (interface{}, error) {
 	m := r.Model()
 	r.setAction(ACTION_UPDATE)
+	// fill model
+	c := r.Context()
+	if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+		if err := r.fill(rb); err != nil {
+			r.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
+		}
+	}
 	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
