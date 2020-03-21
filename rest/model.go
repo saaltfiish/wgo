@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1272,7 +1273,16 @@ func (r *REST) Valid(fields ...string) (Model, error) {
 	}
 	if !r.isGuest() && !r.filled {
 		// 如果不是客人而且没有fill,报错
-		return nil, ErrEmptyModel
+		// fill model
+		c := r.Context()
+		if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+			if err := r.fill(rb); err != nil {
+				r.Info("[REST.PreUpdate]request body not empty but fill to model failed: %s", err)
+				return nil, ErrEmptyModel
+			}
+		} else {
+			return nil, ErrEmptyModel
+		}
 	}
 	return Valid(m, fields...)
 }

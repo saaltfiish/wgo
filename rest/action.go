@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"io/ioutil"
 	"reflect"
 )
 
@@ -197,12 +196,12 @@ func (r *REST) PreCreate() (interface{}, error) {
 	m := r.Model()
 	r.setAction(ACTION_CREATE)
 	// fill model
-	c := r.Context()
-	if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
-		if err := r.fill(rb); err != nil {
-			r.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
-		}
-	}
+	// c := r.Context()
+	// if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+	// 	if err := r.fill(rb); err != nil {
+	// 		r.Info("[REST.PreCreate]request body not empty but fill to model failed: %s", err)
+	// 	}
+	// }
 	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
@@ -256,12 +255,12 @@ func (r *REST) PreUpdate() (interface{}, error) {
 	m := r.Model()
 	r.setAction(ACTION_UPDATE)
 	// fill model
-	c := r.Context()
-	if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
-		if err := r.fill(rb); err != nil {
-			r.Info("[REST.Init]request body not empty but fill to model failed: %s", err)
-		}
-	}
+	// c := r.Context()
+	// if rb, err := ioutil.ReadAll(c.RequestBody()); err == nil && len(rb) > 0 {
+	// 	if err := r.fill(rb); err != nil {
+	// 		r.Info("[REST.PreUpdate]request body not empty but fill to model failed: %s", err)
+	// 	}
+	// }
 	if _, err := m.Valid(); err != nil {
 		return nil, err
 	}
