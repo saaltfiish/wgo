@@ -34,7 +34,8 @@ func ToType(i interface{}) reflect.Type {
 
 /* }}} */
 
-func MustString(vi interface{}) string {
+func MustString(vi interface{}, opts ...interface{}) string {
+	pretty := NewParams(opts).BoolByIndex(0)
 	if vi != nil {
 		switch v := vi.(type) {
 		case string:
@@ -68,7 +69,12 @@ func MustString(vi interface{}) string {
 		case reflect.Value:
 			return valueToString(v)
 		default:
-			vb, _ := json.Marshal(vi)
+			vb := []byte{}
+			if pretty {
+				vb, _ = json.MarshalIndent(vi, "", "  ")
+			} else {
+				vb, _ = json.Marshal(vi)
+			}
 			return string(vb)
 		}
 	}
