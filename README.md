@@ -1,22 +1,16 @@
 # WGO of gladsheim
 go server framework
 
-## docker
+## docker&go modules
+
+为了缓存包, 创建wgo:basic镜像
 
 ```shell
-$ docker build --rm=true -f Dockerfile -t 127.0.0.1:5001/arch/wgo .
-$ docker push 127.0.0.1:5001/arch/wgo
+$ docker/build_basic.sh
+$ docker login --username=100005560250 ccr.ccs.tencentyun.com
+$ docker tag 127.0.0.1:5001/arch/wgo:basic ccr.ccs.tencentyun.com/phyzi/wgo:basic
+$ docker push ccr.ccs.tencentyun.com/phyzi/wgo:basic
 ```
-
-## import notes
-
-import code:
-
-```go
-import "wgo"
-```
-
-可以放到`$GOPATH/src/wgo`, `vendor/wgo`
 
 
 ## 配置
