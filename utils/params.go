@@ -299,11 +299,14 @@ func (p *Params) BoolByIndex(offset int, opts ...bool) bool {
 	iv := p.ItfByIndex(offset)
 	if rt := MustBool(iv, def); !rt && !def {
 		// 传入的不是bool的时候, 尝试"yes", "true"
-		sb := strings.ToLower(MustString(iv))
-		return sb == "yes" || sb == "true"
+		if sbo, ok := iv.(string); ok {
+			sb := strings.ToLower(sbo)
+			return sb == "yes" || sb == "true"
+		}
 	} else {
 		return rt
 	}
+	return def
 }
 
 func (p *Params) ArrayByIndex(offset int) []interface{} {
