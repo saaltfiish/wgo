@@ -2198,7 +2198,7 @@ func digModel(i interface{}) Model {
 func Columns(m Model) []utils.StructColumn {
 	r := m.GetREST()
 	if r == nil {
-		wgo.Warn("[Columns]not found *REST for %s", reflect.TypeOf(m))
+		wgo.Info("[Columns]not found *REST for %s", reflect.TypeOf(m))
 		// r = getREST(m)
 		r = SetModel(m).GetREST()
 	}

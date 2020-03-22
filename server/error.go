@@ -46,7 +46,7 @@ func WrapError(err error) *ServerError {
 	if se, ok := err.(*ServerError); ok {
 		return se
 	}
-	return NewError(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+	return NewError(http.StatusBadRequest, err.Error())
 }
 
 // imp error
