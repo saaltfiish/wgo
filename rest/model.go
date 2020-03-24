@@ -164,7 +164,7 @@ type Model interface {
 	Lt(string, interface{}) Model
 	Range(string, interface{}) Model
 	Join(string, interface{}, ...interface{}) Model
-	Order(string, interface{}) Model
+	OrderBy(string, interface{}) Model
 	Raw(string, interface{}) Model
 
 	SetConditions(...*Condition) Model
@@ -801,7 +801,7 @@ func (r *REST) Join(field string, value interface{}, opts ...interface{}) Model 
 	}
 	return r
 }
-func (r *REST) Order(field string, value interface{}) Model {
+func (r *REST) OrderBy(field string, value interface{}) Model {
 	return r.SetConditions(NewCondition(CTYPE_ORDER, field, value))
 }
 func (r *REST) Raw(field string, value interface{}) Model {
