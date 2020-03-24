@@ -1309,10 +1309,15 @@ func Valid(m Model, fields ...string) (Model, error) {
 	if cols := r.Columns(); cols != nil {
 		ufs := make([]string, 0)
 		for _, col := range cols {
-			if len(fields) > 0 && !utils.InSlice(col.Tag, fields) { // 如果传了fields, 只验证fields包含的字段
-				continue
-			}
 			fv := utils.FieldByIndex(v, col.Index)
+			if len(fields) > 0 {
+				if !utils.InSlice(col.Tag, fields) {
+					// 如果传了fields, 只验证fields包含的字段
+					continue
+				} else if !fv.IsValid() || utils.IsEmptyValue(fv) {
+					return nil, fmt.Errorf("%s invalid", col.Tag)
+				}
+			}
 			// server generate,忽略传入的信息
 			if fv.IsValid() && !utils.IsEmptyValue(fv) { //传入了内容
 				if col.TagOptions.Contains(DBTAG_READONLY) {
