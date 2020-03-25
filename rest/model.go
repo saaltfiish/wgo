@@ -135,11 +135,12 @@ func init() {
 
 // add animal to zoo
 // 外层使用只需要Model
-func (r *REST) AddKeeper(tag string, kp func(Model) error) {
+func (r *REST) AddKeeper(tag string, kp func(Model) error) Model {
 	fn := func(m Model, opts ...interface{}) error {
 		return kp(m)
 	}
 	r.Zoo().Set(tag, fn)
+	return r
 }
 
 type Model interface {
@@ -152,7 +153,7 @@ type Model interface {
 	Columns() []utils.StructColumn
 
 	Keeper() func(utils.StructColumn) error // 各种检查, 闭包缓存
-	AddKeeper(string, func(Model) error)
+	AddKeeper(string, func(Model) error) Model
 	// AddMiddlewares(ms ...interface{})
 
 	// sql sugar
