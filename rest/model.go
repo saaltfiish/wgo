@@ -188,7 +188,7 @@ type Model interface {
 	Rows(...interface{}) (interface{}, error)          // 获取多条记录
 	List() (*List, error)                              // 获取多条记录并返回list
 	GetRecord(opts ...interface{}) interface{}         // 获取一条记录, 可缓存
-	UpdateRecord(...interface{}) error                 // 更新一条记录(包括缓存)
+	UpdateRecord(...interface{}) (int64, error)        // 更新一条记录(包括缓存)
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...interface{}) Model                  // 获取旧记录
 	GetSum(...string) (interface{}, error)             // 获取多条记录
@@ -1730,19 +1730,20 @@ func GetRecord(m Model, opts ...interface{}) Model {
 
 /* }}} */
 
-/* {{{ func (r *REST) UpdateRecord(opts ...interface{}) error
+/* {{{ func (r *REST) UpdateRecord(opts ...interface{}) (affected int64, err error)
  * 更新record
  */
-func (r *REST) UpdateRecord(opts ...interface{}) error {
+func (r *REST) UpdateRecord(opts ...interface{}) (affected int64, err error) {
 	m := r.Model()
 	if m == nil {
-		return ErrNoModel
+		err = ErrNoModel
+		return
 	}
 	ck := ""
 	pk := utils.PrimaryString(opts)
 	if pk != "" {
-		if err := utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
-			return err
+		if err = utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
+			return
 		}
 		ck = fmt.Sprint(m.TableName(), ":", pk)
 	} else if _, pk, _ := m.PKey(); pk != "" {
@@ -1754,12 +1755,13 @@ func (r *REST) UpdateRecord(opts ...interface{}) error {
 		}
 	}
 	if ck == "" {
-		return ErrNoRecord
+		err = ErrNoRecord
+		return
 	}
 	Debug("[UpdateRecord]cachekey: %s", ck)
-	if _, err := m.UpdateRow(); err != nil {
+	if affected, err = m.UpdateRow(); err != nil {
 		Warn("[UpdateRecord]update failed: %s", err)
-		return err
+		return
 	}
 	// update local cache
 	// 1. if cache exists
@@ -1769,12 +1771,14 @@ func (r *REST) UpdateRecord(opts ...interface{}) error {
 	// 	}
 	// }
 	// 更新后把最新的内容放到缓存, 获取失败则删除缓存
-	if nm, err := m.Row(); err == nil {
-		LocalSet(ck, reflect.Indirect(reflect.ValueOf(nm)).Interface().(Model), CACHE_EXPIRE)
-	} else {
-		LocalDel(ck)
-	}
-	return nil
+	// if nm, err := m.Row(); err == nil {
+	// 	LocalSet(ck, reflect.Indirect(reflect.ValueOf(nm)).Interface().(Model), CACHE_EXPIRE)
+	// } else {
+	// 	LocalDel(ck)
+	// }
+	// 更新后删除缓存
+	LocalDel(ck)
+	return
 }
 
 /* }}} */
@@ -1804,7 +1808,7 @@ func (r *REST) Write(opts ...interface{}) (Model, error) {
 	if m.GetRecord(pk, false) != nil { // 禁用fuzzy查询
 		// update
 		Debug("[model.Write]record exists, update it")
-		if err := m.UpdateRecord(pk); err != nil {
+		if _, err := m.UpdateRecord(pk); err != nil {
 			return nil, err
 		}
 		return m, nil
