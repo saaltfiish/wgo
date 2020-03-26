@@ -1763,12 +1763,17 @@ func (r *REST) UpdateRecord(opts ...interface{}) error {
 	}
 	// update local cache
 	// 1. if cache exists
-	if cvi, err := LocalGet(ck); err == nil {
-		if err := utils.Merge(m, cvi); err != nil {
-			Warn("[UpdateRecord]merge failed: %s", err)
-		}
+	// if cvi, err := LocalGet(ck); err == nil {
+	// 	if err := utils.Merge(m, cvi); err != nil {
+	// 		Warn("[UpdateRecord]merge failed: %s", err)
+	// 	}
+	// }
+	// 更新后把最新的内容放到缓存, 获取失败则删除缓存
+	if nm, err := m.Row(); err == nil {
+		LocalSet(ck, reflect.Indirect(reflect.ValueOf(nm)).Interface().(Model), CACHE_EXPIRE)
+	} else {
+		LocalDel(ck)
 	}
-	LocalSet(ck, reflect.Indirect(reflect.ValueOf(m)).Interface().(Model), CACHE_EXPIRE)
 	return nil
 }
 
