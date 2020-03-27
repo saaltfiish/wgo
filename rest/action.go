@@ -285,7 +285,7 @@ func (r *REST) OnUpdate() (interface{}, error) {
 	c := r.Context()
 	//Info("context: %v", c)
 	rk := c.Param(RowkeyKey)
-	if affected, err := m.UpdateRow(rk); err != nil {
+	if affected, err := m.UpdateRecord(rk); err != nil {
 		return nil, err
 	} else {
 		if affected <= 0 {
