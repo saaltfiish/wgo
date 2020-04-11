@@ -35,6 +35,18 @@ pipeline:
       branch: [ refs/tags/* ]
       event: [ tag ]
 
+  publish:
+    image: plugins/docker
+    registry: ccr.ccs.tencentyun.com
+    repo: ccr.ccs.tencentyun.com/phyzi/wgo
+    secrets: [ docker_username, docker_password ]
+    tags:
+      - latest
+    dockerfile: docker/Dockerfile
+    when:
+      branch: [ refs/heads/master ]
+      event: [ push ]
+
   slack:
     image: plugins/slack
     webhook: https://hooks.slack.com/services/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
