@@ -325,64 +325,23 @@ func (rest *REST) OK(data interface{}) (err error) {
 }
 
 // not ok
-func (rest *REST) NotOK(m interface{}) (err error) {
-	// c := rest.Context()
-	// code := getCode(false, c.Request().(whttp.Request).Method())
-	// code *= 1000
-	// msg := "have errors!"
-	// switch err := m.(type) {
-	// case *server.ServerError:
-	// 	return err
-	// case server.ServerError:
-	// 	return &err
-	// case error:
-	// 	msg = m.(error).Error()
-	// case string:
-	// 	msg = m.(string)
-	// }
-	// return c.NewError(code, msg)
-	return rest.returnError(m)
+func (rest *REST) NotOK(opts ...interface{}) (err error) {
+	return rest.returnError(opts...)
 }
 
 // bad request
-func (rest *REST) BadRequest(m interface{}) (err error) {
-	// c := rest.Context()
-	// code := whttp.StatusBadRequest * 1000
-	// msg := "bad request!"
-	// if _, ok := m.(error); ok {
-	// 	msg = m.(error).Error()
-	// } else if _, ok := m.(string); ok {
-	// 	msg = m.(string)
-	// }
-	// return c.NewError(code, msg)
-	return rest.returnError(m, whttp.StatusBadRequest*1000, "Bad request!")
+func (rest *REST) BadRequest(opts ...interface{}) (err error) {
+	return rest.returnError(utils.NewParams(opts).ItfByIndex(0), whttp.StatusBadRequest*1000, "Bad request!")
 }
 
 // not found
-func (rest *REST) NotFound(m interface{}) (err error) {
-	// c := rest.Context()
-	// code := whttp.StatusNotFound * 1000
-	// msg := "not found"
-	// if _, ok := m.(error); ok {
-	// 	msg = m.(error).Error()
-	// } else if _, ok := m.(string); ok {
-	// 	msg = m.(string)
-	// }
-	// return c.NewError(code, msg)
-	return rest.returnError(m, whttp.StatusNotFound*1000, "Not found!")
+func (rest *REST) NotFound(opts ...interface{}) (err error) {
+	return rest.returnError(utils.NewParams(opts).ItfByIndex(0), whttp.StatusNotFound*1000, "Not found!")
 }
 
 // internal error
-func (rest *REST) InternalError(m interface{}) (err error) {
-	// code := whttp.StatusInternalServerError * 1000
-	// msg := "internal errors!"
-	// if _, ok := m.(error); ok {
-	// 	msg = m.(error).Error()
-	// } else if _, ok := m.(string); ok {
-	// 	msg = m.(string)
-	// }
-	// return rest.Context().NewError(code, msg)
-	return rest.returnError(m, whttp.StatusInternalServerError*1000, "Internal errors!")
+func (rest *REST) InternalError(opts ...interface{}) (err error) {
+	return rest.returnError(utils.NewParams(opts).ItfByIndex(0), whttp.StatusInternalServerError*1000, "Internal errors!")
 }
 
 // 获取返回码
@@ -431,14 +390,15 @@ func getCode(ifSuc bool, m string) (s int) {
 }
 
 // returnErr
-func (rest *REST) returnError(i interface{}, opts ...interface{}) error {
-	ps := utils.NewParams(opts)
+func (rest *REST) returnError(opts ...interface{}) error {
 	c := rest.Context()
-	code := ps.IntByIndex(0) // input code
+	ps := utils.NewParams(opts)
+	i := ps.ItfByIndex(0)
+	code := ps.IntByIndex(1) // input code
 	if code == 0 {
 		code = getCode(false, c.Request().(whttp.Request).Method()) * 1000
 	}
-	msg := ps.StringByIndex(1)
+	msg := ps.StringByIndex(2)
 	if msg == "" {
 		msg = "error!"
 	}

@@ -1292,7 +1292,7 @@ func Valid(m Model, fields ...string) (Model, error) {
 	// check *REST
 	r := m.GetREST()
 	if r == nil {
-		wgo.Warn("[GetRecord]not found *REST for %s", reflect.TypeOf(m))
+		wgo.Warn("[Valid]not found *REST for %s", reflect.TypeOf(m))
 		r = SetModel(m).GetREST()
 	}
 	// if !r.Updating() && !r.Creating() {
