@@ -99,12 +99,31 @@ func Prepare() MiddlewareFunc {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(c *Context) (err error) {
 			c.Debug("[wgo.Prepare]-->%s<--", c.Query())
+			if c.Request().(whttp.Request).Method() == "OPTIONS" { // 统一处理options请求
+				c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlMaxAge, "86400")
+				c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowMethods, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				if ch := c.Request().(whttp.Request).Header().Get(whttp.HeaderAccessControlRequestHeaders); ch != "" {
+					c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowHeaders, ch) // 来者不拒
+				}
+				if origin := c.Request().(whttp.Request).Header().Get(whttp.HeaderOrigin); origin != "" {
+					c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowOrigin, origin)
+					c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowCredentials, "true")
+				}
+				c.Response().(whttp.Response).WriteHeader(whttp.StatusOK)
+				return nil
+			}
 			// find request id
 			requestId := ""
 			if prid := c.PreRequestId(); prid != "" && c.Depth() > 0 {
 				requestId = prid
 			} else { // generate request id
 				requestId = utils.FastRequestId(16)
+				// not behind msa,
+				// cors header(Access-Control-Allow-*)
+				if origin := c.Request().(whttp.Request).Header().Get(whttp.HeaderOrigin); origin != "" {
+					c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowOrigin, origin)
+					c.response.(whttp.Response).Header().Set(whttp.HeaderAccessControlAllowCredentials, "true")
+				}
 			}
 			c.SetRequestID(requestId)
 
@@ -114,10 +133,7 @@ func Prepare() MiddlewareFunc {
 				c.response.(whttp.Response).Header().
 					Set(whttp.HeaderServer, fmt.Sprintf("%s %s", strings.ToUpper(Env().ProcName), Version()))
 			}
-			// if requestId != "" { // 放后面执行, 保证新鲜
-			// 	//c.Warn("set requestid header: %s", requestId)
-			// 	c.SetHeader(whttp.HeaderXRequestId, requestId)
-			// }
+
 			return err
 		}
 	}
