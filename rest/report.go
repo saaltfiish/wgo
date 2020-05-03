@@ -11,7 +11,7 @@ import (
 	"wgo"
 	"wgo/utils"
 
-	"github.com/olivere/elastic"
+	elastic "github.com/olivere/elastic/v7"
 )
 
 type Report struct {
