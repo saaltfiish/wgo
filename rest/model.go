@@ -711,7 +711,7 @@ func (r *REST) setModel(m Model) Model {
 }
 
 // new *REST, pass context
-// 注意这生成了新的*REST, 慎用
+// 注意这生成了新的*REST, 但是继承了context
 func (r *REST) Modelize(m Model) Model {
 	if r == nil {
 		return nil

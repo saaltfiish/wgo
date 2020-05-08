@@ -481,9 +481,9 @@ func (rs Routes) LimitAccess() Routes {
 }
 
 // 自定义act
-// func (rs Routes) CustomAction(act string) Routes {
-// 	return rs.SetOptions(CustomActionKey, act)
-// }
+func (rs Routes) CustomAction(act string) Routes {
+	return rs.SetOptions(CustomActionKey, act)
+}
 
 // desc string
 func (rs Routes) Desc(desc string) Routes {
