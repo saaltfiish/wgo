@@ -13,12 +13,20 @@ import (
 var ElasticClient *elastic.Client
 
 func OpenElasticSearch() (err error) {
-	ElasticClient, err = elastic.NewClient(
-		elastic.SetURL(es[RCK_ES_ADDR]),
-		elastic.SetSniff(false),
-		elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]),
-		elastic.SetTraceLog(logger),
-	)
+	if wgo.Env().DebugMode {
+		ElasticClient, err = elastic.NewClient(
+			elastic.SetURL(es[RCK_ES_ADDR]),
+			elastic.SetSniff(false),
+			elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]),
+			elastic.SetTraceLog(logger),
+		)
+	} else {
+		ElasticClient, err = elastic.NewClient(
+			elastic.SetURL(es[RCK_ES_ADDR]),
+			elastic.SetSniff(false),
+			elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]),
+		)
+	}
 
 	if err != nil {
 		panic(err)
