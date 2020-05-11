@@ -44,11 +44,10 @@ type Report struct {
 }
 
 type ReportInfo struct {
-	Took    int64 `json:"took"`
-	Page    int   `json:"page,omitempty"`     //当前页面
-	PerPage int   `json:"per_page,omitempty"` //每页元素个数
-	Total   int64 `json:"total"`              // 总数
-	/// Dimensions Worlds      `json:"dimensions,omitempty"`
+	Took       int64       `json:"took"`
+	Page       int         `json:"page,omitempty"`     //当前页面
+	PerPage    int         `json:"per_page,omitempty"` //每页元素个数
+	Total      int64       `json:"total"`              // 总数
 	Dimensions Dimensions  `json:"dimensions,omitempty"`
 	Tz         string      `json:"tz,omitempty"`
 	Interval   string      `json:"interval,omitempty"`
@@ -59,6 +58,7 @@ type ReportInfo struct {
 	Last       string      `json:"last,omitempty"`  // 最后一条数据时间
 	Summary    interface{} `json:"summary,omitempty"`
 	Dics       interface{} `json:"dics,omitempty"`
+	Ext        interface{} `json:"ext,omitempty"`
 }
 
 type Result map[string]interface{}
