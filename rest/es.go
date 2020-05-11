@@ -16,7 +16,9 @@ func OpenElasticSearch() (err error) {
 	ElasticClient, err = elastic.NewClient(
 		elastic.SetURL(es[RCK_ES_ADDR]),
 		elastic.SetSniff(false),
-		elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]))
+		elastic.SetBasicAuth(es[RCK_ES_USER], es[RCK_ES_PWD]),
+		elastic.SetTraceLog(logger),
+	)
 
 	if err != nil {
 		panic(err)
