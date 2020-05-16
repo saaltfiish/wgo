@@ -9,6 +9,7 @@ import (
 
 	"wgo"
 	"wgo/server"
+	"wgo/utils"
 	"wgo/whttp"
 )
 
@@ -137,7 +138,37 @@ func (r *REST) Builtin(flag int, ms ...interface{}) Routes {
 }
 
 // return handler by method
-func (r *REST) handlerByMethod(method, flag int) wgo.HandlerFunc {
+func (r *REST) handlerByMethod(opts ...interface{}) wgo.HandlerFunc {
+	flag := GM_ALL
+	method := GM_NONE
+
+	// check params
+	ps := utils.NewParams(opts)
+	if nm := ps.IntByIndex(0); nm > 0 {
+		// check int methods
+		method = nm
+	} else if sm := ps.StringByIndex(0); sm != "" {
+		// check string methods
+		switch strings.ToUpper(sm) {
+		case "GET":
+			method = GM_GET
+		case "POST":
+			method = GM_POST
+		case "DELETE":
+			method = GM_DELETE
+		case "PATCH":
+			method = GM_PATCH
+		case "PUT":
+			method = GM_PUT
+		case "HEAD":
+			method = GM_HEAD
+		default:
+		}
+	}
+	// check flag
+	if f := ps.IntByIndex(1); f > 0 {
+		flag = f
+	}
 	if flag&method > 0 {
 		switch method {
 		case GM_GET:
@@ -401,7 +432,8 @@ func (r *REST) RESTHead() wgo.HandlerFunc {
 // 其他路由
 // func (rest *REST) Add(method, path string, h wgo.HandlerFunc, ms ...interface{}) Routes {
 func (rest *REST) Add(method, path string, opts ...interface{}) Routes {
-	var h wgo.HandlerFunc
+	// 默认handler
+	h := rest.handlerByMethod(method)
 	ms := rest.defaultms
 	if len(opts) > 0 {
 		if tmp, ok := opts[0].((func(*wgo.Context) error)); ok {
