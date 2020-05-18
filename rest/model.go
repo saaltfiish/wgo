@@ -189,6 +189,7 @@ type Model interface {
 	List() (*List, error)                              // 获取多条记录并返回list
 	GetRecord(opts ...interface{}) interface{}         // 获取一条记录, 可缓存
 	UpdateRecord(...interface{}) (int64, error)        // 更新一条记录(包括缓存)
+	FlushRecord(...interface{}) error                  // 清除记录缓存
 	Write(...interface{}) (Model, error)               // 写记录, 若果不存在创建, 存在则更新
 	GetOlder(rk ...interface{}) Model                  // 获取旧记录
 	GetSum(...string) (interface{}, error)             // 获取多条记录
@@ -1777,6 +1778,40 @@ func (r *REST) UpdateRecord(opts ...interface{}) (affected int64, err error) {
 	// 	LocalDel(ck)
 	// }
 	// 更新后删除缓存
+	LocalDel(ck)
+	return
+}
+
+/* }}} */
+
+/* {{{ func (r *REST) FlushRecord(opts ...interface{}) error
+ *
+ */
+func (r *REST) FlushRecord(opts ...interface{}) (err error) {
+	m := r.Model()
+	if m == nil {
+		err = ErrNoModel
+		return
+	}
+	ck := ""
+	pk := utils.PrimaryString(opts)
+	if pk != "" {
+		if err = utils.ImportValue(m, map[string]string{DBTAG_PK: pk}); err != nil {
+			return
+		}
+		ck = fmt.Sprint(m.TableName(), ":", pk)
+	} else if _, pk, _ := m.PKey(); pk != "" {
+		ck = fmt.Sprintf("%s:%s", m.TableName(), pk)
+	} else if uks := m.UnionKeys(); len(uks) > 0 {
+		ck = m.TableName()
+		for f, v := range uks {
+			ck += fmt.Sprintf(":%s:%s", f, v)
+		}
+	}
+	if ck == "" {
+		err = ErrNoRecord
+		return
+	}
 	LocalDel(ck)
 	return
 }
