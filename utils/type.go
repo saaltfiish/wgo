@@ -286,6 +286,13 @@ func StringPointer(i interface{}) *string {
 	return rt
 }
 
+// float64 pointer
+func Float64Pointer(i interface{}) *float64 {
+	rt := new(float64)
+	*rt = MustFloat64(i)
+	return rt
+}
+
 // return a pointer with value
 func Pointer(i interface{}) interface{} {
 	if t := reflect.TypeOf(i); t.Kind() == reflect.Ptr {
