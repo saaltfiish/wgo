@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 // SelfPath gets compiled executable file absolute path
@@ -125,4 +126,17 @@ func WriteLines(lines []string, path string) error {
 		fmt.Fprintln(w, line)
 	}
 	return w.Flush()
+}
+
+// get file inode
+func FileInode(path string) (uint64, error) {
+	fileinfo, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	stat, ok := fileinfo.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fmt.Errorf("Not a syscall.Stat_t")
+	}
+	return stat.Ino, nil
 }
