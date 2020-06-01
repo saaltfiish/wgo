@@ -2,7 +2,6 @@
 package rest
 
 import (
-	"context"
 	"fmt"
 
 	"wgo"
@@ -29,22 +28,23 @@ func OpenElasticSearch() (err error) {
 	}
 
 	if err != nil {
-		panic(err)
+		wgo.Error("[OpenElasticSearch]error: %s", err)
+		return err
 	}
-	ctx := context.Background()
-	var exists bool
-	exists, err = ElasticClient.IndexExists(es[RCK_REPORTING_INDEX]).Do(ctx)
-	if err != nil {
-		panic(err)
-	} else if !exists {
-		panic(fmt.Sprintf("reporting index(%s) not exists!", es[RCK_REPORTING_INDEX]))
-	}
-	exists, err = ElasticClient.IndexExists(es[RCK_LOGS_INDEX]).Do(ctx)
-	if err != nil {
-		panic(err)
-	} else if !exists {
-		panic(fmt.Sprintf("logs index(%s) not exists!", es[RCK_LOGS_INDEX]))
-	}
+	// ctx := context.Background()
+	// var exists bool
+	// exists, err = ElasticClient.IndexExists(es[RCK_REPORTING_INDEX]).Do(ctx)
+	// if err != nil {
+	// 	panic(err)
+	// } else if !exists {
+	// 	panic(fmt.Sprintf("reporting index(%s) not exists!", es[RCK_REPORTING_INDEX]))
+	// }
+	// exists, err = ElasticClient.IndexExists(es[RCK_LOGS_INDEX]).Do(ctx)
+	// if err != nil {
+	// 	panic(err)
+	// } else if !exists {
+	// 	panic(fmt.Sprintf("logs index(%s) not exists!", es[RCK_LOGS_INDEX]))
+	// }
 	return
 }
 
