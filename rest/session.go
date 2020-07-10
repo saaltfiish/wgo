@@ -4,6 +4,7 @@ package rest
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"wgo"
@@ -18,6 +19,7 @@ type SessionConfig struct {
 	Life     int                 `json:"life"`   // session life , cookie 过期时间
 	Path     string              `json:"path"`
 	Domain   string              `json:"domain"`
+	Domains  []string            `json:"domains"`
 	Security bool                `json:"security"`
 	HTTPOnly bool                `json:"http_only"`
 	Redis    []map[string]string `json:"redis"`
@@ -71,21 +73,34 @@ func (rest *REST) SaveSession(session interface{}) {
 	rest.SetEnv(SESSION_KEY, session)
 }
 
-// set session
-func (rest *REST) SetSession(key string, value interface{}, opts ...interface{}) {
-	// save to cache
-	// rest.Debug("set session, key: %s, opts: %+v", key, opts)
-	RedisSet(cacheKey(key), value, scfg.Life)
-	// expire
-	expire := time.Time{}
-	if len(opts) > 0 {
-		if remember := utils.NewParams(opts).BoolByIndex(0, false); remember {
-			expire = time.Now().Add(time.Duration(scfg.Life) * time.Second)
+func checkDomain(host string, domains []string, def string) string {
+	for _, domain := range domains {
+		if strings.Contains(host, domain) {
+			return domain
 		}
 	}
-	// set cookie
-	rest.Debug("set session, key: %s, path: %s, domain: %s, life: %d", key, scfg.Path, scfg.Domain, scfg.Life)
-	rest.Context().SetCookie(wgo.NewCookie(scfg.Key, key, scfg.Path, scfg.Domain, expire, scfg.Security, scfg.HTTPOnly))
+	return def
+}
+
+// set session
+func (rest *REST) SetSession(key string, value interface{}, opts ...interface{}) {
+	ctx := rest.Context()
+	// check if host in domains
+	if domain := checkDomain(ctx.Host(), scfg.Domains, scfg.Domain); domain != "" {
+		// save to cache
+		// rest.Debug("set session, key: %s, opts: %+v", key, opts)
+		RedisSet(cacheKey(key), value, scfg.Life)
+		// expire
+		expire := time.Time{}
+		if len(opts) > 0 {
+			if remember := utils.NewParams(opts).BoolByIndex(0, false); remember {
+				expire = time.Now().Add(time.Duration(scfg.Life) * time.Second)
+			}
+		}
+		// set cookie
+		rest.Debug("set session, key: %s, path: %s, domain: %s, life: %d", key, scfg.Path, domain, scfg.Life)
+		ctx.SetCookie(wgo.NewCookie(scfg.Key, key, scfg.Path, domain, expire, scfg.Security, scfg.HTTPOnly))
+	}
 }
 
 // del session
@@ -125,8 +140,16 @@ func Auth() wgo.MiddlewareFunc {
 	if sd := os.Getenv(AECK_SESSION_DOMAIN); sd != "" {
 		// 可通过环境参数传入, for local/develop env
 		scfg.Domain = sd
+		scfg.Domains = []string{sd}
 	} else if scfg.Domain == "" {
 		scfg.Domain = ".gladsheim.cn"
+		scfg.Domains = []string{".adchina.io"}
+	}
+	if sds := os.Getenv(AECK_SESSION_DOMAINS); sds != "" {
+		// 可通过环境参数传入, for local/develop env
+		scfg.Domains = strings.Split(",", sds)
+	} else if len(scfg.Domains) <= 0 {
+		scfg.Domains = []string{".adchina.io"}
 	}
 	// get storage
 	if tc := os.Getenv(AECK_REDIS_ADDR); tc != "" {
