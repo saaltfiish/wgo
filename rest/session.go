@@ -146,7 +146,6 @@ func Auth() wgo.MiddlewareFunc {
 		scfg.Domains = []string{sd}
 	} else if scfg.Domain == "" {
 		scfg.Domain = ".gladsheim.cn"
-		scfg.Domains = []string{".adchina.io"}
 	}
 	if sds := os.Getenv(AECK_SESSION_DOMAINS); sds != "" {
 		// 可通过环境参数传入, for local/develop env
