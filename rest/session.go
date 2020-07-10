@@ -76,7 +76,10 @@ func (rest *REST) SaveSession(session interface{}) {
 func checkDomain(host string, domains []string, def string) string {
 	for _, domain := range domains {
 		if strings.Contains(host, domain) {
+			wgo.Info("[checkDomain]host: %s, domain: %s", host, domain)
 			return domain
+		} else {
+			wgo.Info("[checkDomain]failed, host: %s, domain: %s", host, domain)
 		}
 	}
 	return def
