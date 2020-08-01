@@ -140,6 +140,11 @@ func Fields(f string) *elastic.TermsAggregation {
 
 // save to es
 func saveToES(m Model) {
+	defer func() {
+		if err := recover(); err != nil {
+			Error("error: %s", err)
+		}
+	}()
 	if _, pk, _ := m.PKey(); pk != "" {
 		idx := fmt.Sprintf("%s%s", esPrefix, m.TableName())
 		exists, _ := ElasticClient.IndexExists(idx).Do(context.Background())
