@@ -152,8 +152,9 @@ func saveToES(m Model) {
 			// create index
 			ElasticClient.CreateIndex(idx)
 		}
+		nm, _ := m.Row()
 		bulk := ElasticClient.Bulk().Index(idx)
-		bulk.Add(NewBulkIndexRequest().Id(pk).Doc(m.GetOlder()))
+		bulk.Add(NewBulkIndexRequest().Id(pk).Doc(nm))
 		bulk.Do(context.Background())
 	} else {
 		Warn("not found primary key")
