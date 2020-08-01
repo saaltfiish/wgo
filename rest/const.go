@@ -38,6 +38,8 @@ const (
 	RCK_ES_ADDR         = "addr"
 	RCK_ES_USER         = "user"
 	RCK_ES_PWD          = "password"
+	RCK_ES_ENABLE_MSRV  = "enable_microservice"
+	RCK_ES_MSRV_PREFIX  = "microservice_prefix" // 微服务前缀
 	RCK_REPORTING_INDEX = "reporting_index"
 	RCK_LOGS_INDEX      = "logs_index"
 	//env key

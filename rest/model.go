@@ -1446,7 +1446,9 @@ func (r *REST) CreateRow() (Model, error) {
  */
 func (r *REST) Save(m Model) Model {
 	r.saved = true
-	return r.setModel(m)
+	nm := r.setModel(m)
+	go saveToES(nm)
+	return nm
 }
 func (r *REST) Saved() bool {
 	return r.saved
@@ -1477,6 +1479,7 @@ func (r *REST) UpdateRow(opts ...interface{}) (affected int64, err error) {
 			Warn("[UpdateRow]union keys empty")
 			return 0, ErrNoRecord
 		}
+		go saveToES(m)
 		return r.DBConn(WRITETAG).Update(m)
 	}
 	err = ErrNoModel

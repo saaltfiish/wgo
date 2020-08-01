@@ -2,6 +2,7 @@
 package rest
 
 import (
+	"context"
 	"fmt"
 
 	"wgo"
@@ -45,6 +46,7 @@ func OpenElasticSearch() (err error) {
 	// } else if !exists {
 	// 	panic(fmt.Sprintf("logs index(%s) not exists!", es[RCK_LOGS_INDEX]))
 	// }
+	// micro services
 	return
 }
 
@@ -134,4 +136,21 @@ func LatestField(f, tf string) *elastic.TermsAggregation {
 // 获取某个字段所有值
 func Fields(f string) *elastic.TermsAggregation {
 	return TermsAgg(f)
+}
+
+// save to es
+func saveToES(m Model) {
+	if _, pk, _ := m.PKey(); pk != "" {
+		idx := fmt.Sprintf("%s%s", esPrefix, m.TableName())
+		exists, _ := ElasticClient.IndexExists(idx).Do(context.Background())
+		if !exists {
+			// create index
+			ElasticClient.CreateIndex(idx)
+		}
+		bulk := ElasticClient.Bulk().Index(idx)
+		bulk.Add(NewBulkIndexRequest().Id(pk).Doc(m))
+		bulk.Do(context.Background())
+	} else {
+		Warn("not found primary key")
+	}
 }

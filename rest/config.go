@@ -22,6 +22,7 @@ var db map[string]string
 var es map[string]string
 var mio map[string]interface{} // object storage
 var services map[string]string
+var esPrefix = "service"
 
 func RegisterConfig(tags ...interface{}) {
 	if cfg := wgo.SubConfig(tags...); cfg != nil {
@@ -61,6 +62,19 @@ func RegisterConfig(tags ...interface{}) {
 		if _, ok := es[RCK_LOGS_INDEX]; !ok {
 			es[RCK_LOGS_INDEX] = "asgard-logs"
 		}
+
+		// micro services
+		if enable := config.Sub("es").Bool(RCK_ES_ENABLE_MSRV); enable {
+			if p := config.Sub("es").String(RCK_ES_MSRV_PREFIX); p != "" {
+				esPrefix = p
+			}
+			pn := wgo.Env().ServiceName
+			esPrefix = fmt.Sprintf("%s_%s_", esPrefix, pn)
+			wgo.Warn("esPrefix: %s", esPrefix)
+		} else {
+			wgo.Warn("not found es config")
+		}
+
 		OpenElasticSearch()
 	}
 

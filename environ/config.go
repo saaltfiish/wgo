@@ -17,6 +17,8 @@ import (
 const (
 	CFG_KEY_PROCNAME    = "proc_name"
 	CFG_KEY_DOCKERIZE   = "dockerize"
+	CFG_KEY_SERVICE     = "service"
+	CFG_KEY_ENV         = "env"
 	CFG_KEY_ENABLECACHE = "enable_cache"
 	CFG_KEY_DAEMONIZE   = "daemonize"
 	CFG_KEY_DEBUG       = "debug"
