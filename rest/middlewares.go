@@ -146,7 +146,7 @@ func Init() wgo.MiddlewareFunc {
 				}
 
 				// action
-				// ac.Service.Action = rest.Action()
+				ac.Service.Action = rest.action()
 				if rk := c.Param(RowkeyKey); rk != "" {
 					ac.Service.RowKey = rk
 				}
