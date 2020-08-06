@@ -4,6 +4,8 @@ package rest
 import (
 	"context"
 	"fmt"
+	"wgo/rest"
+	"wgo/utils"
 
 	"wgo"
 
@@ -158,5 +160,35 @@ func saveToES(m Model) {
 		bulk.Do(context.Background())
 	} else {
 		Warn("not found primary key")
+	}
+}
+
+// save all rows to es
+func saveAllToES(m Model) {
+	defer func() {
+		if err := recover(); err != nil {
+			Error("error: %s", err)
+		}
+	}()
+	idx := fmt.Sprintf("%s%s", esPrefix, m.TableName())
+	exists, _ := ElasticClient.IndexExists(idx).Do(context.Background())
+	if !exists {
+		// create index
+		ElasticClient.CreateIndex(idx)
+	}
+	bulk := ElasticClient.Bulk().Index(idx)
+	if rs, err := m.Rows(); err == nil {
+		for _, om := range rs.([]Model) {
+			if _, pk, _ := m.PKey(); pk != "" {
+				bulk.Add(rest.NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
+			}
+		}
+		if cnt := bulk.NumberOfActions(); cnt > 0 {
+			wgo.Info("save %d %s", cnt, m.TableName())
+			_, be := bulk.Do(context.Background())
+			if be != nil {
+				wgo.Warn("bulk error: %s", be)
+			}
+		}
 	}
 }
