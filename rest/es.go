@@ -4,7 +4,6 @@ package rest
 import (
 	"context"
 	"fmt"
-	"wgo/rest"
 	"wgo/utils"
 
 	"wgo"
@@ -180,7 +179,7 @@ func SaveAllToES(m Model) {
 	if rs, err := m.Rows(); err == nil {
 		for _, om := range rs.([]Model) {
 			if _, pk, _ := m.PKey(); pk != "" {
-				bulk.Add(rest.NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
+				bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
 			}
 		}
 		if cnt := bulk.NumberOfActions(); cnt > 0 {
