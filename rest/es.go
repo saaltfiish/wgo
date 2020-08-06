@@ -179,21 +179,13 @@ func SaveAllToES(m Model) {
 	bulk := ElasticClient.Bulk().Index(idx)
 	if rs, err := m.Rows(); err == nil {
 		rsv := reflect.ValueOf(rs)
-		wgo.Info("count: %d", rsv.Len())
 		for i := 0; i < rsv.Len(); i++ {
 			mi := rsv.Index(i).Interface()
-			if _, pk, _ := mi.(Model).PKey(); pk != "" {
-				wgo.Info("primary key: %s", pk)
+			if _, pk, _ := primaryKey(mi.(Model)); pk != "" {
 				bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(mi))
 			}
 		}
-		// for _, om := range rs.([]Model) {
-		// 	if _, pk, _ := m.PKey(); pk != "" {
-		// 		bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
-		// 	}
-		// }
 		if cnt := bulk.NumberOfActions(); cnt > 0 {
-			wgo.Info("save %d %s", cnt, m.TableName())
 			_, be := bulk.Do(context.Background())
 			if be != nil {
 				wgo.Warn("bulk error: %s", be)
