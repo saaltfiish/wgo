@@ -4,6 +4,7 @@ package rest
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"wgo/utils"
 
 	"wgo"
@@ -177,11 +178,18 @@ func SaveAllToES(m Model) {
 	}
 	bulk := ElasticClient.Bulk().Index(idx)
 	if rs, err := m.Rows(); err == nil {
-		for _, om := range rs.([]Model) {
-			if _, pk, _ := m.PKey(); pk != "" {
-				bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
+		rsv := reflect.ValueOf(rs)
+		for i := 0; i < rsv.Len(); i++ {
+			mi := rsv.Index(i).Interface()
+			if _, pk, _ := mi.(Model).PKey(); pk != "" {
+				bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(mi))
 			}
 		}
+		// for _, om := range rs.([]Model) {
+		// 	if _, pk, _ := m.PKey(); pk != "" {
+		// 		bulk.Add(NewBulkIndexRequest().Id(utils.MustString(pk)).Doc(om))
+		// 	}
+		// }
 		if cnt := bulk.NumberOfActions(); cnt > 0 {
 			wgo.Info("save %d %s", cnt, m.TableName())
 			_, be := bulk.Do(context.Background())
