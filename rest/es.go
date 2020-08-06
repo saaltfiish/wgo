@@ -164,7 +164,7 @@ func saveToES(m Model) {
 }
 
 // save all rows to es
-func saveAllToES(m Model) {
+func SaveAllToES(m Model) {
 	defer func() {
 		if err := recover(); err != nil {
 			Error("error: %s", err)
