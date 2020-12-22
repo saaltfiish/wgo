@@ -78,7 +78,7 @@ func DefaultConfig() *Config {
 		cfg.v.AddConfigPath(defaultWorkDir)
 		cfg.v.AddConfigPath(".")
 		if err := cfg.v.ReadInConfig(); err != nil {
-			panic(fmt.Sprintf("[PANIC] read config file failed: %s", err))
+			environ.Error(fmt.Sprintf("[PANIC] read config file failed: %s", err))
 		}
 	}
 
@@ -96,7 +96,7 @@ func (cfg *Config) ReadConfig(cc, ct string) *Config {
 		cfg.v.SetConfigType(ct)
 		ccb := []byte(cc)
 		if err := cfg.v.ReadConfig(bytes.NewBuffer(ccb)); err != nil {
-			panic(fmt.Sprintf("[PANIC] read config string failed: %s", err))
+			environ.Error(fmt.Sprintf("[PANIC] read config string failed: %s", err))
 		}
 	}
 
@@ -115,7 +115,7 @@ func (cfg *Config) ReadInConfig(cf, ct string) *Config {
 		cfg.v.SetConfigFile(cf)
 		cfg.v.SetConfigType(ct)
 		if err := cfg.v.ReadInConfig(); err != nil {
-			panic(fmt.Sprintf("[PANIC] read config file failed: %s", err))
+			environ.Error(fmt.Sprintf("[PANIC] read config file failed: %s", err))
 		}
 	}
 

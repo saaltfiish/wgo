@@ -234,12 +234,12 @@ func (r *REST) setTimeRangeFromStartEnd() {
 /* }}} */
 
 /* {{{ func (r *REST) setOrderBy(p string) {
- * 时间段信息
+ * 排序信息
  */
 func (r *REST) setOrderBy(p []string) {
 	ob := new(OrderBy)
 	r.SetEnv(OrderByKey, ob)
-	if len(p) > 0 { //只有一个, 可通过 "{start},{end}"方式传
+	if len(p) > 0 { //只有一个, 可通过 "{field},{DESC/ASC}"方式传
 		pieces := strings.SplitN(p[0], ",", 2)
 		ob.Field = pieces[0]
 		ob.Sort = "DESC" //默认降序
