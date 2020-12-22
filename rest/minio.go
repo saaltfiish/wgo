@@ -98,7 +98,7 @@ func (o *ObjectStorage) PutPicByUrl(url, bucketName string) (string, error) {
 
 // set policy
 func (o *ObjectStorage) SetBucketRead(bucketName, objectPrefix string) error {
-	return o.client.SetBucketPolicy(bucketName, objectPrefix, policy.BucketPolicyReadOnly)
+	return o.client.SetBucketPolicy(bucketName, policy.BucketPolicyReadOnly)
 }
 
 // pub object
