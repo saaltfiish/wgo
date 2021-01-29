@@ -10,6 +10,8 @@
 # set -e
 set -x
 
+export GOPROXY="https://mirrors.aliyun.com/goproxy/"
+export GOSUMDB=off
 export TZ="Asia/Shanghai"
 
 prog="example"
