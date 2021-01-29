@@ -1,0 +1,11 @@
+.DS_Store
+*.pid
+*.log
+example
+
+.idea/*
+/*.iml
+/pkg/
+/bin/
+/release/
+go.sum

@@ -1,0 +1,9 @@
+proc_name: example
+port: 8888
+time_zone: Asia/Shanghai
+#debug: true
+dockerize: true
+daemonize: false
+access:
+  path: logs/example.log
+  topic: ac
