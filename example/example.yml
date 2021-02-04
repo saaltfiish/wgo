@@ -1,9 +1,12 @@
 proc_name: example
 port: 8888
 time_zone: Asia/Shanghai
-#debug: true
+debug: true
 dockerize: true
 daemonize: false
 access:
   path: logs/example.log
   topic: ac
+example:
+  db:
+    db: root:Guoyuzhou14677249012@tcp(localhost:3306)/example?charset=utf8&loc=Asia%2FShanghai

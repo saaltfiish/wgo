@@ -1,16 +1,12 @@
-// main.go
+//
+// user.go
 // Copyright (C) 2021 Odin <odinmanlee@gmail.com>
 //
 // Distributed under terms of the MIT license.
 //
 
-package main
+package api
 
 import (
-	"wgo"
-	_ "example/api"
+	_ "example/models"
 )
-
-func main() {
-	wgo.Run()
-}
