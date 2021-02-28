@@ -237,6 +237,20 @@ func (cfg *Config) StringMapString(key string) map[string]string {
 
 /* }}} */
 
+/* {{{ func (cfg *Config) StringMapArray(key string) []map[string]interface{}
+ *
+ */
+func (cfg *Config) StringMapArray(key string) ([]map[string]interface{}, error) {
+	var rst []map[string]interface{}
+	if err := cfg.v.UnmarshalKey(key, &rst); err == nil {
+		return rst, nil
+	} else {
+		return nil, err
+	}
+}
+
+/* }}} */
+
 /* {{{ func (cfg *Config) StringMapStringSlice(key string) map[string][]string
  *
  */
