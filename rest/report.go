@@ -17,6 +17,7 @@ import (
 type Report struct {
 	Info   ReportInfo  `json:"info,omitempty"`
 	Result interface{} `json:"list"`
+	Chart  interface{} `json:"chart"`
 
 	base         interface{}
 	fields       utils.StructFields
