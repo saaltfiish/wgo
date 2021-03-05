@@ -754,6 +754,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 			empty := true
 			tr := make(Result)
 			tr[RTKEY_TIME] = *intvlBucket.KeyAsString
+			tr[RTKEY_COUNT] = intvlBucket.DocCount
 			if len(rpt.aggregations) > 0 {
 				for _, agg := range rpt.aggregations {
 					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
