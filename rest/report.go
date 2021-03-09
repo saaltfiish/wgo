@@ -627,7 +627,7 @@ func (rpt *Report) Build() (r Result, err error) {
 		// hits
 		if rpt.pagination != nil {
 			if rpt.tophits != nil { // 从top hits里找
-				TermsAgg(rpt.tophits.field).Missing("_empty_").SubAggregation(rpt.tophits.sortField, TopAgg(rpt.tophits.sortField, false)).Size(rpt.pagination.PerPage)
+				rpt.search = rpt.search.Aggregation(RTKEY_TOPHITS, TermsAgg(rpt.tophits.field).Size(rpt.pagination.PerPage).Missing("_empty_").SubAggregation(rpt.tophits.sortField, TopAgg(rpt.tophits.sortField, false)))
 			} else {
 				rpt.search = rpt.search.From(rpt.pagination.Offset).Size(rpt.pagination.PerPage)
 			}
@@ -706,10 +706,17 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 	// took, hits
 	rpt.Info.Took = result.TookInMillis
 	// pagination
-	if rpt.pagination != nil {
-		rpt.Info.Total = result.TotalHits()
-		rpt.Info.Page = rpt.pagination.Page
-		rpt.Info.PerPage = rpt.pagination.PerPage
+	if rpt.tophits == nil {
+		if rpt.pagination != nil {
+			rpt.Info.Total = result.TotalHits()
+			rpt.Info.Page = rpt.pagination.Page
+			rpt.Info.PerPage = rpt.pagination.PerPage
+		}
+		// hits
+		r[RTKEY_HITS] = result.Hits
+	} else {
+		tp, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
+		Info("tophits: %s", tp)
 	}
 	// start/end
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
@@ -760,8 +767,6 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		rpt.Info.Dics = dics
 	}
 
-	// hits
-	r[RTKEY_HITS] = result.Hits
 	// aggs
 	if rpt.interval != "" { // interval 先fetch date_histogram数据
 		rpt.Info.Interval = rpt.interval

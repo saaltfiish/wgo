@@ -185,6 +185,7 @@ const (
 	RTKEY_INTVL   = "_interval_"
 	RTKEY_TIME    = "_time_"
 	RTKEY_MIR     = "_max_interval_range_"
+	RTKEY_TOPHITS = "_top_hits_"
 
 	INTVL_HOUR    = "hour"
 	INTVL_DAY     = "day"

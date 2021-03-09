@@ -117,7 +117,8 @@ func MaxAgg(field string) *elastic.MaxAggregation {
 	return elastic.NewMaxAggregation().Field(field)
 }
 func DateHistogramAgg(field, interval string) *elastic.DateHistogramAggregation {
-	return elastic.NewDateHistogramAggregation().Field(field).Interval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
+	// return elastic.NewDateHistogramAggregation().Field(field).Interval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
+	return elastic.NewDateHistogramAggregation().Field(field).CalendarInterval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
 }
 func FilterAgg(field string, value ...interface{}) *elastic.FilterAggregation {
 	return elastic.NewFilterAggregation().Filter(elastic.NewTermsQuery(field, value...))
