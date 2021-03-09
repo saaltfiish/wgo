@@ -706,6 +706,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 	// took, hits
 	rpt.Info.Took = result.TookInMillis
 	// pagination
+	r = make(Result)
 	if rpt.tophits == nil {
 		if rpt.pagination != nil {
 			rpt.Info.Total = result.TotalHits()
@@ -715,8 +716,16 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		// hits
 		r[RTKEY_HITS] = result.Hits
 	} else {
-		tp, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
-		Info("tophits: %s", tp)
+		tpr, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
+		// Info("tophits: %s", tpr.Aggregations["buckets"])
+		if j, err := utils.NewJson(tpr.Aggregations["buckets"]); err == nil {
+			arr := []interface{}{}
+			for _, b := range j.MustArray() {
+				// Info("source: %s", b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"])
+				arr = append(arr, b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"])
+			}
+			r[RTKEY_TOPHITS] = arr
+		}
 	}
 	// start/end
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
@@ -729,7 +738,6 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		et, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", ev.ValueAsString)
 		rpt.Info.Last = et.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
-	r = make(Result)
 
 	// summary
 	if len(rpt.summary) > 0 {
