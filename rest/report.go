@@ -14,6 +14,12 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 )
 
+type topHits struct {
+	field     string
+	sortField string
+	ascending bool
+}
+
 type Report struct {
 	Info   ReportInfo  `json:"info,omitempty"`
 	Result interface{} `json:"list"`
@@ -29,6 +35,7 @@ type Report struct {
 	mterms       []string               // 命中的terms查询
 	excludes     []string               // source fields exclude
 	includes     []string               // source fields include
+	tophits      *topHits               // top hits属性
 	dimensions   Dimensions             // 维度
 	qs           []elastic.Query        // 根据条件形成的多个query
 	filters      map[string]string      // 条件term查询, 需要在nested agg中filter
@@ -548,6 +555,12 @@ func (rpt *Report) Interval(inr string) *Report {
 	return rpt
 }
 
+// top hit
+func (rpt *Report) TopHits(field string, sortField string, ascending bool) *Report {
+	rpt.tophits = &topHits{field, sortField, ascending}
+	return rpt
+}
+
 func (rpt *Report) Pagination() *Report {
 	rpt.pagination = rpt.rest.Pagination()
 	return rpt
@@ -611,6 +624,14 @@ func (rpt *Report) Build() (r Result, err error) {
 		// start/end
 		rpt.search = rpt.search.Aggregation(RTKEY_START, MinAgg(tsField)).Aggregation(RTKEY_END, MaxAgg(tsField))
 
+		// hits
+		if rpt.pagination != nil {
+			if rpt.tophits != nil { // 从top hits里找
+				TermsAgg(rpt.tophits.field).Missing("_empty_").SubAggregation(rpt.tophits.sortField, TopAgg(rpt.tophits.sortField, false)).Size(rpt.pagination.PerPage)
+			} else {
+				rpt.search = rpt.search.From(rpt.pagination.Offset).Size(rpt.pagination.PerPage)
+			}
+		}
 		// aggs
 		if rpt.interval != "" {
 			// rpt.dimensions = rpt.dimensions.Increase(rpt.interval)
@@ -802,16 +823,12 @@ func (rpt *Report) prepare() error {
 		rpt.idsQuery()
 	} else {
 		rpt.search = rpt.search.Size(0)
+
 		// pagination
 		if len(rpt.params) > 0 && strings.ToLower(rpt.rest.Context().QueryParam(PARAM_ALLDATA)) == "true" {
 			rpt.pagination.Offset = 0
 			rpt.pagination.Page = 1
 			rpt.pagination.PerPage = 10000
-		}
-		if rpt.pagination != nil {
-			rpt.search = rpt.search.From(rpt.pagination.Offset).Size(rpt.pagination.PerPage)
-		} else {
-			rpt.search = rpt.search.Size(0)
 		}
 
 		rpt.rangeQuery()

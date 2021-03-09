@@ -98,8 +98,8 @@ type Filter struct {
 func TermsAgg(field string) *elastic.TermsAggregation {
 	return elastic.NewTermsAggregation().Field(field).Size(1000)
 }
-func TopAgg(field string, sortField string, ascending bool) *elastic.TopHitsAggregation {
-	return elastic.NewTopHitsAggregation().Sort(sortField, ascending).Size(1)
+func TopAgg(field string, ascending bool) *elastic.TopHitsAggregation {
+	return elastic.NewTopHitsAggregation().Sort(field, ascending).Size(1)
 }
 func ReverseAgg() *elastic.ReverseNestedAggregation {
 	return elastic.NewReverseNestedAggregation()
