@@ -1164,20 +1164,20 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 	}
 	switch rtype := reportType(field); rtype {
 	case RPT_SUM:
-		if v, found := aggs.Sum(agg.field); found {
-			r = Result{agg.field: *v.Value}
+		if v, found := aggs.Sum(agg.field); found && v != nil && v.Value != nil {
+			r = Result{agg.field: *(v.Value)}
 		}
 	case RPT_MAX:
-		if v, found := aggs.Max(agg.field); found {
-			r = Result{agg.field: *v.Value}
+		if v, found := aggs.Max(agg.field); found && v != nil && v.Value != nil {
+			r = Result{agg.field: *(v.Value)}
 		}
 	case RPT_MIN:
-		if v, found := aggs.Min(agg.field); found {
-			r = Result{agg.field: *v.Value}
+		if v, found := aggs.Min(agg.field); found && v != nil && v.Value != nil {
+			r = Result{agg.field: *(v.Value)}
 		}
 	case RPT_AVG:
-		if v, found := aggs.Avg(agg.field); found {
-			r = Result{agg.field: *v.Value}
+		if v, found := aggs.Avg(agg.field); found && v != nil && v.Value != nil {
+			r = Result{agg.field: *(v.Value)}
 		}
 	case RPT_TERM:
 		if len(agg.filters) > 0 {
