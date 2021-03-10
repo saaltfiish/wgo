@@ -1116,11 +1116,11 @@ func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) 
 	case RPT_SUM:
 		eagg = rpt.buildSumAgg(agg, path)
 	case RPT_MAX:
-		eagg = rpt.buildSumAgg(agg, path)
+		eagg = rpt.buildMaxAgg(agg, path)
 	case RPT_MIN:
-		eagg = rpt.buildSumAgg(agg, path)
+		eagg = rpt.buildMinAgg(agg, path)
 	case RPT_AVG:
-		eagg = rpt.buildSumAgg(agg, path)
+		eagg = rpt.buildAvgAgg(agg, path)
 	case RPT_TERM:
 		if len(opts) > 0 && opts[0] == true {
 			//rpt.rest.Context().Info("field: %s", agg.field)
