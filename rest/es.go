@@ -116,6 +116,9 @@ func MinAgg(field string) *elastic.MinAggregation {
 func MaxAgg(field string) *elastic.MaxAggregation {
 	return elastic.NewMaxAggregation().Field(field)
 }
+func AvgAgg(field string) *elastic.AvgAggregation {
+	return elastic.NewAvgAggregation().Field(field)
+}
 func DateHistogramAgg(field, interval string) *elastic.DateHistogramAggregation {
 	// return elastic.NewDateHistogramAggregation().Field(field).Interval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
 	return elastic.NewDateHistogramAggregation().Field(field).CalendarInterval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))

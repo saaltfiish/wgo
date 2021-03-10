@@ -170,6 +170,9 @@ const (
 	RPT_NESTED  = "nested"
 	RPT_TERM    = "term"
 	RPT_SUM     = "sum"
+	RPT_MAX     = "max"
+	RPT_MIN     = "min"
+	RPT_AVG     = "avg"
 	RPT_SEARCH  = "search"
 	RPT_KEYWORD = "keyword" // 包含multifield, 并且为`keyword`
 	RPT_FILTER  = "filter"

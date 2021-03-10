@@ -706,6 +706,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 	// took, hits
 	rpt.Info.Took = result.TookInMillis
 	// pagination
+	r = make(Result)
 	if rpt.tophits == nil {
 		if rpt.pagination != nil {
 			rpt.Info.Total = result.TotalHits()
@@ -715,8 +716,18 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		// hits
 		r[RTKEY_HITS] = result.Hits
 	} else {
-		tp, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
-		Info("tophits: %s", tp)
+		tpr, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
+		// Info("tophits: %s", tpr.Aggregations["buckets"])
+		if j, err := utils.NewJson(tpr.Aggregations["buckets"]); err == nil {
+			arr := []interface{}{}
+			for _, b := range j.MustArray() {
+				// Info("source: %s", b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"])
+				item := b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"].(map[string]interface{})
+				item["id"] = b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_id"]
+				arr = append(arr, item)
+			}
+			r[RTKEY_TOPHITS] = arr
+		}
 	}
 	// start/end
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
@@ -729,7 +740,6 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		et, _ := time.Parse("2006-01-02T15:04:05.000Z07:00", ev.ValueAsString)
 		rpt.Info.Last = et.In(wgo.Env().Location).Format("2006-01-02T15:04:05Z07:00")
 	}
-	r = make(Result)
 
 	// summary
 	if len(rpt.summary) > 0 {
@@ -964,6 +974,12 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 			case RPT_TERM:
 				// rpt.rest.Info("term properties: %+v, search field: %s, field: %s", agg.field, spf, pf)
 				tmp = tmp.SubAggregation(p.field, LatestField(spf, tsField))
+			case RPT_MAX:
+				tmp = tmp.SubAggregation(p.field, MaxAgg(spf))
+			case RPT_MIN:
+				tmp = tmp.SubAggregation(p.field, MinAgg(spf))
+			case RPT_AVG:
+				tmp = tmp.SubAggregation(p.field, AvgAgg(spf))
 			case RPT_SUM:
 				if pf.Path != "" && pf.Path != field.Path { // 父聚合是agg
 					tmp = tmp.SubAggregation(p.field, NestedAgg(pf.Path).SubAggregation(p.field, SumAgg(spf)))
