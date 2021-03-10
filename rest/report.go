@@ -805,7 +805,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 					switch rtype := reportType(field); rtype {
 					case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
 						tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)[agg.field]
-						if tr[agg.field] != nil && tr[agg.field].(int) > 0 {
+						if tr[agg.field] != nil {
 							empty = false
 						}
 					default:
