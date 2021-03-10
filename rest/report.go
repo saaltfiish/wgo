@@ -646,8 +646,8 @@ func (rpt *Report) Build() (r Result, err error) {
 			if len(rpt.aggregations) > 0 {
 				// rpt.dimensions = rpt.dimensions.Increase()
 				for _, agg := range rpt.aggregations {
-					// rpt.rest.Context().Info("agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
-					tmp = tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
+					Info("[in_interval] agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
+					tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
 				}
 			}
 			rpt.search = rpt.search.Aggregation(RTKEY_INTVL, tmp)
@@ -753,7 +753,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		for _, agg := range rpt.summary {
 			field := rpt.Field(agg.field, RPT_TAG)
 			switch rtype := reportType(field); rtype {
-			case RPT_SUM:
+			case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
 				summary[agg.field] = rpt.fetchResult(agg, result.Aggregations)[agg.field]
 			case RPT_TERM:
 				rst := rpt.fetchResult(agg, result.Aggregations)
@@ -803,7 +803,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 					// tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
 					field := rpt.Field(agg.field, RPT_TAG)
 					switch rtype := reportType(field); rtype {
-					case RPT_SUM:
+					case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
 						tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)[agg.field]
 						if tr[agg.field] != nil && tr[agg.field].(int) > 0 {
 							empty = false
@@ -1165,7 +1165,19 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 	switch rtype := reportType(field); rtype {
 	case RPT_SUM:
 		if v, found := aggs.Sum(agg.field); found {
-			r = Result{agg.field: int(*v.Value)}
+			r = Result{agg.field: *v.Value}
+		}
+	case RPT_MAX:
+		if v, found := aggs.Max(agg.field); found {
+			r = Result{agg.field: *v.Value}
+		}
+	case RPT_MIN:
+		if v, found := aggs.Min(agg.field); found {
+			r = Result{agg.field: *v.Value}
+		}
+	case RPT_AVG:
+		if v, found := aggs.Avg(agg.field); found {
+			r = Result{agg.field: *v.Value}
 		}
 	case RPT_TERM:
 		if len(agg.filters) > 0 {
@@ -1189,7 +1201,7 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 								if rts := rt.Results(); len(rts) > 0 {
 									tr[p.field] = rts[0][p.field]
 								}
-							case RPT_SUM:
+							case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
 								tr[p.field] = rt[p.field]
 							}
 						}
@@ -1225,7 +1237,7 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 								if rts := rt.Results(); len(rts) > 0 {
 									tr[p.field] = rts[0][p.field]
 								}
-							case RPT_SUM:
+							case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
 								tr[p.field] = rt[p.field]
 							}
 						}
