@@ -370,6 +370,12 @@ func reportType(f utils.StructField) string {
 	if f.Tags != nil {
 		if f.Tags[RPT_TAG].Options.Contains(RPT_SUM) {
 			return RPT_SUM
+		} else if f.Tags[RPT_TAG].Options.Contains(RPT_MAX) {
+			return RPT_MAX
+		} else if f.Tags[RPT_TAG].Options.Contains(RPT_MIN) {
+			return RPT_MIN
+		} else if f.Tags[RPT_TAG].Options.Contains(RPT_AVG) {
+			return RPT_AVG
 		} else if f.Tags[RPT_TAG].Options.Contains(RPT_TERM) {
 			return RPT_TERM
 		} else if f.Tags[RPT_TAG].Options.Contains(RPT_RANGE) {
@@ -957,7 +963,7 @@ func (rpt *Report) TermsQuery(field string, text interface{}) *Report {
 	return rpt
 }
 
-// build term sagg
+// build terms agg
 func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
 	field := rpt.Field(agg.field, RPT_TAG)
 	tsField := rpt.SearchFieldName(rpt.timestamp.field)
