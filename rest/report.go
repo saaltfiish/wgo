@@ -663,7 +663,7 @@ func (rpt *Report) Build() (r Result, err error) {
 			for _, agg := range rpt.summary {
 				field := rpt.Field(agg.field, tag)
 				switch rtype := reportType(field); rtype {
-				case RPT_SUM, RPT_TERM: // 只有sum, term才能做summary
+				case RPT_SUM, RPT_TERM, RPT_AVG, RPT_MAX, RPT_MIN: // 只有sum/term/max/min/avg才能做summary
 					rpt.rest.Info("summary field: %s", agg.field)
 					rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, ""))
 				}
@@ -1019,10 +1019,43 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 	return
 }
 
-// build sum agg
+// build aggs
 func (rpt *Report) buildSumAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
 	field := rpt.Field(agg.field, RPT_TAG)
 	eagg = SumAgg(rpt.SearchFieldName(agg.field, RPT_TAG))
+	// nested agg, 同时在同一nested path下无需nestedagg多次
+	if field.Path != "" && field.Path != path {
+		//rpt.rest.Context().Info("add nested. path: %s, field: %s", field.Path, agg.field)
+		eagg = NestedAgg(field.Path).SubAggregation(agg.field, eagg)
+		agg.wraps = append(agg.wraps, RPT_NESTED)
+	}
+	return
+}
+func (rpt *Report) buildMaxAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
+	field := rpt.Field(agg.field, RPT_TAG)
+	eagg = MaxAgg(rpt.SearchFieldName(agg.field, RPT_TAG))
+	// nested agg, 同时在同一nested path下无需nestedagg多次
+	if field.Path != "" && field.Path != path {
+		//rpt.rest.Context().Info("add nested. path: %s, field: %s", field.Path, agg.field)
+		eagg = NestedAgg(field.Path).SubAggregation(agg.field, eagg)
+		agg.wraps = append(agg.wraps, RPT_NESTED)
+	}
+	return
+}
+func (rpt *Report) buildMinAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
+	field := rpt.Field(agg.field, RPT_TAG)
+	eagg = MinAgg(rpt.SearchFieldName(agg.field, RPT_TAG))
+	// nested agg, 同时在同一nested path下无需nestedagg多次
+	if field.Path != "" && field.Path != path {
+		//rpt.rest.Context().Info("add nested. path: %s, field: %s", field.Path, agg.field)
+		eagg = NestedAgg(field.Path).SubAggregation(agg.field, eagg)
+		agg.wraps = append(agg.wraps, RPT_NESTED)
+	}
+	return
+}
+func (rpt *Report) buildAvgAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
+	field := rpt.Field(agg.field, RPT_TAG)
+	eagg = AvgAgg(rpt.SearchFieldName(agg.field, RPT_TAG))
 	// nested agg, 同时在同一nested path下无需nestedagg多次
 	if field.Path != "" && field.Path != path {
 		//rpt.rest.Context().Info("add nested. path: %s, field: %s", field.Path, agg.field)
@@ -1081,6 +1114,12 @@ func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) 
 	field := rpt.Field(agg.field, RPT_TAG)
 	switch rtype := reportType(field); rtype {
 	case RPT_SUM:
+		eagg = rpt.buildSumAgg(agg, path)
+	case RPT_MAX:
+		eagg = rpt.buildSumAgg(agg, path)
+	case RPT_MIN:
+		eagg = rpt.buildSumAgg(agg, path)
+	case RPT_AVG:
 		eagg = rpt.buildSumAgg(agg, path)
 	case RPT_TERM:
 		if len(opts) > 0 && opts[0] == true {
