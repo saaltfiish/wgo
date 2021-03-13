@@ -107,6 +107,9 @@ func ReverseAgg() *elastic.ReverseNestedAggregation {
 func SumAgg(field string) *elastic.SumAggregation {
 	return elastic.NewSumAggregation().Field(field)
 }
+func CumSumAgg(field string) *elastic.CumulativeSumAggregation {
+	return elastic.NewCumulativeSumAggregation().BucketsPath(field)
+}
 func NestedAgg(field string) *elastic.NestedAggregation {
 	return elastic.NewNestedAggregation().Path(field)
 }

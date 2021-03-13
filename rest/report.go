@@ -370,6 +370,8 @@ func reportType(f utils.StructField) string {
 	if f.Tags != nil {
 		if f.Tags[RPT_TAG].Options.Contains(RPT_SUM) {
 			return RPT_SUM
+		} else if f.Tags[RPT_TAG].Options.Contains(RPT_CUMSUM) {
+			return RPT_CUMSUM
 		} else if f.Tags[RPT_TAG].Options.Contains(RPT_MAX) {
 			return RPT_MAX
 		} else if f.Tags[RPT_TAG].Options.Contains(RPT_MIN) {
@@ -648,6 +650,9 @@ func (rpt *Report) Build() (r Result, err error) {
 				for _, agg := range rpt.aggregations {
 					Info("[in_interval] agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
 					tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
+					if field := rpt.Field(agg.field, RPT_TAG); reportType(field) == RPT_CUMSUM {
+						tmp.SubAggregation(agg.field+"::_cumn_", CumSumAgg(agg.field))
+					}
 				}
 			}
 			rpt.search = rpt.search.Aggregation(RTKEY_INTVL, tmp)
@@ -663,8 +668,8 @@ func (rpt *Report) Build() (r Result, err error) {
 			for _, agg := range rpt.summary {
 				field := rpt.Field(agg.field, tag)
 				switch rtype := reportType(field); rtype {
-				case RPT_SUM, RPT_TERM, RPT_AVG, RPT_MAX, RPT_MIN: // 只有sum/term/max/min/avg才能做summary
-					rpt.rest.Info("summary field: %s", agg.field)
+				case RPT_SUM, RPT_CUMSUM, RPT_TERM, RPT_AVG, RPT_MAX, RPT_MIN: // 只有sum/cum_sum/term/max/min/avg才能做summary
+					rpt.rest.Info("summary field: %s, report type: %s", agg.field, rtype)
 					rpt.search = rpt.search.Aggregation(agg.field, rpt.buildAgg(agg, ""))
 				}
 			}
@@ -753,7 +758,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		for _, agg := range rpt.summary {
 			field := rpt.Field(agg.field, RPT_TAG)
 			switch rtype := reportType(field); rtype {
-			case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
+			case RPT_SUM, RPT_CUMSUM, RPT_MAX, RPT_MIN, RPT_AVG:
 				summary[agg.field] = rpt.fetchResult(agg, result.Aggregations)[agg.field]
 			case RPT_TERM:
 				rst := rpt.fetchResult(agg, result.Aggregations)
@@ -803,7 +808,7 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 					// tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)
 					field := rpt.Field(agg.field, RPT_TAG)
 					switch rtype := reportType(field); rtype {
-					case RPT_SUM, RPT_MAX, RPT_MIN, RPT_AVG:
+					case RPT_SUM, RPT_CUMSUM, RPT_MAX, RPT_MIN, RPT_AVG:
 						tr[agg.field] = rpt.fetchResult(agg, intvlBucket.Aggregations)[agg.field]
 						if tr[agg.field] != nil {
 							empty = false
@@ -986,6 +991,9 @@ func (rpt *Report) buildTermsAgg(agg *Aggregation, path string) (eagg elastic.Ag
 				tmp = tmp.SubAggregation(p.field, MinAgg(spf))
 			case RPT_AVG:
 				tmp = tmp.SubAggregation(p.field, AvgAgg(spf))
+			case RPT_CUMSUM:
+				tmp = tmp.SubAggregation(p.field, SumAgg(spf))
+				tmp = tmp.SubAggregation(p.field+"::_cum_", CumSumAgg(spf))
 			case RPT_SUM:
 				if pf.Path != "" && pf.Path != field.Path { // 父聚合是agg
 					tmp = tmp.SubAggregation(p.field, NestedAgg(pf.Path).SubAggregation(p.field, SumAgg(spf)))
@@ -1113,7 +1121,7 @@ func (rpt *Report) buildFiltersAgg(agg *Aggregation, path string) (eagg elastic.
 func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) (eagg elastic.Aggregation) {
 	field := rpt.Field(agg.field, RPT_TAG)
 	switch rtype := reportType(field); rtype {
-	case RPT_SUM:
+	case RPT_SUM, RPT_CUMSUM:
 		eagg = rpt.buildSumAgg(agg, path)
 	case RPT_MAX:
 		eagg = rpt.buildMaxAgg(agg, path)
@@ -1177,6 +1185,10 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 		}
 	case RPT_AVG:
 		if v, found := aggs.Avg(agg.field); found && v != nil && v.Value != nil {
+			r = Result{agg.field: *(v.Value)}
+		}
+	case RPT_CUMSUM:
+		if v, found := aggs.CumulativeSum(agg.field); found && v != nil && v.Value != nil {
 			r = Result{agg.field: *(v.Value)}
 		}
 	case RPT_TERM:

@@ -170,6 +170,7 @@ const (
 	RPT_NESTED  = "nested"
 	RPT_TERM    = "term"
 	RPT_SUM     = "sum"
+	RPT_CUMSUM  = "cum_sum"
 	RPT_MAX     = "max"
 	RPT_MIN     = "min"
 	RPT_AVG     = "avg"
