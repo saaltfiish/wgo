@@ -124,7 +124,12 @@ func AvgAgg(field string) *elastic.AvgAggregation {
 }
 func DateHistogramAgg(field, interval string) *elastic.DateHistogramAggregation {
 	// return elastic.NewDateHistogramAggregation().Field(field).Interval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
-	return elastic.NewDateHistogramAggregation().Field(field).CalendarInterval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
+	switch interval {
+	case INTVL_HOUR, INTVL_DAY, INTVL_WEEK, INTVL_MONTH, INTVL_QUARTER, INTVL_YEAR:
+		return elastic.NewDateHistogramAggregation().Field(field).CalendarInterval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
+	default:
+		return elastic.NewDateHistogramAggregation().Field(field).FixedInterval(interval).TimeZone(fmt.Sprint(wgo.Env().Location))
+	}
 }
 func FilterAgg(field string, value ...interface{}) *elastic.FilterAggregation {
 	return elastic.NewFilterAggregation().Filter(elastic.NewTermsQuery(field, value...))

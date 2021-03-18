@@ -558,6 +558,7 @@ func (rpt *Report) Interval(inr string) *Report {
 			}
 		}
 	default:
+		rpt.interval = inr
 		rpt.rest.Warn("unknown interval: %s", inr)
 	}
 	return rpt
