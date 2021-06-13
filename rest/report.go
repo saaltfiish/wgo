@@ -476,6 +476,15 @@ func (rpt *Report) NewAggregation(field string, properties ...string) *Aggregati
 	return agg
 }
 
+// 以时间字段倒序tophits为snapshot
+func (rpt *Report) Snapshot() *Aggregation {
+	tsField := rpt.SearchFieldName(rpt.timestamp.field)
+	agg := &Aggregation{
+		field: tsField,
+	}
+	return agg
+}
+
 // timestamp
 func (rpt *Report) Timestamp(fields ...string) *Report {
 	rpt.timestamp = &Timestamp{field: fields[0]}
@@ -1078,6 +1087,10 @@ func (rpt *Report) buildAvgAgg(agg *Aggregation, path string) (eagg elastic.Aggr
 	}
 	return
 }
+func (rpt *Report) buildSnapshotAgg(agg *Aggregation) (eagg elastic.Aggregation) {
+	eagg = TopAgg(rpt.SearchFieldName(agg.field, RPT_TAG), false)
+	return
+}
 
 // build filters agg
 func (rpt *Report) buildFiltersAgg(agg *Aggregation, path string) (eagg elastic.Aggregation) {
@@ -1135,6 +1148,8 @@ func (rpt *Report) buildAgg(agg *Aggregation, path string, opts ...interface{}) 
 		eagg = rpt.buildMinAgg(agg, path)
 	case RPT_AVG:
 		eagg = rpt.buildAvgAgg(agg, path)
+	case RPT_SNAPSHOT:
+		eagg = rpt.buildSnapshotAgg(agg)
 	case RPT_TERM:
 		if len(opts) > 0 && opts[0] == true {
 			//rpt.rest.Context().Info("field: %s", agg.field)
