@@ -131,18 +131,18 @@ func (bkt *bucket) resetStatistics() {
 
 func (bkt *bucket) lookup(slot []entry, hash16 uint16, key []byte) (idx int, match bool) {
 	idx = entryIdx(slot, hash16)
-	for idx <= len(slot)-1 { // 可能会有几个hash16相同的排在一起
+	for idx < len(slot) { // 可能会有几个hash16相同的排在一起
 		ent := slot[idx]
 		//Warn("old hash: %d, new: %d", ent.hash16, hash16)
 		if ent.hash16 != hash16 {
 			break
 		}
-		if match = ent.key != nil && string(ent.key) == string(key); match {
+		if match = ent.key != nil && string(ent.key) == string(key); match || idx == len(slot)-1 {
 			return
 		}
-		if idx < len(slot)-1 {
-			idx++
-		}
+		// if idx < len(slot)-1 {
+		idx++
+		// }
 	}
 	//Warn("final idx: %v, match: %v", idx, match)
 	return
