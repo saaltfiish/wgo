@@ -386,6 +386,8 @@ func reportType(f utils.StructField) string {
 			return RPT_RANGE
 		} else if f.Tags[RPT_TAG].Options.Contains(RPT_SEARCH) {
 			return RPT_SEARCH
+		} else if f.Tags[RPT_TAG].Options.Contains(RPT_SNAPSHOT) {
+			return RPT_SNAPSHOT
 		} else { // 按照类型分
 			typ := f.Type
 			if typ.Kind() == reflect.Ptr {
