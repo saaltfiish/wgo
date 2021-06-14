@@ -3,6 +3,7 @@ package rest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -662,7 +663,7 @@ func (rpt *Report) Build() (r Result, err error) {
 			if len(rpt.aggregations) > 0 {
 				// rpt.dimensions = rpt.dimensions.Increase()
 				for _, agg := range rpt.aggregations {
-					Info("[in_interval] agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
+					// Info("[in_interval] agg: %s(%s)", agg.field, rpt.SearchFieldName(agg.field))
 					tmp.SubAggregation(agg.field, rpt.buildAgg(agg, "", true))
 					if field := rpt.Field(agg.field, RPT_TAG); reportType(field) == RPT_CUMSUM {
 						tmp.SubAggregation(agg.field+"::_cumn_", CumSumAgg(agg.field))
@@ -740,19 +741,27 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		}
 		// hits
 		r[RTKEY_HITS] = result.Hits
-	} else {
-		tpr, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
+	} else if tpr, found := result.Aggregations.TopHits(RTKEY_TOPHITS); found {
+		// tpr, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
 		// Info("tophits: %s", tpr.Aggregations["buckets"])
-		if j, err := utils.NewJson(tpr.Aggregations["buckets"]); err == nil {
-			arr := []interface{}{}
-			for _, b := range j.MustArray() {
-				// Info("source: %s", b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"])
-				item := b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"].(map[string]interface{})
-				item["id"] = b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_id"]
-				arr = append(arr, item)
-			}
-			r[RTKEY_TOPHITS] = arr
+		// if j, err := utils.NewJson(tpr.Aggregations["buckets"]); err == nil {
+		// 	arr := []interface{}{}
+		// 	for _, b := range j.MustArray() {
+		// 		// Info("source: %s", b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"])
+		// 		item := b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_source"].(map[string]interface{})
+		// 		item["id"] = b.(map[string]interface{})[rpt.tophits.sortField].(map[string]interface{})["hits"].(map[string]interface{})["hits"].([]interface{})[0].(map[string]interface{})["_id"]
+		// 		arr = append(arr, item)
+		// 	}
+		// 	r[RTKEY_TOPHITS] = arr
+		// }
+		arr := []interface{}{}
+		for _, hit := range tpr.Hits.Hits {
+			rec := map[string]interface{}{}
+			json.Unmarshal(hit.Source, &rec)
+			rec["id"] = hit.Id
+			arr = append(arr, rec)
 		}
+		r[RTKEY_TOPHITS] = arr
 	}
 	// start/end
 	if sv, found := result.Aggregations.MinBucket(RTKEY_START); found && sv.ValueAsString != "" {
@@ -1220,7 +1229,7 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 		}
 	case RPT_SNAPSHOT:
 		if v, found := aggs.TopHits(agg.field); found && len(v.Hits.Hits) > 0 {
-			r = Result{agg.field: v.Hits.Hits}
+			r = Result{RTKEY_HITS: v.Hits}
 		}
 	case RPT_TERM:
 		if len(agg.filters) > 0 {
@@ -1357,6 +1366,14 @@ func (r Result) Name() string {
 func (r Result) Hits() *elastic.SearchHits {
 	if hits := r.Property(RTKEY_HITS); hits != nil {
 		return hits.(*elastic.SearchHits)
+	}
+	return nil
+}
+func Hits(i interface{}) *elastic.SearchHits {
+	if r, ok := i.(Result); ok {
+		if hits := r.Property(RTKEY_HITS); hits != nil {
+			return hits.(*elastic.SearchHits)
+		}
 	}
 	return nil
 }
