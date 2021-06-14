@@ -741,7 +741,18 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		}
 		// hits
 		r[RTKEY_HITS] = result.Hits
-	} else if tpr, found := result.Aggregations.TopHits(RTKEY_TOPHITS); found {
+	} else if tpr, found := result.Aggregations.Terms(RTKEY_TOPHITS); found {
+		arr := []interface{}{}
+		for _, bucket := range tpr.Buckets {
+			if tpr, found := bucket.TopHits(rpt.tophits.sortField); found {
+				for _, hit := range tpr.Hits.Hits {
+					rec := map[string]interface{}{}
+					json.Unmarshal(hit.Source, &rec)
+					rec["id"] = hit.Id
+					arr = append(arr, rec)
+				}
+			}
+		}
 		// tpr, _ := result.Aggregations.TopHits(RTKEY_TOPHITS)
 		// Info("tophits: %s", tpr.Aggregations["buckets"])
 		// if j, err := utils.NewJson(tpr.Aggregations["buckets"]); err == nil {
@@ -754,13 +765,6 @@ func (rpt *Report) fetch(result *elastic.SearchResult) (r Result, err error) {
 		// 	}
 		// 	r[RTKEY_TOPHITS] = arr
 		// }
-		arr := []interface{}{}
-		for _, hit := range tpr.Hits.Hits {
-			rec := map[string]interface{}{}
-			json.Unmarshal(hit.Source, &rec)
-			rec["id"] = hit.Id
-			arr = append(arr, rec)
-		}
 		r[RTKEY_TOPHITS] = arr
 	}
 	// start/end
