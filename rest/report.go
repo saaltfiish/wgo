@@ -1218,6 +1218,10 @@ func (rpt *Report) fetchResult(agg *Aggregation, aggs elastic.Aggregations) (r R
 		if v, found := aggs.Terms(agg.field); found && len(v.Buckets) > 0 {
 			r = Result{agg.field: v.Buckets[0].Key.(float64)}
 		}
+	case RPT_SNAPSHOT:
+		if v, found := aggs.TopHits(agg.field); found && len(v.Hits.Hits) > 0 {
+			r = Result{agg.field: v.Hits.Hits}
+		}
 	case RPT_TERM:
 		if len(agg.filters) > 0 {
 			if eagg, found := aggs.Filters(agg.field); found {
