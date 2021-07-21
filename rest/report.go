@@ -194,6 +194,8 @@ func (rest *REST) NewLogs(base interface{}, params ...string) *Report {
 		// 传入了时间段参数, 参数优先
 		rpt.timeRange = tr.(*TimeRange)
 	}
+	// save to context
+	rest.SetEnv(ReportKey, rpt)
 	return rpt
 }
 
