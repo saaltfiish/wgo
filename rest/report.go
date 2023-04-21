@@ -151,7 +151,7 @@ func (rest *REST) NewReport(base interface{}, opts ...string) *Report {
 		filters:    make(map[string]string),
 		search:     SearchService(indexName),
 		limitation: map[string]interface{}{
-			RTKEY_MIR: float64(200), // interval报表最多200个数据点
+			RTKEY_MIR: float64(400), // interval报表最多200个数据点
 		},
 	}
 	if len(params) > 0 {
